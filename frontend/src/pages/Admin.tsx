@@ -314,14 +314,20 @@ const Admin = () => {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <img
-                            src={listing.images[0]}
+                            src={typeof listing.images[0] === "string" ? listing.images[0] : listing.images[0]?.url}
                             alt={listing.title}
                             className="h-6 w-6 rounded object-cover"
                           />
                           {listing.title}
                         </div>
                       </TableCell>
-                      <TableCell>{listing.location}</TableCell>
+                      <TableCell>
+                        {typeof listing.location === "string"
+                          ? listing.location
+                          : listing.location
+                          ? `${listing.location.address}, ${listing.location.city}${listing.location.state ? ", " + listing.location.state : ""}, ${listing.location.country}`
+                          : "Unknown"}
+                      </TableCell>
                       <TableCell>${listing.price}/night</TableCell>
                       <TableCell>
                         <div className="flex items-center">

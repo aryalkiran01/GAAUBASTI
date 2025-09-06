@@ -184,7 +184,11 @@ const ListingDetail = () => {
               <span className="text-muted-foreground">·</span>
               <span className="text-muted-foreground">{listing.reviewCount} reviews</span>
               <span className="text-muted-foreground">·</span>
-              <span>{listing.location}</span>
+              <span>
+                {typeof listing.location === "string"
+                  ? listing.location
+                  : `${listing.location.address}, ${listing.location.city}${listing.location.state ? `, ${listing.location.state}` : ""}, ${listing.location.country}`}
+              </span>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm">
@@ -201,14 +205,21 @@ const ListingDetail = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
           <div className="aspect-square overflow-hidden rounded-lg">
             <img
-              src={listing.images[0]}
+              src={typeof listing.images[0] === "string" ? listing.images[0] : listing.images[0]?.url}
               alt={listing.title}
               className="h-full w-full object-cover"
             />
           </div>
           <div className="aspect-square overflow-hidden rounded-lg">
             <img
-              src={listing.images[1] || listing.images[0]}
+              src={
+                typeof listing.images[1] === "string"
+                  ? listing.images[1]
+                  : listing.images[1]?.url ||
+                    (typeof listing.images[0] === "string"
+                      ? listing.images[0]
+                      : listing.images[0]?.url)
+              }
               alt={listing.title}
               className="h-full w-full object-cover"
             />
@@ -326,7 +337,7 @@ const ListingDetail = () => {
                 </div>
               )}
 
-              {!selectedDate || !endDate ? (
+              {!selectedDate || !endDate &&(
                 <div className="border-t pt-4 mb-4">
                 <div className="flex justify-between mb-2">
                   <span>${listing!.price} x {nights} nights</span>
