@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { Booking, DialogType, Listing, User } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { dummyUsers, dummyListings, dummyBookings } from "@/lib/dummy-data";
 
 // Import our new dialog components
 import UserEditDialog from "@/components/admin/UserEditDialog";
@@ -49,27 +50,40 @@ const Admin = () => {
       try {
         setLoading(true);
         
-        const [statsResponse, usersResponse, listingsResponse, bookingsResponse] = await Promise.all([
-          adminAPI.getDashboardStats(),
-          adminAPI.getAllUsers(),
-          adminAPI.getAllListings(),
-          adminAPI.getAllBookings({})
-        ]);
-        
-        if (statsResponse.success) {
-          setDashboardStats(statsResponse.data.stats);
-        }
-        
-        if (usersResponse.success) {
-          setUsers(usersResponse.data.users);
-        }
-        
-        if (listingsResponse.success) {
-          setListings(listingsResponse.data.listings);
-        }
-        
-        if (bookingsResponse.success) {
-          setBookings(bookingsResponse.data.bookings);
+        try {
+          const [statsResponse, usersResponse, listingsResponse, bookingsResponse] = await Promise.all([
+            adminAPI.getDashboardStats(),
+            adminAPI.getAllUsers(),
+            adminAPI.getAllListings(),
+            adminAPI.getAllBookings({})
+          ]);
+          
+          if (statsResponse.success) {
+            setDashboardStats(statsResponse.data.stats);
+          }
+          
+          if (usersResponse.success) {
+            setUsers(usersResponse.data.users);
+          }
+          
+          if (listingsResponse.success) {
+            setListings(listingsResponse.data.listings);
+          }
+          
+          if (bookingsResponse.success) {
+            setBookings(bookingsResponse.data.bookings);
+          }
+        } catch (apiError) {
+          console.warn('API not available, using dummy data:', apiError);
+          // Fallback to dummy data
+          setUsers(dummyUsers);
+          setListings(dummyListings);
+          setBookings(dummyBookings);
+          setDashboardStats({
+            totalUsers: dummyUsers.length,
+            totalListings: dummyListings.length,
+            totalBookings: dummyBookings.length
+          });
         }
       } catch (error: any) {
         toast({
@@ -77,6 +91,10 @@ const Admin = () => {
           title: "Error loading admin data",
           description: error.message || "Failed to load admin dashboard data",
         });
+        // Fallback to dummy data on error
+        setUsers(dummyUsers);
+        setListings(dummyListings);
+        setBookings(dummyBookings);
       } finally {
         setLoading(false);
       }
@@ -296,14 +314,20 @@ const Admin = () => {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <img
-                            src={listing.images[0]}
+                            src={typeof listing.images[0] === "string" ? listing.images[0] : listing.images[0]?.url}
                             alt={listing.title}
                             className="h-6 w-6 rounded object-cover"
                           />
                           {listing.title}
                         </div>
                       </TableCell>
-                      <TableCell>{listing.location}</TableCell>
+                      <TableCell>
+                        {typeof listing.location === "string"
+                          ? listing.location
+                          : listing.location
+                          ? `${listing.location.address}, ${listing.location.city}${listing.location.state ? ", " + listing.location.state : ""}, ${listing.location.country}`
+                          : "Unknown"}
+                      </TableCell>
                       <TableCell>${listing.price}/night</TableCell>
                       <TableCell>
                         <div className="flex items-center">

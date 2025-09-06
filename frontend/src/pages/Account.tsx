@@ -4,10 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUserBookings } from "@/hooks/useBookings";
-import { useListing } from "@/hooks/useListings";
 import { format } from "date-fns";
 import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { dummyListings } from "@/lib/dummy-data";
 
 const Account = () => {
   const { user } = useAuth();
@@ -117,7 +117,11 @@ const Account = () => {
                         <div key={booking.id} className="flex flex-col md:flex-row bg-white border rounded-lg overflow-hidden">
                           <div className="md:w-1/4">
                             <img 
-                              src={listingData?.images?.[0] || "https://images.unsplash.com/photo-1587061949409-02df41d5e562"} 
+                              src={
+                                typeof listingData?.images?.[0] === "string"
+                                  ? listingData?.images?.[0]
+                                  : listingData?.images?.[0]?.url || "https://images.unsplash.com/photo-1587061949409-02df41d5e562"
+                              }
                               alt={listingData?.title || "Homestay"}
                               className="h-48 md:h-full w-full object-cover"
                             />
@@ -126,7 +130,13 @@ const Account = () => {
                             <div className="flex justify-between items-start">
                               <div>
                                 <h3 className="text-lg font-medium mb-1">{listingData?.title || "Homestay"}</h3>
-                                <p className="text-muted-foreground">{listingData?.location || "Nepal"}</p>
+                                <p className="text-muted-foreground">
+                                  {typeof listingData?.location === "string"
+                                    ? listingData.location
+                                    : listingData?.location
+                                      ? `${listingData.location.address}, ${listingData.location.city}${listingData.location.state ? `, ${listingData.location.state}` : ""}, ${listingData.location.country}`
+                                      : "Nepal"}
+                                </p>
                               </div>
                               <div className="flex items-center">
                                 <span className={`px-2 py-1 rounded-full text-xs ${

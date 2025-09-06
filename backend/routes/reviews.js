@@ -9,7 +9,8 @@ const {
   respondToReview,
   flagReview
 } = require('../controllers/reviewController');
-const { authenticate, requireHost } = require('../middlewares/auth');
+const { authenticate } = require('../middlewares/auth');
+const { requireHost, requireTraveler } = require('../middlewares/roleAuth');
 const {
   validateReview,
   validateObjectId
@@ -21,11 +22,11 @@ router.get('/listing/:listingId', validateObjectId('listingId'), getListingRevie
 // Protected routes
 router.use(authenticate);
 
-router.post('/', validateReview, createReview);
-router.get('/my-reviews', getUserReviews);
-router.put('/:id', validateObjectId('id'), validateReview, updateReview);
-router.delete('/:id', validateObjectId('id'), deleteReview);
-router.post('/:id/flag', validateObjectId('id'), flagReview);
+router.post('/', requireTraveler, validateReview, createReview);
+router.get('/my-reviews', requireTraveler, getUserReviews);
+router.put('/:id', requireTraveler, validateObjectId('id'), validateReview, updateReview);
+router.delete('/:id', requireTraveler, validateObjectId('id'), deleteReview);
+router.post('/:id/flag', requireTraveler, validateObjectId('id'), flagReview);
 
 // Host routes
 router.post('/:id/respond', requireHost, validateObjectId('id'), respondToReview);

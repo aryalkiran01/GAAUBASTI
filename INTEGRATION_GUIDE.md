@@ -21,6 +21,7 @@ npm run dev   # Starts frontend on http://localhost:8080
 ### Authentication Testing
 1. **Demo Login**: Use these accounts:
    - Guest: `guest@example.com` / `password`
+   - Guest: `aryalkira1@gmail.com` / `1111111`
    - Host: `host@example.com` / `password` 
    - Admin: `admin@example.com` / `password`
 

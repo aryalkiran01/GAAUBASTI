@@ -63,6 +63,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setTimeout(() => {
             if (response.data.user.role === 'admin') {
               window.location.href = '/admin';
+            } else if (response.data.user.role === 'host') {
+              window.location.href = '/host';
             } else {
               window.location.href = '/account';
             }
@@ -88,6 +90,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setTimeout(() => {
             if (demoUser.role === 'admin') {
               window.location.href = '/admin';
+            } else if (demoUser.role === 'host') {
+              window.location.href = '/host';
             } else {
               window.location.href = '/account';
             }
@@ -143,7 +147,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           // Navigate to account page
           setTimeout(() => {
-            window.location.href = '/account';
+            if (response.data.user.role === 'host') {
+              window.location.href = '/host';
+            } else {
+              window.location.href = '/account';
+            }
           }, 1000);
           return;
         }
@@ -169,7 +177,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // Navigate to account page
       setTimeout(() => {
-        window.location.href = '/account';
+        if (newUser.role === 'host') {
+          window.location.href = '/host';
+        } else {
+          window.location.href = '/account';
+        }
       }, 1000);
     } catch (error: any) {
       toast({

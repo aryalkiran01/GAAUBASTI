@@ -157,7 +157,8 @@ const createListing = async (req, res) => {
 // Update listing (host or admin only)
 const updateListing = async (req, res) => {
   try {
-    const listing = await Listing.findById(req.params.id);
+    // Use the listing from middleware if available (from ownership check)
+    const listing = req.resource || await Listing.findById(req.params.id);
 
     if (!listing) {
       return res.status(404).json({
@@ -165,15 +166,6 @@ const updateListing = async (req, res) => {
         message: 'Listing not found'
       });
     }
-
-    // Check ownership (host can only update their own listings)
-    if (req.user.role !== 'admin' && listing.host.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'You can only update your own listings'
-      });
-    }
-
     // If listing is being updated by host, set verification to false
     if (req.user.role === 'host') {
       req.body.isVerified = false;
@@ -204,7 +196,8 @@ const updateListing = async (req, res) => {
 // Delete listing (host or admin only)
 const deleteListing = async (req, res) => {
   try {
-    const listing = await Listing.findById(req.params.id);
+    // Use the listing from middleware if available (from ownership check)
+    const listing = req.resource || await Listing.findById(req.params.id);
 
     if (!listing) {
       return res.status(404).json({
@@ -212,15 +205,6 @@ const deleteListing = async (req, res) => {
         message: 'Listing not found'
       });
     }
-
-    // Check ownership
-    if (req.user.role !== 'admin' && listing.host.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'You can only delete your own listings'
-      });
-    }
-
     // Check for active bookings
     const activeBookings = await Booking.countDocuments({
       listing: req.params.id,

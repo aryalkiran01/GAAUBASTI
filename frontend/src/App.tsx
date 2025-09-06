@@ -15,6 +15,7 @@ import Listings from "./pages/Listings";
 import ListingDetail from "./pages/ListingDetail";
 import Account from "./pages/Account";
 import Admin from "./pages/Admin";
+import HostDashboard from "./pages/HostDashboard";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Payment from "./pages/Payment";
@@ -44,6 +45,7 @@ const App = () => (
                 <Route path="/listing/:id" element={<ListingDetail />} />
                 <Route path="/account" element={<Account />} />
                 <Route path="/admin" element={<Admin />} />
+                <Route path="/host" element={<HostDashboard />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/payment" element={<Payment />} />
