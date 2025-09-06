@@ -61,6 +61,11 @@ export default function Navbar() {
                     <Link to="/admin">Admin Dashboard</Link>
                   </DropdownMenuItem>
                 )}
+                {user.role === "host" && (
+                  <DropdownMenuItem>
+                    <Link to="/host">Host Dashboard</Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout}>
                   <LogOut className="mr-2 h-4 w-4" />
@@ -145,6 +150,15 @@ export default function Navbar() {
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Admin Dashboard
+                  </Link>
+                )}
+                {user.role === "host" && (
+                  <Link 
+                    to="/host" 
+                    className="flex items-center text-sm font-medium hover:text-gaun-green"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Host Dashboard
                   </Link>
                 )}
                 <Button 
