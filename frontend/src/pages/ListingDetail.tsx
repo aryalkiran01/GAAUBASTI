@@ -337,7 +337,7 @@ const ListingDetail = () => {
                 </div>
               )}
 
-              {!selectedDate || !endDate ? (
+              {!selectedDate || !endDate &&(
                 <div className="border-t pt-4 mb-4">
                 <div className="flex justify-between mb-2">
                   <span>${listing!.price} x {nights} nights</span>

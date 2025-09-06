@@ -11,14 +11,23 @@ const generateToken = (userId) => {
 // Register new user
 const register = async (req, res) => {
   try {
-    const { name, email, password, role = 'guest' } = req.body;
+    const { name, email, password, role = 'guest', username } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    if (!username) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username is required'
+      });
+    }
+
+    // Check if user already exists by email or username
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username }]
+    });
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'User with this email already exists'
+        message: 'User with this email or username already exists'
       });
     }
 
@@ -27,7 +36,8 @@ const register = async (req, res) => {
       name,
       email,
       password,
-      role
+      role,
+      username
     });
 
     await user.save();
@@ -42,10 +52,7 @@ const register = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
-      data: {
-        user,
-        token
-      }
+      data: { user, token }
     });
   } catch (error) {
     res.status(500).json({
@@ -55,6 +62,7 @@ const register = async (req, res) => {
     });
   }
 };
+
 
 // Login user
 const login = async (req, res) => {

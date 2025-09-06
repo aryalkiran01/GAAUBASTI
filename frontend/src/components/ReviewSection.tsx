@@ -70,48 +70,77 @@ export default function ReviewSection({ listingId, canReview = false, bookingId 
     fetchReviews();
   }, [listingId]);
 
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !bookingId) return;
+const handleSubmitReview = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    setIsSubmitting(true);
-    
-    try {
-      const response = await reviewsAPI.createReview({
-        bookingId,
-        ...newReview
+  if (!user) {
+    toast({
+      variant: "destructive",
+      title: "You must be logged in",
+      description: "Please log in to submit a review.",
+    });
+    return;
+  }
+
+  if (!bookingId) {
+    toast({
+      variant: "destructive",
+      title: "Booking not found",
+      description: "Cannot submit review without a valid booking.",
+    });
+    return;
+  }
+
+  setIsSubmitting(true);
+
+  try {
+    // Debug: log the data being sent
+    console.log("Submitting review:", {
+      listingId,
+      bookingId,
+      ...newReview,
+    });
+
+    const response = await reviewsAPI.createReview({
+      listingId,   // Make sure listingId is sent
+      bookingId,
+      ...newReview
+    });
+
+    if (response.success) {
+      setReviews([response.data.review, ...reviews]);
+      setShowReviewForm(false);
+      setNewReview({
+        rating: 5,
+        comment: "",
+        ratings: {
+          cleanliness: 5,
+          communication: 5,
+          checkIn: 5,
+          accuracy: 5,
+          location: 5,
+          value: 5
+        }
       });
-      
-      if (response.success) {
-        setReviews([response.data.review, ...reviews]);
-        setShowReviewForm(false);
-        setNewReview({
-          rating: 5,
-          comment: "",
-          ratings: {
-            cleanliness: 5,
-            communication: 5,
-            checkIn: 5,
-            accuracy: 5,
-            location: 5,
-            value: 5
-          }
-        });
-        toast({
-          title: "Review submitted",
-          description: "Thank you for your review!",
-        });
-      }
-    } catch (error: any) {
       toast({
-        variant: "destructive",
-        title: "Review failed",
-        description: error.message || "Failed to submit review",
+        title: "Review submitted",
+        description: "Thank you for your review!",
       });
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      throw new Error(response.message || "Failed to submit review");
     }
-  };
+  } catch (error: any) {
+    console.error("Review submission error:", error);
+    toast({
+      variant: "destructive",
+      title: "Review failed",
+      description: error.message || "Failed to submit review",
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
