@@ -8,7 +8,8 @@ const {
   updateBookingStatus,
   cancelBooking
 } = require('../controllers/bookingController');
-const { authenticate, requireHost } = require('../middlewares/auth');
+const { authenticate } = require('../middlewares/auth');
+const { requireHost, requireTraveler } = require('../middlewares/roleAuth');
 const {
   validateBooking,
   validateObjectId
@@ -17,11 +18,11 @@ const {
 // All routes require authentication
 router.use(authenticate);
 
-// Guest routes
-router.post('/', validateBooking, createBooking);
-router.get('/my-bookings', getUserBookings);
+// Traveler routes
+router.post('/', requireTraveler, validateBooking, createBooking);
+router.get('/my-bookings', requireTraveler, getUserBookings);
 router.get('/:id', validateObjectId('id'), getBooking);
-router.patch('/:id/cancel', validateObjectId('id'), cancelBooking);
+router.patch('/:id/cancel', requireTraveler, validateObjectId('id'), cancelBooking);
 
 // Host routes
 router.get('/host/bookings', requireHost, getHostBookings);

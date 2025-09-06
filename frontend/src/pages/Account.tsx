@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUserBookings } from "@/hooks/useBookings";
-import { useListing } from "@/hooks/useListings";
 import { format } from "date-fns";
 import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";

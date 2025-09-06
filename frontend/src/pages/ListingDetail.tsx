@@ -10,13 +10,17 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { PaymentDetails } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import AvailabilityChecker from "@/components/AvailabilityChecker";
+import ReviewSection from "@/components/ReviewSection";
 
 const ListingDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { listing, loading, error } = useListing(id!);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [nights, setNights] = useState(1);
   const [isBooking, setIsBooking] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -72,6 +76,13 @@ const ListingDetail = () => {
     return basePrice + cleaningFee + serviceFee;
   };
 
+  const handleAvailabilityCheck = (available: boolean, startDate: Date, checkEndDate: Date) => {
+    setIsAvailable(available);
+    setSelectedDate(startDate);
+    setEndDate(checkEndDate);
+    const nightsCount = Math.ceil((checkEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    setNights(nightsCount);
+  };
   const handleBooking = async () => {
     if (!user) {
       toast({
@@ -82,22 +93,26 @@ const ListingDetail = () => {
       return;
     }
     
-    if (!selectedDate) {
+    if (!selectedDate || !endDate) {
       toast({
         title: "Date required",
-        description: "Please select a check-in date",
+        description: "Please check availability first",
         variant: "destructive",
       });
       return;
     }
 
+    if (!isAvailable) {
+      toast({
+        title: "Availability required",
+        description: "Please check availability for your selected dates",
+        variant: "destructive",
+      });
+      return;
+    }
     setIsBooking(true);
     
     try {
-      // Calculate end date
-      const endDate = new Date(selectedDate);
-      endDate.setDate(endDate.getDate() + nights);
-      
       // Create booking via API
       const bookingData = {
         listing: listing.id,
@@ -257,6 +272,14 @@ const ListingDetail = () => {
                 </div>
               </div>
             </div>
+            
+            {/* Reviews Section */}
+            <div className="border-t pt-6">
+              <ReviewSection 
+                listingId={listing.id}
+                canReview={user?.role === 'guest'}
+              />
+            </div>
           </div>
 
           {/* Booking Card */}
@@ -281,44 +304,41 @@ const ListingDetail = () => {
                 </div>
               </div>
 
-              <div className="border rounded-md mb-4 overflow-hidden">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  className="border-0"
+              {/* Availability Checker */}
+              <div className="mb-6">
+                <AvailabilityChecker
+                  listingId={listing.id}
+                  onAvailabilityCheck={handleAvailabilityCheck}
                 />
               </div>
 
-              <div className="mb-4">
-                <label htmlFor="nights" className="block text-sm font-medium mb-1">
-                  Number of nights
-                </label>
-                <div className="flex items-center">
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="outline"
-                    className="h-10 w-10"
-                    onClick={() => setNights(Math.max(1, nights - 1))}
-                    disabled={nights <= 1}
-                  >
-                    -
-                  </Button>
-                  <span className="flex-1 text-center">{nights}</span>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="outline"
-                    className="h-10 w-10"
-                    onClick={() => setNights(nights + 1)}
-                  >
-                    +
-                  </Button>
+              {selectedDate && endDate && (
+                <div className="border-t pt-4 mb-4">
+                  <div className="flex justify-between mb-2">
+                    <span>Selected dates</span>
+                    <span>{format(selectedDate, "MMM d")} - {format(endDate, "MMM d")}</span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span>${listing!.price} x {nights} nights</span>
+                    <span>${listing!.price * nights}</span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span>Cleaning fee</span>
+                    <span>$25</span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span>Service fee</span>
+                    <span>$15</span>
+                  </div>
+                  <div className="border-t pt-4 mt-4 flex justify-between font-bold">
+                    <span>Total</span>
+                    <span>${calculateTotalPrice()}</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="border-t pt-4 mb-4">
+              {!selectedDate || !endDate ? (
+                <div className="border-t pt-4 mb-4">
                 <div className="flex justify-between mb-2">
                   <span>${listing!.price} x {nights} nights</span>
                   <span>${listing!.price * nights}</span>
@@ -335,14 +355,17 @@ const ListingDetail = () => {
                   <span>Total</span>
                   <span>${calculateTotalPrice()}</span>
                 </div>
-              </div>
+                </div>
+              )}
 
               <Button
                 className="w-full bg-gaun-green hover:bg-gaun-light-green"
                 onClick={handleBooking}
-                disabled={isBooking}
+                disabled={isBooking || !isAvailable || !selectedDate || !endDate}
               >
-                {isBooking ? "Creating booking..." : "Reserve"}
+                {isBooking ? "Creating booking..." : 
+                 !selectedDate || !endDate ? "Check availability first" :
+                 !isAvailable ? "Not available" : "Reserve"}
               </Button>
             </div>
           </div>

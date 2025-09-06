@@ -14,7 +14,8 @@ const {
   moderateReview,
   getAnalytics
 } = require('../controllers/adminController');
-const { authenticate, requireAdmin } = require('../middlewares/auth');
+const { authenticate } = require('../middlewares/auth');
+const { requireAdmin } = require('../middlewares/roleAuth');
 const { validateObjectId } = require('../middlewares/validation');
 
 // All admin routes require authentication and admin role

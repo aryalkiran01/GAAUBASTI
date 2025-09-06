@@ -74,3 +74,25 @@ export interface PaymentDetails {
 
 // Adding a new type for dialogs
 export type DialogType = 'user' | 'listing' | 'booking' | null;
+
+export interface Review {
+  id: string;
+  listing: string | Listing;
+  guest: string | User;
+  booking: string;
+  rating: number;
+  comment: string;
+  ratings?: {
+    cleanliness?: number;
+    communication?: number;
+    checkIn?: number;
+    accuracy?: number;
+    location?: number;
+    value?: number;
+  };
+  createdAt: string;
+  hostResponse?: {
+    comment: string;
+    respondedAt: string;
+  };
+}
