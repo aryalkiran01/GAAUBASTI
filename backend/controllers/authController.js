@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const OTP = require('../models/OTP'); 
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -209,6 +210,92 @@ const changePassword = async (req, res) => {
   }
 };
 
+const sendEmail = require('../utils/sendemail');
+
+
+// --- Forgot Password: send OTP ---
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = Date.now() + 10 * 60 * 1000;
+
+    // Save OTP to separate collection
+    await OTP.findOneAndUpdate(
+      { email },
+      { otp, expires },
+      { upsert: true, new: true }
+    );
+
+    console.log(`Generated OTP for ${email}: ${otp}`);
+    res.json({ success: true, message: 'OTP sent to your email' });
+  } catch (error) {
+    console.error("Error in forgotPassword:", error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send OTP',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+
+
+// --- Reset Password: verify OTP ---
+const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    console.log("Reset request:", { email, otp, newPassword });
+
+    // Check OTP from separate collection
+    const otpRecord = await OTP.findOne({ email, otp });
+    
+    if (!otpRecord) {
+      console.log("OTP not found");
+      return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    }
+
+    if (otpRecord.expires < Date.now()) {
+      console.log("OTP expired");
+      return res.status(400).json({ success: false, message: 'OTP expired' });
+    }
+
+    // Find user and update password
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log("User not found");
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    // Delete used OTP
+    await OTP.deleteOne({ email });
+
+    console.log("Password reset successfully");
+    res.json({ success: true, message: 'Password reset successfully' });
+  } catch (error) {
+    console.error("Reset error:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reset password',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+
 // Refresh token
 const refreshToken = async (req, res) => {
   try {
@@ -234,5 +321,7 @@ module.exports = {
   getProfile,
   updateProfile,
   changePassword,
-  refreshToken
+  refreshToken,
+  forgotPassword,
+  resetPassword
 };

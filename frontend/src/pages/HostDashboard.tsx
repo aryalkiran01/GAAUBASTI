@@ -43,7 +43,9 @@ const HostDashboard = () => {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [bookingStatus, setBookingStatus] = useState("");
   const [hostNotes, setHostNotes] = useState("");
-  
+  const [editingListing, setEditingListing] = useState<Listing | null>(null);
+  const [isEditingOpen, setIsEditingOpen] = useState(false);
+
   // New listing form state
   const [isCreatingListing, setIsCreatingListing] = useState(false);
   const [newListing, setNewListing] = useState({
@@ -57,6 +59,7 @@ const HostDashboard = () => {
     amenities: [],
     category: "homestay"
   });
+  
 
   // Fetch host data
   useEffect(() => {
@@ -180,6 +183,43 @@ const HostDashboard = () => {
     }
   };
 
+  const handleUpdateListing = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingListing) return;
+
+    try {
+      // Prepare the data to send to the API
+      const listingData = {
+        title: editingListing.title,
+        description: editingListing.description,
+        location: editingListing.location,
+        price: editingListing.price,
+        maxGuests: editingListing.maxGuests,
+        bedrooms: editingListing.bedrooms,
+        bathrooms: editingListing.bathrooms,
+        amenities: editingListing.amenities,
+        category: editingListing.category
+      };
+
+      const response = await listingsAPI.updateListing(editingListing.id, listingData);
+      if (response.success) {
+        setListings(listings.map(l => l.id === editingListing.id ? response.data.listing : l));
+        setEditingListing(null);
+        setIsEditingOpen(false);
+        toast({ 
+          title: "Listing updated", 
+          description: "Your listing has been updated. It will need to be verified again by admin." 
+        });
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: error.message || "Failed to update listing",
+      });
+    }
+  };
+
   const handleDeleteListing = async (listingId: string) => {
     try {
       const response = await listingsAPI.deleteListing(listingId);
@@ -198,6 +238,11 @@ const HostDashboard = () => {
         description: error.message || "Failed to delete listing",
       });
     }
+  };
+
+  const openEditDialog = (listing: Listing) => {
+    setEditingListing({...listing});
+    setIsEditingOpen(true);
   };
 
   return (
@@ -380,67 +425,215 @@ const HostDashboard = () => {
                   ))}
                 </div>
               ) : listings.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Listing</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {listings.map(listing => (
-                      <TableRow key={listing.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={Array.isArray(listing.images) ? 
-                                (typeof listing.images[0] === 'string' ? listing.images[0] : listing.images[0]?.url) :
-                                "https://images.unsplash.com/photo-1587061949409-02df41d5e562"
-                              }
-                              alt={listing.title}
-                              className="h-12 w-12 rounded object-cover"
-                            />
-                            <div>
-                              <p className="font-medium">{listing.title}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {listing.bedrooms} bed • {listing.bathrooms} bath
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {typeof listing.location === 'string' ? 
-                            listing.location : 
-                            `${listing.location.city}, ${listing.location.country}`
-                          }
-                        </TableCell>
-                        <TableCell>${listing.price}/night</TableCell>
-                        <TableCell>
-                          <Badge variant={listing.isVerified ? "default" : "secondary"}>
-                            {listing.isVerified ? "Verified" : "Pending"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm">
-                              Edit
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleDeleteListing(listing.id)}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </TableCell>
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Listing</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {listings.map(listing => (
+                        <TableRow key={listing.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={Array.isArray(listing.images) ? 
+                                  (typeof listing.images[0] === 'string' ? listing.images[0] : listing.images[0]?.url) :
+                                  "https://images.unsplash.com/photo-1587061949409-02df41d5e562"
+                                }
+                                alt={listing.title}
+                                className="h-12 w-12 rounded object-cover"
+                              />
+                              <div>
+                                <p className="font-medium">{listing.title}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {listing.bedrooms} bed • {listing.bathrooms} bath
+                                </p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {typeof listing.location === 'string' ? 
+                              listing.location : 
+                              `${listing.location.city}, ${listing.location.country}`
+                            }
+                          </TableCell>
+                          <TableCell>${listing.price}/night</TableCell>
+                          <TableCell>
+                            <Badge variant={listing.isVerified ? "default" : "secondary"}>
+                              {listing.isVerified ? "Verified" : "Pending"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {/* Edit Listing */}
+                              <Dialog open={isEditingOpen} onOpenChange={setIsEditingOpen}>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openEditDialog(listing)}
+                                  >
+                                    Edit
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-[600px]">
+                                  <DialogHeader>
+                                    <DialogTitle>Edit Listing</DialogTitle>
+                                    <DialogDescription>Update your listing details</DialogDescription>
+                                  </DialogHeader>
+                                  {editingListing && (
+                                    <form onSubmit={handleUpdateListing} className="space-y-4">
+                                      <div>
+                                        <Label htmlFor="edit-title">Title</Label>
+                                        <Input
+                                          id="edit-title"
+                                          value={editingListing.title}
+                                          onChange={(e) =>
+                                            setEditingListing(prev => prev ? { ...prev, title: e.target.value } : null)
+                                          }
+                                          placeholder="Title"
+                                          required
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label htmlFor="edit-description">Description</Label>
+                                        <Textarea
+                                          id="edit-description"
+                                          value={editingListing.description}
+                                          onChange={(e) =>
+                                            setEditingListing(prev => prev ? { ...prev, description: e.target.value } : null)
+                                          }
+                                          placeholder="Description"
+                                          required
+                                          rows={3}
+                                        />
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                          <Label htmlFor="edit-city">City</Label>
+                                          <Input
+                                            id="edit-city"
+                                            value={typeof editingListing.location === 'string' 
+                                              ? "" 
+                                              : editingListing.location.city}
+                                            onChange={(e) =>
+                                              setEditingListing(prev => prev ? { 
+                                                ...prev, 
+                                                location: typeof prev.location === 'string' 
+                                                  ? { address: "", city: e.target.value, state: "", country: "Nepal" }
+                                                  : { ...prev.location, city: e.target.value } 
+                                              } : null)
+                                            }
+                                            placeholder="City"
+                                            required
+                                          />
+                                        </div>
+                                        <div>
+                                          <Label htmlFor="edit-address">Address</Label>
+                                          <Input
+                                            id="edit-address"
+                                            value={typeof editingListing.location === 'string' 
+                                              ? "" 
+                                              : editingListing.location.address}
+                                            onChange={(e) =>
+                                              setEditingListing(prev => prev ? { 
+                                                ...prev, 
+                                                location: typeof prev.location === 'string' 
+                                                  ? { address: e.target.value, city: "", state: "", country: "Nepal" }
+                                                  : { ...prev.location, address: e.target.value } 
+                                              } : null)
+                                            }
+                                            placeholder="Address"
+                                            required
+                                          />
+                                        </div>
+                                      </div>
+                                      <div className="grid grid-cols-3 gap-4">
+                                        <div>
+                                          <Label htmlFor="edit-maxGuests">Max Guests</Label>
+                                          <Input
+                                            id="edit-maxGuests"
+                                            type="number"
+                                            min="1"
+                                            value={editingListing.maxGuests}
+                                            onChange={(e) =>
+                                              setEditingListing(prev => prev ? { ...prev, maxGuests: Number(e.target.value) } : null)
+                                            }
+                                            placeholder="Max Guests"
+                                            required
+                                          />
+                                        </div>
+                                        <div>
+                                          <Label htmlFor="edit-bedrooms">Bedrooms</Label>
+                                          <Input
+                                            id="edit-bedrooms"
+                                            type="number"
+                                            min="0"
+                                            value={editingListing.bedrooms}
+                                            onChange={(e) =>
+                                              setEditingListing(prev => prev ? { ...prev, bedrooms: Number(e.target.value) } : null)
+                                            }
+                                            placeholder="Bedrooms"
+                                            required
+                                          />
+                                        </div>
+                                        <div>
+                                          <Label htmlFor="edit-bathrooms">Bathrooms</Label>
+                                          <Input
+                                            id="edit-bathrooms"
+                                            type="number"
+                                            min="0"
+                                            value={editingListing.bathrooms}
+                                            onChange={(e) =>
+                                              setEditingListing(prev => prev ? { ...prev, bathrooms: Number(e.target.value) } : null)
+                                            }
+                                            placeholder="Bathrooms"
+                                            required
+                                          />
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <Label htmlFor="edit-price">Price per night ($)</Label>
+                                        <Input
+                                          id="edit-price"
+                                          type="number"
+                                          value={editingListing.price}
+                                          onChange={(e) =>
+                                            setEditingListing(prev => prev ? { ...prev, price: Number(e.target.value) } : null)
+                                          }
+                                          placeholder="Price"
+                                          required
+                                        />
+                                      </div>
+                                      <DialogFooter>
+                                        <Button type="submit">Update Listing</Button>
+                                      </DialogFooter>
+                                    </form>
+                                  )}
+                                </DialogContent>
+                              </Dialog>
+
+                              {/* Delete Listing */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteListing(listing.id)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </>
               ) : (
                 <div className="text-center py-12">
                   <h3 className="text-lg font-medium mb-2">No listings yet</h3>

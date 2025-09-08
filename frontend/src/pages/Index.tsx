@@ -126,14 +126,14 @@ const Index = () => {
               </p>
               <div className="flex items-center">
                 <div className="h-10 w-10 rounded-full overflow-hidden mr-3">
-                  <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80" alt="Sarah from USA" className="h-full w-full object-cover" />
+                  <img src="/IMG-20250128-WA0003.jpg" alt="lushal from USA" className="h-full w-full object-cover" />
                 </div>
                 <div>
-                  <h4 className="font-medium">Sarah J.</h4>
-                  <p className="text-sm text-muted-foreground">from USA</p>
+                  <h4 className="font-medium">Kushal Thapa</h4>
+                  <p className="text-sm text-muted-foreground">from UNITED STATE OF ARGHAKHANCHI(USA)</p>
                 </div>
               </div>
-            </div>
+            </div>  
             <div className="bg-gaun-cream p-6 rounded-lg">
               <div className="flex items-center mb-4">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
@@ -147,11 +147,11 @@ const Index = () => {
               </p>
               <div className="flex items-center">
                 <div className="h-10 w-10 rounded-full overflow-hidden mr-3">
-                  <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80" alt="Michael from Germany" className="h-full w-full object-cover" />
+                  <img src="/IMG-20250128-WA0005.jpg" alt="Michael from Germany" className="h-full w-full object-cover" />
                 </div>
                 <div>
-                  <h4 className="font-medium">Michael R.</h4>
-                  <p className="text-sm text-muted-foreground">from Germany</p>
+                  <h4 className="font-medium">Michael JACKON</h4>
+                  <p className="text-sm text-muted-foreground">from Kantipur</p>
                 </div>
               </div>
             </div>
@@ -168,10 +168,10 @@ const Index = () => {
               </p>
               <div className="flex items-center">
                 <div className="h-10 w-10 rounded-full overflow-hidden mr-3">
-                  <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80" alt="Emma from Australia" className="h-full w-full object-cover" />
+                  <img src="/IMG-20250128-WA0006.jpg" alt="JUDUWA BHAI" className="h-full w-full object-cover" />
                 </div>
                 <div>
-                  <h4 className="font-medium">Emma L.</h4>
+                  <h4 className="font-medium">JUDUWA BHAI</h4>
                   <p className="text-sm text-muted-foreground">from Australia</p>
                 </div>
               </div>

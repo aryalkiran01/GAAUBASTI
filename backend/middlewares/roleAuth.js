@@ -25,7 +25,7 @@ const requireHost = requireRole(['host', 'admin']);
 const requireTraveler = requireRole(['guest', 'host', 'admin']);
 
 // Resource ownership check
-const requireOwnership = (resourceField = 'host') => {
+const requireOwnership = (Model, resourceField = 'host') => {
   return async (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
@@ -34,40 +34,36 @@ const requireOwnership = (resourceField = 'host') => {
       });
     }
 
-    // Admin can access everything
-    if (req.user.role === 'admin') {
-      return next();
-    }
+    if (req.user.role === 'admin') return next();
 
-    // For other roles, check ownership
     try {
-      const Model = getModelByRoute(req.route.path);
       const resource = await Model.findById(req.params.id);
-      
       if (!resource) {
-        return res.status(404).json({
-          success: false,
-          message: 'Resource not found'
-        });
+        return res.status(404).json({ success: false, message: 'Resource not found' });
+      }
+        const ownerId = resource[resourceField]?._id?.toString() || resource[resourceField]?.toString();
+
+      if (!ownerId || ownerId !== req.user._id.toString()) {
+        return res.status(403).json({ success: false, message: 'Access denied. You can only access your own resources.' });
       }
 
-      if (resource[resourceField].toString() !== req.user._id.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied. You can only access your own resources.'
-        });
-      }
+
+    if (!resource[resourceField] || resource[resourceField].toString() !== req.user._id.toString()) {
+  return res.status(403).json({
+    success: false,
+    message: 'Access denied. You can only access your own resources.'
+  });
+}
 
       req.resource = resource;
       next();
+    
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: 'Authorization check failed'
-      });
+      res.status(500).json({ success: false, message: 'Authorization check failed' });
     }
   };
 };
+
 
 // Helper function to get model based on route
 const getModelByRoute = (routePath) => {

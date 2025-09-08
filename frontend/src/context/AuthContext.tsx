@@ -1,6 +1,6 @@
 import { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import { User } from "../types";
-import { authAPI } from "../lib/api";
+import { authAPI, getAuthToken, removeAuthToken } from "../lib/api"; // Import these functions
 import { useToast } from "@/components/ui/use-toast";
 import { dummyUsers, PASSWORD } from "@/lib/dummy-data";
 
@@ -10,6 +10,9 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   register: (name: string, email: string, password: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string, otp: string, newPassword: string) => Promise<void>; // Fixed signature
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,17 +26,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Check if user is logged in by fetching profile
     const initializeAuth = async () => {
       try {
-        try {
-          const response = await authAPI.getProfile();
-          if (response.success) {
-            setUser(response.data.user);
+        const token = getAuthToken();
+        
+        // Only try to get profile if we have a token
+        if (token) {
+          try {
+            const response = await authAPI.getProfile();
+            if (response.success && response.data && response.data.user) {
+              setUser(response.data.user);
+            }
+          } catch (error) {
+            console.warn('Profile fetch failed, using demo user:', error);
+            // Token might be invalid, remove it
+            removeAuthToken();
           }
-        } catch (error) {
-          // Check localStorage for demo user
-          const storedUser = localStorage.getItem('demoUser');
-          if (storedUser) {
-            setUser(JSON.parse(storedUser));
-          }
+        }
+        
+        // Check localStorage for demo user as fallback
+        const storedUser = localStorage.getItem('demoUser');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
         }
       } catch (error) {
         console.warn('Auth initialization failed:', error);
@@ -63,8 +75,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setTimeout(() => {
             if (response.data.user.role === 'admin') {
               window.location.href = '/admin';
-            } else if (response.data.user.role === 'host') {
-              window.location.href = '/host';
             } else {
               window.location.href = '/account';
             }
@@ -90,8 +100,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setTimeout(() => {
             if (demoUser.role === 'admin') {
               window.location.href = '/admin';
-            } else if (demoUser.role === 'host') {
-              window.location.href = '/host';
             } else {
               window.location.href = '/account';
             }
@@ -105,12 +113,83 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Login failed",
         description: "Invalid email or password",
       });
-    } catch (error: any) {
+
+    } 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+catch (error: any) {
       toast({
         variant: "destructive",
         title: "Login failed",
         description: error.message || "An error occurred during login",
       });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    setIsLoading(true);
+    try {
+      const response = await authAPI.changePassword(currentPassword, newPassword);
+      if (response.success) {
+        toast({ title: "Password Changed", description: "Your password was updated successfully." });
+      }
+    } 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+catch (error: any) {
+      toast({ variant: "destructive", title: "Change Password Failed", description: error.message || "An error occurred" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Forgot Password
+  const forgotPassword = async (email: string) => {
+    setIsLoading(true);
+    try {
+      const response = await authAPI.forgotPassword(email);
+      if (response.success) {
+        toast({ 
+          title: "OTP Sent", 
+          description: "Check your email for the OTP code." 
+        });
+      }
+      return response;
+    } 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+catch (error: any) {
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: error.message || "Failed to send OTP" 
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Reset Password
+  const resetPassword = async (email: string, otp: string, newPassword: string) => {
+    setIsLoading(true);
+    try {
+      const response = await authAPI.resetPassword(email, otp, newPassword);
+      if (response.success) {
+        toast({ 
+          title: "Success", 
+          description: "Password reset successfully." 
+        });
+      }
+      return response;
+    } 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+catch (error: any) {
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: error.message || "Failed to reset password" 
+      });
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -147,11 +226,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           // Navigate to account page
           setTimeout(() => {
-            if (response.data.user.role === 'host') {
-              window.location.href = '/host';
-            } else {
-              window.location.href = '/account';
-            }
+            window.location.href = '/account';
           }, 1000);
           return;
         }
@@ -177,13 +252,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // Navigate to account page
       setTimeout(() => {
-        if (newUser.role === 'host') {
-          window.location.href = '/host';
-        } else {
-          window.location.href = '/account';
-        }
+        window.location.href = '/account';
       }, 1000);
-    } catch (error: any) {
+    } 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+catch (error: any) {
       toast({
         variant: "destructive",
         title: "Registration failed",
@@ -195,12 +268,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, register }}>
+    <AuthContext.Provider value={{ 
+      user, isLoading, login, logout, register, 
+      changePassword, forgotPassword, resetPassword 
+    }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {

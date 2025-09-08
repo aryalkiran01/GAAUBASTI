@@ -10,6 +10,8 @@ const {
   checkAvailability,
   getFeaturedListings
 } = require('../controllers/listingController');
+const Listing = require('../models/Listing');
+
 const { authenticate } = require('../middlewares/auth');
 const { requireHost, requireOwnership } = require('../middlewares/roleAuth');
 const {
@@ -30,7 +32,8 @@ router.use(authenticate);
 // Host routes
 router.post('/', requireHost, validateListing, createListing);
 router.get('/host/my-listings', requireHost, getHostListings);
-router.put('/:id', requireHost, validateObjectId('id'), requireOwnership('host'), validateListing, updateListing);
-router.delete('/:id', requireHost, validateObjectId('id'), requireOwnership('host'), deleteListing);
+router.put('/:id', requireHost, validateObjectId('id'), requireOwnership(Listing, 'host'), validateListing, updateListing);
+router.delete('/:id', requireHost, validateObjectId('id'), requireOwnership(Listing, 'host'), deleteListing);
+
 
 module.exports = router;

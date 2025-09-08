@@ -41,7 +41,7 @@ const About = () => {
             </div>
             <div className="rounded-lg overflow-hidden">
               <img
-                src="https://images.unsplash.com/photo-1583309219338-a582f1f9ca6d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2196&q=80"
+                src="https://i.pinimg.com/originals/3b/70/bf/3b70bf3871a7670082ca152af26bd3b2.jpg"
                 alt="Traditional Nepali home"
                 className="w-full h-auto"
               />
@@ -95,49 +95,49 @@ const About = () => {
             <div className="text-center">
               <div className="mb-4 rounded-full overflow-hidden mx-auto w-40 h-40">
                 <img
-                  src="https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&q=80"
-                  alt="Raj Sharma"
+                  src="/WhatsApp Image 2025-06-08 at 19.58.10_f0f236d9.jpg"
+                  alt="KUSHAL THAPA"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <h3 className="text-xl font-medium">Raj Sharma</h3>
-              <p className="text-gaun-green">Co-founder & CEO</p>
+              <h3 className="text-xl font-medium">Kiran Aryal</h3>
+              <p className="text-gaun-green">Founder & CEO</p>
             </div>
             {/* Team Member 2 */}
             <div className="text-center">
               <div className="mb-4 rounded-full overflow-hidden mx-auto w-40 h-40">
                 <img
-                  src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&q=80"
-                  alt="Maya Gurung"
+                  src="/IMG-20250128-WA0003.jpg"
+                  alt="Kushal Thapa"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <h3 className="text-xl font-medium">Maya Gurung</h3>
+              <h3 className="text-xl font-medium">Kushal Thapa</h3>
               <p className="text-gaun-green">Co-founder & COO</p>
             </div>
             {/* Team Member 3 */}
             <div className="text-center">
               <div className="mb-4 rounded-full overflow-hidden mx-auto w-40 h-40">
                 <img
-                  src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&q=80"
+                  src="/WhatsApp Image 2025-01-28 at 21.20.36_2d6875c4.jpg"
                   alt="Sunil Thapa"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <h3 className="text-xl font-medium">Sunil Thapa</h3>
+              <h3 className="text-xl font-medium">NABIN PUN</h3>
               <p className="text-gaun-green">Technical Lead</p>
             </div>
             {/* Team Member 4 */}
             <div className="text-center">
               <div className="mb-4 rounded-full overflow-hidden mx-auto w-40 h-40">
                 <img
-                  src="https://images.unsplash.com/photo-1548142813-c348350df52b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&q=80"
+                  src="/WhatsApp Image 2025-01-28 at 21.36.19_4ec2fbd6.jpg"
                   alt="Puja Tamang"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <h3 className="text-xl font-medium">Puja Tamang</h3>
-              <p className="text-gaun-green">Community Manager</p>
+              <h3 className="text-xl font-medium">ROHIT KHANAL</h3>
+              <p className="text-gaun-green">TECHNICAL Manager</p>
             </div>
           </div>
         </div>

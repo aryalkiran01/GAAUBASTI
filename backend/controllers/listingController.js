@@ -14,6 +14,7 @@ const getListings = async (req, res) => {
       guests,
       rating,
       category,
+      image,
       amenities,
       sortBy = 'createdAt',
       sortOrder = 'desc'
@@ -130,9 +131,18 @@ const getListing = async (req, res) => {
 // Create new listing (hosts only)
 const createListing = async (req, res) => {
   try {
+    let imageUrl = null;
+
+    if (req.file) {
+      // multer-storage-cloudinary stores Cloudinary URL in `path`
+      imageUrl = req.file.path || req.file.secure_url;
+    }
+
+  
     const listingData = {
       ...req.body,
-      host: req.user._id
+      host: req.user._id,
+      image:imageUrl
     };
 
     const listing = new Listing(listingData);
@@ -152,7 +162,7 @@ const createListing = async (req, res) => {
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
-};
+}
 
 // Update listing (host or admin only)
 const updateListing = async (req, res) => {
@@ -172,6 +182,10 @@ const updateListing = async (req, res) => {
       req.body.verifiedAt = null;
       req.body.verifiedBy = null;
     }
+if (req.file) {
+      req.body.image = req.file.path || req.file.secure_url; // update image
+    }
+
 
     const updatedListing = await Listing.findByIdAndUpdate(
       req.params.id,

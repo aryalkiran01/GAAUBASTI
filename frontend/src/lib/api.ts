@@ -1,4 +1,4 @@
-// API configuration and helper functions for frontend-backend integration
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:3000/api";
@@ -26,6 +26,8 @@ const createHeaders = (includeAuth: boolean = true): HeadersInit => {
 
   if (includeAuth) {
     const token = getAuthToken();
+    console.log("Auth token:", token);
+
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
@@ -34,7 +36,7 @@ const createHeaders = (includeAuth: boolean = true): HeadersInit => {
   return headers;
 };
 
-// Generic API request function
+// Update your apiRequest function in api.ts:
 const apiRequest = async (
   endpoint: string,
   options: RequestInit = {},
@@ -54,14 +56,29 @@ const apiRequest = async (
 
     const data = await response.json();
 
+    // Handle unauthorized responses gracefully - check the response data
     if (!response.ok) {
+      // For authentication errors, return gracefully instead of throwing
+      if (response.status === 401 || response.status === 403) {
+        return {
+          success: false,
+          message: data.message || "Unauthorized",
+          status: response.status,
+        };
+      }
+
+      // For other errors, throw as before
       throw new Error(data.message || "API request failed");
     }
 
     return data;
   } catch (error) {
     console.error("API Request Error:", error);
-    throw error;
+    // Return a graceful error instead of throwing
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "API request failed",
+    };
   }
 };
 
@@ -111,7 +128,43 @@ export const authAPI = {
   },
 
   getProfile: async () => {
-    return await apiRequest("/auth/profile");
+    const token = getAuthToken();
+    if (!token) {
+      // Return empty response if no token
+      return { success: false, message: "No authentication token" };
+    }
+
+    const response = await apiRequest("/auth/profile");
+
+    if (response.status === 401 || response.status === 403) {
+      removeAuthToken();
+    }
+
+    return response;
+  },
+
+  // NEW: Forgot Password
+  forgotPassword: async (email: string) => {
+    return await apiRequest(
+      "/auth/forgot-password",
+      {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      },
+      false
+    );
+  },
+
+  // NEW: Reset Password
+  resetPassword: async (email: string, otp: string, newPassword: string) => {
+    return await apiRequest(
+      "/auth/reset-password",
+      {
+        method: "POST",
+        body: JSON.stringify({ email, otp, newPassword }),
+      },
+      false
+    );
   },
 
   updateProfile: async (profileData: any) => {

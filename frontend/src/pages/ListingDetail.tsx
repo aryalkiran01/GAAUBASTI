@@ -121,7 +121,8 @@ const ListingDetail = () => {
         guests: { adults: 1, children: 0 }, // Default for now
         totalPrice: calculateTotalPrice()
       };
-      
+      console.log("Listing ID being sent:", listing?.id);
+
       const response = await bookingsAPI.createBooking(bookingData);
       
       if (response.success) {
