@@ -7,7 +7,7 @@ const API_BASE_URL =
 const getAuthToken = (): string | null => {
   return localStorage.getItem("authToken");
 };
-e
+
 // Set auth token in localStorage
 const setAuthToken = (token: string): void => {
   localStorage.setItem("authToken", token);
