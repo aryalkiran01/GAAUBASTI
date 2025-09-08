@@ -7,6 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "seed": "node scripts/seedData.js",
+      "build": "echo 'No build needed for Node.js backend' && npm install",
+
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
