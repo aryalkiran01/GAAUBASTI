@@ -1,6 +1,6 @@
 import { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import { User } from "../types";
-import { authAPI, getAuthToken, removeAuthToken } from "../lib/api"; // Import these functions
+import { authAPI, getAuthToken, removeAuthToken } from "../lib/api"; 
 import { useToast } from "@/components/ui/use-toast";
 import { dummyUsers, PASSWORD } from "@/lib/dummy-data";
 
@@ -12,7 +12,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
-  resetPassword: (email: string, otp: string, newPassword: string) => Promise<void>; // Fixed signature
+  resetPassword: (email: string, otp: string, newPassword: string) => Promise<void>; 
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,7 +37,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           } catch (error) {
             console.warn('Profile fetch failed, using demo user:', error);
-            // Token might be invalid, remove it
             removeAuthToken();
           }
         }

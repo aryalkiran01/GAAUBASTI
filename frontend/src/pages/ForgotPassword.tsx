@@ -29,6 +29,7 @@ const ForgotPasswordPage = () => {
       } else {
         throw new Error(response.message || "Failed to send OTP");
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast({
         variant: "destructive",

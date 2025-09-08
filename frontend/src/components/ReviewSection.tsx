@@ -124,6 +124,7 @@ export default function ReviewSection({ listingId, canReview = false, bookingId 
       } else {
         throw new Error(response.message || "Failed to submit review");
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error("Review submission error:", error);
       toast({

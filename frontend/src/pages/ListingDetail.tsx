@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -338,7 +339,7 @@ const ListingDetail = () => {
                 </div>
               )}
 
-              {!selectedDate || !endDate &&(
+              {(!selectedDate || !endDate) &&(
                 <div className="border-t pt-4 mb-4">
                 <div className="flex justify-between mb-2">
                   <span>${listing!.price} x {nights} nights</span>

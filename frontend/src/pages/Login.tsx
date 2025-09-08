@@ -37,7 +37,6 @@ const Login = () => {
     login(demoEmail, PASSWORD);
   };
 
-  // Handle forgot password click
 
 
   
