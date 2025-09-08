@@ -6,38 +6,53 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-// Import routes
+// Import routes and middleware
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const listingRoutes = require('./routes/listings');
 const bookingRoutes = require('./routes/bookings');
 const reviewRoutes = require('./routes/reviews');
 const adminRoutes = require('./routes/admin');
-
-// Import middleware
 const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 
-// Security middleware
+// Configure CORS
+const allowedOrigins = [
+  'http://localhost:8080',
+  'https://gaaubasti-19rzg9sr5-aryalkiran01s-projects.vercel.app',
+  'https://gaaubasti.vercel.app',
+  process.env.FRONTEND_URL // Add this if you have a custom domain
+].filter(Boolean); // Remove any falsy values
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
+// Apply middleware in correct order
+app.use(cors(corsOptions));
 app.use(helmet());
 app.use(compression());
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: 'Too many requests from this IP, please try again later.'
 });
 app.use('/api/', limiter);
-
-// CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -65,9 +80,6 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Error handling middleware (must be last)
-app.use(errorHandler);
-
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 
@@ -76,11 +88,14 @@ app.use('*', (req, res) => {
   });
 });
 
+// Error handling middleware (must be last)
+app.use(errorHandler);
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-
+  console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
 });
 
 module.exports = app;
