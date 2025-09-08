@@ -131,18 +131,20 @@ const getListing = async (req, res) => {
 // Create new listing (hosts only)
 const createListing = async (req, res) => {
   try {
-    let imageUrl = null;
-
+    let images = [];
     if (req.file) {
-      // multer-storage-cloudinary stores Cloudinary URL in `path`
-      imageUrl = req.file.path || req.file.secure_url;
+      images.push({
+        url: req.file.path || req.file.secure_url,
+        publicId: req.file.filename || req.file.public_id,
+        caption: 'Main image'
+      });
     }
 
   
     const listingData = {
       ...req.body,
       host: req.user._id,
-      image:imageUrl
+      image:images
     };
 
     const listing = new Listing(listingData);

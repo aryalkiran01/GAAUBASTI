@@ -221,7 +221,7 @@ const bookings = await Booking.create([
   }
 ]);
 
-    console.log('📅 Created bookings');
+    console.log('Created bookings');
 
     // Create reviews
     await Review.create([
@@ -253,7 +253,7 @@ const bookings = await Booking.create([
     
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error seeding data:', error);
+    console.error('Error seeding data:', error);
     process.exit(1);
   }
 };
