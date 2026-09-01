@@ -1,6 +1,7 @@
 const Listing = require('../models/Listing');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
+const { checkListingAvailability, validateBookingDates } = require('../services/bookingAvailability');
 
 // Get all listings with filtering and pagination
 const getListings = async (req, res) => {
@@ -290,8 +291,16 @@ const getHostListings = async (req, res) => {
 const checkAvailability = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    const listing = await Listing.findById(req.params.id);
 
+    const dateValidation = validateBookingDates(startDate, endDate);
+    if (!dateValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: dateValidation.message
+      });
+    }
+
+    const listing = await Listing.findById(req.params.id);
     if (!listing) {
       return res.status(404).json({
         success: false,
@@ -299,29 +308,26 @@ const checkAvailability = async (req, res) => {
       });
     }
 
-    const isAvailable = listing.isAvailable(startDate, endDate);
-
-    // Also check for existing bookings
-    const conflictingBookings = await Booking.countDocuments({
-      listing: req.params.id,
-      status: { $in: ['confirmed', 'pending'] },
-      $or: [
-        {
-          startDate: { $lte: new Date(endDate) },
-          endDate: { $gte: new Date(startDate) }
-        }
-      ]
+    const availability = await checkListingAvailability({
+      listingId: req.params.id,
+      startDate,
+      endDate
     });
-
-    const available = isAvailable && conflictingBookings === 0;
 
     res.json({
       success: true,
       data: {
-        available,
+        available: availability.available,
         startDate,
         endDate,
-        listingId: req.params.id
+        listingId: req.params.id,
+        reason: availability.reason,
+        conflictingBooking: availability.conflictingBooking ? {
+          id: availability.conflictingBooking._id,
+          status: availability.conflictingBooking.status,
+          startDate: availability.conflictingBooking.startDate,
+          endDate: availability.conflictingBooking.endDate
+        } : null
       }
     });
   } catch (error) {

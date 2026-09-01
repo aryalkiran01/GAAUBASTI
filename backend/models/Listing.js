@@ -152,16 +152,17 @@ listingSchema.virtual('bookings', {
   foreignField: 'listing'
 });
 
-// Method to check availability for given dates
+// Manual blocked-date check only. Actual booking inventory is enforced by the
+// centralized availability service in backend/services/bookingAvailability.js.
 listingSchema.methods.isAvailable = function(startDate, endDate) {
   const start = new Date(startDate);
   const end = new Date(endDate);
-  
+
   return !this.unavailableDates.some(unavailable => {
     const unavailableStart = new Date(unavailable.startDate);
     const unavailableEnd = new Date(unavailable.endDate);
-    
-    return (start <= unavailableEnd && end >= unavailableStart);
+
+    return (start < unavailableEnd && end > unavailableStart);
   });
 };
 

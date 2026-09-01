@@ -1,74 +1,72 @@
 const Booking = require('../models/Booking');
 const Listing = require('../models/Listing');
 const User = require('../models/User');
+const {
+  validateGuestCount,
+  canTransitionStatus,
+  checkListingAvailability
+} = require('../services/bookingAvailability');
 
 // Create new booking
 const createBooking = async (req, res) => {
   try {
     const { listing: listingId, startDate, endDate, guests, specialRequests } = req.body;
 
-    // Find listing and host
+    if (!listingId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Listing is required'
+      });
+    }
+
     const listing = await Listing.findById(listingId).populate('host');
-    if (!listing || !listing.isActive ) {
+    if (!listing || !listing.isActive) {
       return res.status(404).json({
         success: false,
         message: 'Listing not found or not available'
       });
     }
 
-    // Check if guest count exceeds maximum
-    const totalGuests = guests.adults + (guests.children || 0);
-    if (totalGuests > listing.maxGuests) {
+    const guestValidation = validateGuestCount(guests, listing.maxGuests);
+    if (!guestValidation.valid) {
       return res.status(400).json({
         success: false,
-        message: `Maximum ${listing.maxGuests} guests allowed`
+        message: guestValidation.message
       });
     }
 
-    // Check availability
-    const isAvailable = listing.isAvailable(startDate, endDate);
-    if (!isAvailable) {
-      return res.status(400).json({
-        success: false,
-        message: 'Selected dates are not available'
-      });
-    }
-
-    // Check for conflicting bookings
-    const conflictingBookings = await Booking.countDocuments({
-      listing: listingId,
-      status: { $in: ['confirmed', 'pending'] },
-      $or: [
-        {
-          startDate: { $lte: new Date(endDate) },
-          endDate: { $gte: new Date(startDate) }
-        }
-      ]
+    const availability = await checkListingAvailability({
+      listingId,
+      startDate,
+      endDate
     });
 
-    if (conflictingBookings > 0) {
+    if (!availability.available) {
       return res.status(400).json({
         success: false,
-        message: 'Selected dates are already booked'
+        message: availability.reason || 'Selected dates are unavailable'
       });
     }
 
-    // Calculate pricing
-    const nights = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+    const bookingStart = new Date(startDate);
+    const bookingEnd = new Date(endDate);
+    const nights = Math.ceil((bookingEnd - bookingStart) / (1000 * 60 * 60 * 24));
     const basePrice = listing.price * nights;
     const cleaningFee = 25;
-    const serviceFee = Math.round(basePrice * 0.1); // 10% service fee
-    const taxes = Math.round(basePrice * 0.05); // 5% taxes
+    const serviceFee = Math.round(basePrice * 0.1);
+    const taxes = Math.round(basePrice * 0.05);
     const totalPrice = basePrice + cleaningFee + serviceFee + taxes;
 
-    // Create booking
     const booking = new Booking({
       listing: listingId,
       guest: req.user._id,
       host: listing.host._id,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-      guests,
+      startDate: bookingStart,
+      endDate: bookingEnd,
+      guests: {
+        adults: guestValidation.adults,
+        children: guestValidation.children
+      },
       totalPrice,
       priceBreakdown: {
         basePrice,
@@ -81,14 +79,12 @@ const createBooking = async (req, res) => {
 
     await booking.save();
 
-    // Populate booking details
     await booking.populate([
       { path: 'listing', select: 'title location images' },
       { path: 'guest', select: 'name email' },
       { path: 'host', select: 'name email' }
     ]);
 
-    // Update listing's total bookings
     listing.totalBookings += 1;
     await listing.save();
 
@@ -241,37 +237,45 @@ const updateBookingStatus = async (req, res) => {
       });
     }
 
-    // Check permissions
-    const isHost = booking.host.toString() === req.user._id.toString();
+    const listing = await Listing.findById(booking.listing);
+    const isHost = req.user.role === 'host' && listing && listing.host.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
 
     if (!isHost && !isAdmin) {
       return res.status(403).json({
         success: false,
-        message: 'Only host or admin can update booking status'
+        message: 'Only the listing host or admin can update booking status'
       });
     }
 
-    // Validate status transitions
-    const validTransitions = {
-      pending: ['confirmed', 'cancelled'],
-      confirmed: ['completed', 'cancelled'],
-      cancelled: [], // Cannot change from cancelled
-      completed: [], // Cannot change from completed
-      refunded: [] // Cannot change from refunded
-    };
-
-    if (!validTransitions[booking.status].includes(status)) {
+    if (!canTransitionStatus(booking.status, status)) {
       return res.status(400).json({
         success: false,
         message: `Cannot change status from ${booking.status} to ${status}`
       });
     }
 
-    // Update booking
+    if (status === 'confirmed') {
+      const availability = await checkListingAvailability({
+        listingId: booking.listing,
+        startDate: booking.startDate,
+        endDate: booking.endDate,
+        excludeBookingId: booking._id
+      });
+
+      if (!availability.available) {
+        return res.status(409).json({
+          success: false,
+          message: 'Cannot confirm this booking because the requested dates are unavailable.'
+        });
+      }
+    }
+
+    const previousStatus = booking.status;
+
     booking.status = status;
     if (hostNotes) booking.hostNotes = hostNotes;
-    
+
     if (status === 'cancelled') {
       booking.cancelledAt = new Date();
       booking.cancelledBy = req.user._id;
@@ -279,10 +283,33 @@ const updateBookingStatus = async (req, res) => {
 
     await booking.save();
 
-    // If confirmed, add dates to listing's unavailable dates
-    if (status === 'confirmed') {
-      const listing = await Listing.findById(booking.listing);
-      await listing.addUnavailableDates(booking.startDate, booking.endDate, 'Booked');
+    if (status === 'confirmed' && previousStatus !== 'confirmed') {
+      const listingForDates = await Listing.findById(booking.listing);
+      if (listingForDates) {
+        const matches = listingForDates.unavailableDates.some((unavailable) => {
+          const start = new Date(unavailable.startDate);
+          const end = new Date(unavailable.endDate);
+          return start.getTime() === new Date(booking.startDate).getTime() && end.getTime() === new Date(booking.endDate).getTime();
+        });
+
+        if (!matches) {
+          await listingForDates.addUnavailableDates(booking.startDate, booking.endDate, 'Booked');
+        }
+      }
+    }
+
+    if (status === 'cancelled' && previousStatus === 'confirmed') {
+      const listingForDates = await Listing.findById(booking.listing);
+      if (listingForDates) {
+        listingForDates.unavailableDates = listingForDates.unavailableDates.filter((unavailable) => {
+          const blockStart = new Date(unavailable.startDate);
+          const blockEnd = new Date(unavailable.endDate);
+          const bookingStart = new Date(booking.startDate);
+          const bookingEnd = new Date(booking.endDate);
+          return !(blockStart <= bookingEnd && blockEnd >= bookingStart);
+        });
+        await listingForDates.save();
+      }
     }
 
     await booking.populate([
@@ -317,7 +344,6 @@ const cancelBooking = async (req, res) => {
       });
     }
 
-    // Check if user is the guest who made the booking
     if (booking.guest.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -325,7 +351,13 @@ const cancelBooking = async (req, res) => {
       });
     }
 
-    // Check if booking can be cancelled
+    if (!['pending', 'confirmed'].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Booking status ${booking.status} cannot be cancelled`
+      });
+    }
+
     if (!booking.canBeCancelled()) {
       return res.status(400).json({
         success: false,
@@ -333,16 +365,26 @@ const cancelBooking = async (req, res) => {
       });
     }
 
-    // Calculate refund
     const refundAmount = booking.calculateRefund(booking.listing.cancellationPolicy);
 
-    // Update booking
     booking.status = 'cancelled';
     booking.cancellationReason = cancellationReason;
     booking.cancelledAt = new Date();
     booking.cancelledBy = req.user._id;
 
     await booking.save();
+
+    const listingForDates = await Listing.findById(booking.listing);
+    if (listingForDates) {
+      listingForDates.unavailableDates = listingForDates.unavailableDates.filter((unavailable) => {
+        const blockStart = new Date(unavailable.startDate);
+        const blockEnd = new Date(unavailable.endDate);
+        const bookingStart = new Date(booking.startDate);
+        const bookingEnd = new Date(booking.endDate);
+        return !(blockStart <= bookingEnd && blockEnd >= bookingStart);
+      });
+      await listingForDates.save();
+    }
 
     res.json({
       success: true,
