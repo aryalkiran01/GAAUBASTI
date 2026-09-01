@@ -29,6 +29,7 @@ const requireRole = (roles) => {
 
 const requireAdmin = requireRole(['admin']);
 const requireHost = requireRole(['host', 'admin']);
+const requireGuest = requireRole(['guest']);
 const requireTraveler = requireRole(['guest', 'host', 'admin']);
 
 const requireOwnership = (Model, resourceField = 'host') => {
@@ -79,6 +80,7 @@ module.exports = {
   requireRole,
   requireAdmin,
   requireHost,
+  requireGuest,
   requireTraveler,
   requireOwnership
 };

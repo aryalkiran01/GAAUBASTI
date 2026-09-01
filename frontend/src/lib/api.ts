@@ -36,6 +36,20 @@ const createHeaders = (includeAuth: boolean = true): HeadersInit => {
 };
 
 // Update your apiRequest function in api.ts:
+const parseJsonSafely = async (response: Response) => {
+  const text = await response.text();
+
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: "Received an invalid response from the server." };
+  }
+};
+
 const apiRequest = async (
   endpoint: string,
   options: RequestInit = {},
@@ -53,30 +67,54 @@ const apiRequest = async (
       },
     });
 
-    const data = await response.json();
+    const data = await parseJsonSafely(response);
 
-    // Handle unauthorized responses gracefully - check the response data
     if (!response.ok) {
-      // For authentication errors, return gracefully instead of throwing
-      if (response.status === 401 || response.status === 403) {
+      const status = response.status;
+      const message =
+        data?.message ||
+        data?.error ||
+        "The request could not be completed.";
+
+      if (status === 401 || status === 403) {
         return {
           success: false,
-          message: data.message || "Unauthorized",
-          status: response.status,
+          message,
+          status,
         };
       }
 
-      // For other errors, throw as before
-      throw new Error(data.message || "API request failed");
+      if (status === 404) {
+        return {
+          success: false,
+          message: message || "Resource not found.",
+          status,
+        };
+      }
+
+      if (status === 409 || status === 422) {
+        return {
+          success: false,
+          message,
+          status,
+        };
+      }
+
+      return {
+        success: false,
+        message: message || "API request failed.",
+        status,
+      };
     }
 
     return data;
   } catch (error) {
-    console.error("API Request Error:", error);
-    // Return a graceful error instead of throwing
     return {
       success: false,
-      message: error instanceof Error ? error.message : "API request failed",
+      message:
+        error instanceof Error && error.message
+          ? error.message
+          : "Network error. Please try again.",
     };
   }
 };

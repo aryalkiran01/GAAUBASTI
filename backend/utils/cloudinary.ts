@@ -45,7 +45,9 @@ const deleteImage = async (publicId) => {
     const result = await cloudinary.uploader.destroy(publicId);
     return result;
   } catch (error: any) {
-    console.error('Error deleting image from Cloudinary:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Cloudinary delete failed');
+    }
     throw error;
   }
 };
@@ -61,7 +63,9 @@ const uploadImage = async (filePath, folder = 'gaunbasti') => {
     });
     return result;
   } catch (error: any) {
-    console.error('Error uploading image to Cloudinary:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Cloudinary upload failed');
+    }
     throw error;
   }
 };

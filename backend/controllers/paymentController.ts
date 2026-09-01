@@ -35,11 +35,39 @@ const ensureBookingIsPayable = async ({ bookingId, userId, amount, listingId }) 
   }
 
   const expectedAmount = Number(booking.totalPrice);
-  if (Math.abs(expectedAmount - amount) > 0.01) {
+  if (!Number.isFinite(expectedAmount) || Math.abs(expectedAmount - amount) > 0.01) {
     return { status: 400, error: 'Payment amount does not match the booking total' };
   }
 
   return { booking };
+};
+
+const verifyPaymentOwnership = async ({ paymentId, userId, userRole, providerPaymentId, amount }) => {
+  const payment = await Payment.findById(paymentId).populate('booking');
+
+  if (!payment) {
+    return { status: 404, error: 'Payment not found' };
+  }
+
+  const isAdmin = userRole === 'admin';
+
+  if (!isAdmin && payment.payer && payment.payer.toString() !== userId.toString()) {
+    return { status: 403, error: 'You do not own this payment' };
+  }
+
+  if (!isAdmin && payment.booking && payment.booking.guest && payment.booking.guest.toString() !== userId.toString()) {
+    return { status: 403, error: 'You cannot verify this booking payment' };
+  }
+
+  if (amount !== null && payment.amount !== undefined && Math.abs(Number(payment.amount) - Number(amount)) > 0.01) {
+    return { status: 400, error: 'Payment verification amount does not match the stored booking payment' };
+  }
+
+  if (providerPaymentId && payment.providerPaymentId && providerPaymentId !== payment.providerPaymentId) {
+    return { status: 400, error: 'The supplied provider payment ID does not match the payment record' };
+  }
+
+  return { payment };
 };
 
 const createPayment = async (req, res) => {
@@ -70,19 +98,38 @@ const createPayment = async (req, res) => {
 
     const { booking } = validation;
     const provider = process.env.PAYMENT_PROVIDER || 'mock';
-    const payment = await Payment.findOne({ booking: booking._id, idempotencyKey: idempotencyKey || { $exists: false } });
+    const activePayment = await Payment.findOne({
+      booking: booking._id,
+      payer: req.user._id,
+      status: { $in: ['pending', 'processing', 'paid'] }
+    }).sort({ createdAt: -1 });
 
-    if (payment && payment.status === 'paid') {
+    if (activePayment) {
+      if (activePayment.status === 'paid') {
+        return res.status(200).json({
+          success: true,
+          message: 'Payment already processed',
+          data: {
+            paymentId: activePayment._id,
+            provider: activePayment.provider,
+            status: activePayment.status,
+            amount: activePayment.amount,
+            currency: activePayment.currency,
+            providerPaymentId: activePayment.providerPaymentId
+          }
+        });
+      }
+
       return res.status(200).json({
         success: true,
-        message: 'Payment already processed',
+        message: 'Payment already initialized for this booking',
         data: {
-          paymentId: payment._id,
-          provider: payment.provider,
-          status: payment.status,
-          amount: payment.amount,
-          currency: payment.currency,
-          providerPaymentId: payment.providerPaymentId
+          paymentId: activePayment._id,
+          provider: activePayment.provider,
+          status: activePayment.status,
+          amount: activePayment.amount,
+          currency: activePayment.currency,
+          providerPaymentId: activePayment.providerPaymentId
         }
       });
     }
@@ -183,14 +230,24 @@ const verifyPayment = async (req, res) => {
   try {
     const { paymentId } = req.params;
     const { providerPaymentId } = req.body || {};
+    const normalizedAmount = normalizeAmount(req.body?.amount ?? null);
 
-    const payment = await Payment.findById(paymentId).populate('booking');
-    if (!payment) {
-      return res.status(404).json({
+    const ownershipCheck = await verifyPaymentOwnership({
+      paymentId,
+      userId: req.user._id,
+      userRole: req.user.role,
+      providerPaymentId,
+      amount: normalizedAmount
+    });
+
+    if (ownershipCheck.status) {
+      return res.status(ownershipCheck.status).json({
         success: false,
-        message: 'Payment not found'
+        message: ownershipCheck.error
       });
     }
+
+    const { payment } = ownershipCheck;
 
     if (payment.status === 'paid') {
       return res.status(200).json({
@@ -266,12 +323,23 @@ const verifyPayment = async (req, res) => {
 
 const getPaymentStatus = async (req, res) => {
   try {
-    const payment = await Payment.findById(req.params.paymentId);
+    const payment = await Payment.findById(req.params.paymentId).populate('booking');
 
     if (!payment) {
       return res.status(404).json({
         success: false,
         message: 'Payment not found'
+      });
+    }
+
+    const isOwner = payment.payer && payment.payer.toString() === req.user._id.toString();
+    const isBookingGuest = payment.booking && payment.booking.guest && payment.booking.guest.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isBookingGuest && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to view this payment'
       });
     }
 
@@ -297,6 +365,9 @@ const getPaymentStatus = async (req, res) => {
 module.exports = {
   createPayment,
   verifyPayment,
-  getPaymentStatus
+  getPaymentStatus,
+  ensureBookingIsPayable,
+  verifyPaymentOwnership,
+  normalizeAmount
 };
 

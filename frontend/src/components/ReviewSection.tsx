@@ -60,8 +60,8 @@ export default function ReviewSection({ listingId, canReview = false, bookingId 
         if (response.success) {
           setReviews(response.data.reviews);
         }
-      } catch (error) {
-        console.warn('Failed to fetch reviews:', error);
+      } catch {
+        // Silently fall back to an empty reviews list; the UI can render without it.
       } finally {
         setLoading(false);
       }
@@ -94,8 +94,6 @@ export default function ReviewSection({ listingId, canReview = false, bookingId 
     setIsSubmitting(true);
 
     try {
-      console.log("Submitting review:", { listingId, bookingId, ...newReview });
-
       const response = await reviewsAPI.createReview({
         listingId,
         bookingId,
@@ -126,7 +124,6 @@ export default function ReviewSection({ listingId, canReview = false, bookingId 
       }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      console.error("Review submission error:", error);
       toast({
         variant: "destructive",
         title: "Review failed",

@@ -19,13 +19,20 @@ const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 
-const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
-const paymentProvider = (process.env.PAYMENT_PROVIDER || 'mock').toLowerCase();
+const getRequiredEnvVars = () => {
+  const required = ['JWT_SECRET'];
+  const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+  if (!mongoUri) {
+    required.push('MONGODB_URI');
+  }
+  const paymentProvider = (process.env.PAYMENT_PROVIDER || 'mock').toLowerCase();
+  if (paymentProvider === 'stripe') {
+    required.push('STRIPE_SECRET_KEY');
+  }
+  return required;
+};
 
-if (paymentProvider === 'stripe') {
-  requiredEnvVars.push('STRIPE_SECRET_KEY');
-}
-
+const requiredEnvVars = getRequiredEnvVars();
 const missingRequiredEnvVars = requiredEnvVars.filter((key) => {
   return process.env.NODE_ENV === 'production' && !process.env[key];
 });
@@ -34,7 +41,7 @@ if (missingRequiredEnvVars.length > 0) {
   throw new Error(`Missing required environment variables in production: ${missingRequiredEnvVars.join(', ')}`);
 }
 
-const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/gaunbasti';
+const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/gaunbasti';
 const jwtSecret = process.env.JWT_SECRET || 'development-secret-key';
 
 if (!process.env.JWT_SECRET && process.env.NODE_ENV !== 'production') {
@@ -81,11 +88,6 @@ app.use('/api/', limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Connect to MongoDB
-mongoose.connect(mongoUri)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
-
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -97,8 +99,8 @@ app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     message: 'Gaunbasti API is running',
     timestamp: new Date().toISOString()
   });
@@ -106,9 +108,9 @@ app.get('/api/health', (req, res) => {
 
 // 404 handler
 app.use('*', (req, res) => {
-  res.status(404).json({ 
-    success: false, 
-    message: 'API endpoint not found' 
+  res.status(404).json({
+    success: false,
+    message: 'API endpoint not found'
   });
 });
 
@@ -116,10 +118,67 @@ app.use('*', (req, res) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
+let server;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
+const startServer = async () => {
+  try {
+    await mongoose.connect(mongoUri);
+    if (process.env.NODE_ENV !== 'test') {
+      console.log('Connected to MongoDB');
+    }
+
+    server = app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server');
+    process.exitCode = 1;
+  }
+};
+
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
+
+process.on('SIGINT', async () => {
+  if (server) {
+    server.close(async () => {
+      await mongoose.disconnect();
+      process.exit(0);
+    });
+  } else {
+    await mongoose.disconnect();
+    process.exit(0);
+  }
+});
+
+process.on('SIGTERM', async () => {
+  if (server) {
+    server.close(async () => {
+      await mongoose.disconnect();
+      process.exit(0);
+    });
+  } else {
+    await mongoose.disconnect();
+    process.exit(0);
+  }
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Unhandled exception');
+  if (process.env.NODE_ENV === 'development') {
+    console.error(error.message);
+  }
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection');
+  if (process.env.NODE_ENV === 'development' && reason instanceof Error) {
+    console.error(reason.message);
+  }
+  process.exit(1);
 });
 
 module.exports = app;

@@ -238,43 +238,42 @@ const forgotPassword = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    console.log(`Generated OTP for ${email}: ${otp}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.info('OTP generation requested for a user');
+    }
+
     res.json({ success: true, message: 'OTP sent to your email' });
   } catch (error: any) {
-    console.error("Error in forgotPassword:", error.message);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Forgot password error');
+    }
     res.status(500).json({
       success: false,
       message: 'Failed to send OTP',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' && process.env.DEBUG_ERRORS === 'true' ? error.message : undefined
     });
   }
 };
-
-
 
 // --- Reset Password: verify OTP ---
 const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
-    console.log("Reset request:", { email, otp, newPassword });
 
     // Check OTP from separate collection
     const otpRecord = await OTP.findOne({ email, otp });
-    
+
     if (!otpRecord) {
-      console.log("OTP not found");
       return res.status(400).json({ success: false, message: 'Invalid OTP' });
     }
 
     if (otpRecord.expires < Date.now()) {
-      console.log("OTP expired");
       return res.status(400).json({ success: false, message: 'OTP expired' });
     }
 
     // Find user and update password
     const user = await User.findOne({ email });
     if (!user) {
-      console.log("User not found");
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
@@ -284,14 +283,19 @@ const resetPassword = async (req, res) => {
     // Delete used OTP
     await OTP.deleteOne({ email });
 
-    console.log("Password reset successfully");
+    if (process.env.NODE_ENV === 'development') {
+      console.info('Password reset completed');
+    }
+
     res.json({ success: true, message: 'Password reset successfully' });
   } catch (error: any) {
-    console.error("Reset error:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Password reset error');
+    }
     res.status(500).json({
       success: false,
       message: 'Failed to reset password',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' && process.env.DEBUG_ERRORS === 'true' ? error.message : undefined
     });
   }
 };

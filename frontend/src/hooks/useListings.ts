@@ -51,9 +51,8 @@ export const useListings = (
         } else {
           throw new Error(response.message || "Failed to fetch listings");
         }
-      } catch (apiError) {
-        console.warn("API not available, using dummy data:", apiError);
-        // Fallback to dummy data if API is not available
+      } catch {
+        // Fallback to dummy data if the API is temporarily unavailable.
         setListings(dummyListings);
         setPagination({
           currentPage: 1,
@@ -108,9 +107,8 @@ export const useFeaturedListings = () => {
               response.message || "Failed to fetch featured listings"
             );
           }
-        } catch (apiError) {
-          console.warn("API not available, using dummy data:", apiError);
-          // Fallback to dummy data if API is not available
+        } catch {
+          // Fallback to dummy data if the API is temporarily unavailable.
           setListings(dummyListings.slice(0, 4));
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -150,9 +148,8 @@ export const useListing = (id: string) => {
           } else {
             throw new Error(response.message || "Failed to fetch listing");
           }
-        } catch (apiError) {
-          console.warn("API not available, using dummy data:", apiError);
-          // Fallback to dummy data if API is not available
+        } catch {
+          // Fallback to dummy data if the API is temporarily unavailable.
           const dummyListing = dummyListings.find((l) => l.id === id);
           if (dummyListing) {
             setListing(dummyListing);

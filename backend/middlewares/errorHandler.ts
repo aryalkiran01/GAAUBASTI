@@ -1,59 +1,88 @@
 export {};
-const errorHandler = (err: any, req: any, res: any, next: any) => {
-  let error: any = { ...err };
-  error.message = err.message;
 
-  // Log error for debugging
-  console.error('Error:', err);
+const getSafeErrorPayload = (err: any) => {
+  const statusCode = err?.statusCode || err?.status || 500;
+  let message = err?.message || 'Server Error';
 
-  // Mongoose bad ObjectId
-  if (err.name === 'CastError') {
-    const message = 'Resource not found';
-    error = { message, statusCode: 404 };
+  if (err?.name === 'CastError') {
+    return {
+      statusCode: 400,
+      message: 'Invalid resource identifier'
+    };
   }
 
-  // Mongoose duplicate key
-  if (err.code === 11000) {
+  if (err?.code === 11000) {
     const keyValue = err.keyValue || {};
     const field = Object.keys(keyValue)[0];
-    const message = field ? `${field.charAt(0).toUpperCase() + field.slice(1)} already exists` : 'Duplicate entry';
-    error = { message, statusCode: 400 };
+    return {
+      statusCode: 409,
+      message: field ? `${field.charAt(0).toUpperCase() + field.slice(1)} already exists` : 'Duplicate entry'
+    };
   }
 
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
+  if (err?.name === 'ValidationError') {
     const errorValues = err.errors || {};
-    const message = Object.values(errorValues).map((val: any) => val.message).join(', ');
-    error = { message, statusCode: 400 };
+    const values = Object.values(errorValues) as any[];
+    return {
+      statusCode: 422,
+      message: values.map((value) => value?.message).filter(Boolean).join(', ') || 'Validation failed'
+    };
   }
 
-  // JWT errors
-  if (err.name === 'JsonWebTokenError') {
-    const message = 'Invalid token';
-    error = { message, statusCode: 401 };
+  if (err?.name === 'JsonWebTokenError') {
+    return { statusCode: 401, message: 'Invalid token' };
   }
 
-  if (err.name === 'TokenExpiredError') {
-    const message = 'Token expired';
-    error = { message, statusCode: 401 };
+  if (err?.name === 'TokenExpiredError') {
+    return { statusCode: 401, message: 'Token expired' };
   }
 
-  // Multer errors (file upload)
-  if (err.code === 'LIMIT_FILE_SIZE') {
-    const message = 'File too large';
-    error = { message, statusCode: 400 };
+  if (err?.code === 'LIMIT_FILE_SIZE') {
+    return { statusCode: 400, message: 'File too large' };
   }
 
-  if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-    const message = 'Too many files uploaded';
-    error = { message, statusCode: 400 };
+  if (err?.code === 'LIMIT_UNEXPECTED_FILE') {
+    return { statusCode: 400, message: 'Too many files uploaded' };
   }
 
-  res.status(error.statusCode || 500).json({
+  if (statusCode >= 400 && statusCode < 500 && !message) {
+    message = 'Request failed';
+  }
+
+  if (statusCode === 401) {
+    message = 'Authentication required';
+  }
+
+  return {
+    statusCode,
+    message
+  };
+};
+
+const errorHandler = (err: any, req: any, res: any, next: any) => {
+  const payload = getSafeErrorPayload(err);
+
+  if (process.env.NODE_ENV === 'development' && process.env.DEBUG_ERRORS === 'true') {
+    console.error('Request error:', {
+      name: err?.name,
+      code: err?.code,
+      message: err?.message,
+      statusCode: payload.statusCode
+    });
+  }
+
+  const response: Record<string, any> = {
     success: false,
-    message: error.message || 'Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
+    message: payload.message || 'Server Error'
+  };
+
+  if (process.env.NODE_ENV === 'development' && process.env.DEBUG_ERRORS === 'true') {
+    response.error = err?.name || 'InternalError';
+    response.stack = err?.stack;
+  }
+
+  res.status(payload.statusCode || 500).json(response);
 };
 
 module.exports = errorHandler;
+module.exports.getSafeErrorPayload = getSafeErrorPayload;

@@ -38,8 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           removeAuthToken();
           setUser(null);
         }
-      } catch (error) {
-        console.warn('Auth initialization failed:', error);
+      } catch {
         removeAuthToken();
         setUser(null);
       } finally {
@@ -166,8 +165,8 @@ catch (error: any) {
   const logout = () => {
     try {
       authAPI.logout();
-    } catch (error) {
-      console.warn('API logout failed:', error);
+    } catch {
+      // Ignore cleanup errors and continue with local logout.
     }
     setUser(null);
     window.location.href = '/';

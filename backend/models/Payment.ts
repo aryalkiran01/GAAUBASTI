@@ -55,6 +55,15 @@ const paymentSchema = new mongoose.Schema({
 });
 
 paymentSchema.index({ booking: 1, idempotencyKey: 1 }, { unique: true, sparse: true });
+paymentSchema.index(
+  { booking: 1, payer: 1, status: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: { $in: ['pending', 'processing', 'paid'] }
+    }
+  }
+);
 
 module.exports = mongoose.model('Payment', paymentSchema);
 
