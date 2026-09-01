@@ -36,12 +36,18 @@ router.get('/:id', validateObjectId('id'), async (req, res) => {
 router.use(authenticate);
 
 // Update user profile
-router.put('/:id', validateObjectId('id'), requireOwnershipOrAdmin(), async (req, res) => {
+router.put('/:id', validateObjectId('id'), requireOwnershipOrAdmin('user'), async (req, res) => {
   try {
+    if (req.params.id !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only update your own profile.'
+      });
+    }
+
     const allowedUpdates = ['name', 'phone', 'address', 'avatar', 'hostProfile'];
     const updates = {};
 
-    // Filter allowed updates
     Object.keys(req.body).forEach(key => {
       if (allowedUpdates.includes(key)) {
         updates[key] = req.body[key];

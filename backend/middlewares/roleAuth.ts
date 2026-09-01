@@ -1,4 +1,11 @@
 export {};
+
+const toObjectIdString = (value) => {
+  if (!value) return null;
+  if (typeof value === 'object' && value._id) return value._id.toString();
+  return value.toString();
+};
+
 // Role-based authorization middleware
 const requireRole = (roles) => {
   return (req, res, next) => {
@@ -20,12 +27,10 @@ const requireRole = (roles) => {
   };
 };
 
-// Specific role middleware
 const requireAdmin = requireRole(['admin']);
 const requireHost = requireRole(['host', 'admin']);
 const requireTraveler = requireRole(['guest', 'host', 'admin']);
 
-// Resource ownership check
 const requireOwnership = (Model, resourceField = 'host') => {
   return async (req, res, next) => {
     if (!req.user) {
@@ -40,17 +45,22 @@ const requireOwnership = (Model, resourceField = 'host') => {
     }
 
     try {
+      if (!req.params?.id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Resource identifier is required.'
+        });
+      }
+
       const resource = await Model.findById(req.params.id);
       if (!resource) {
         return res.status(404).json({ success: false, message: 'Resource not found' });
       }
 
-      const resourceOwnerId = resource[resourceField];
-      const ownerId = resourceOwnerId && typeof resourceOwnerId === 'object' && resourceOwnerId._id
-        ? resourceOwnerId._id.toString()
-        : resourceOwnerId?.toString?.();
+      const ownerId = toObjectIdString(resource[resourceField]);
+      const currentUserId = toObjectIdString(req.user._id);
 
-      if (!ownerId || ownerId !== req.user._id.toString()) {
+      if (!ownerId || ownerId !== currentUserId) {
         return res.status(403).json({
           success: false,
           message: 'Access denied. You can only access your own resources.'
@@ -59,7 +69,7 @@ const requireOwnership = (Model, resourceField = 'host') => {
 
       req.resource = resource;
       next();
-    } catch (error: any) {
+    } catch (error) {
       return res.status(500).json({ success: false, message: 'Authorization check failed' });
     }
   };

@@ -190,23 +190,29 @@ const getAllListings = async (req, res) => {
 const verifyListing = async (req, res) => {
   try {
     const { isVerified, notes } = req.body;
-    
-    const listing = await Listing.findByIdAndUpdate(
-      req.params.id,
-      {
-        isVerified,
-        verifiedAt: isVerified ? new Date() : null,
-        verifiedBy: isVerified ? req.user._id : null
-      },
-      { new: true }
-    ).populate('host', 'name email');
 
+    if (typeof isVerified !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'isVerified must be a boolean'
+      });
+    }
+
+    const listing = await Listing.findById(req.params.id);
     if (!listing) {
       return res.status(404).json({
         success: false,
         message: 'Listing not found'
       });
     }
+
+    listing.isVerified = isVerified;
+    listing.verifiedAt = isVerified ? new Date() : null;
+    listing.verifiedBy = isVerified ? req.user._id : null;
+    if (notes) listing.adminNotes = notes;
+
+    await listing.save();
+    await listing.populate('host', 'name email');
 
     res.json({
       success: true,
@@ -301,8 +307,15 @@ const getFlaggedReviews = async (req, res) => {
 // Moderate review (admin only)
 const moderateReview = async (req, res) => {
   try {
-    const { action, reason } = req.body; // action: 'approve' or 'remove'
-    
+    const { action, reason } = req.body;
+
+    if (!['approve', 'remove'].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Action must be approve or remove'
+      });
+    }
+
     const review = await Review.findById(req.params.id);
     if (!review) {
       return res.status(404).json({
@@ -313,15 +326,18 @@ const moderateReview = async (req, res) => {
 
     if (action === 'approve') {
       review.isFlagged = false;
-      review.flagReason = null;
+      review.flagReason = reason || null;
       review.isVerified = true;
+      review.isPublic = true;
     } else if (action === 'remove') {
       review.isPublic = false;
+      review.isFlagged = false;
+      review.flagReason = reason || null;
     }
 
     review.moderatedBy = req.user._id;
     review.moderatedAt = new Date();
-    
+
     await review.save();
 
     res.json({
@@ -612,11 +628,11 @@ module.exports = {
   getAllUsers,
   updateUser,
   getAllListings,
-  verifyListing: require('./listingController').updateListing,
+  verifyListing,
   deleteListing,
   deactivateUser,
   reactivateUser,
   getFlaggedReviews,
-  moderateReview: require('./reviewController').flagReview,
+  moderateReview,
   getAnalytics
 };
