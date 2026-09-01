@@ -92,7 +92,7 @@ const Payment = () => {
                     value={nameOnCard}
                     onChange={(e) => setNameOnCard(e.target.value)}
                     required
-                    placeholder="John Smith"
+                    placeholder="Kiran"
                   />
                 </div>
                 
