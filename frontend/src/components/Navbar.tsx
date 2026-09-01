@@ -22,6 +22,12 @@ export default function Navbar() {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center">
+          <img
+    src="/gaubasti-logo.png" 
+    alt="Gaubasti Logo"
+    className="w-12 h-12 object-contain"
+  />
+
             <span className="font-serif text-2xl font-bold text-gaun-green">Gaun Basti</span>
           </Link>
         </div>

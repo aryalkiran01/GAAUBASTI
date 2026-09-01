@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { bookingsAPI } from '@/lib/api';
-import { Booking } from '@/types';
-import { dummyBookings } from '@/lib/dummy-data';
+import { useState, useEffect } from "react";
+import { bookingsAPI } from "@/lib/api";
+import { Booking } from "@/types";
+import { dummyBookings } from "@/lib/dummy-data";
 
 interface UseBookingsParams {
   status?: string;
@@ -21,7 +21,9 @@ interface UseBookingsReturn {
   refetch: () => void;
 }
 
-export const useUserBookings = (params: UseBookingsParams = {}): UseBookingsReturn => {
+export const useUserBookings = (
+  params: UseBookingsParams = {}
+): UseBookingsReturn => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,28 +33,35 @@ export const useUserBookings = (params: UseBookingsParams = {}): UseBookingsRetu
     try {
       setLoading(true);
       setError(null);
-      
+
       try {
         const response = await bookingsAPI.getUserBookings(params);
-        
+
         if (response.success) {
           setBookings(response.data.bookings);
           setPagination(response.data.pagination);
         } else {
-          throw new Error(response.message || 'Failed to fetch bookings');
+          throw new Error(response.message || "Failed to fetch bookings");
         }
       } catch (apiError) {
-        console.warn('API not available, using dummy data:', apiError);
+        console.warn("API not available, using dummy data:", apiError);
         // Fallback to dummy data if API is not available
         setBookings(dummyBookings);
         setPagination({
           currentPage: 1,
           totalPages: 1,
-          totalBookings: dummyBookings.length
+          totalBookings: dummyBookings.length,
         });
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred while fetching bookings');
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "message" in err) {
+        setError(
+          (err as { message?: string }).message ||
+            "An error occurred while fetching bookings"
+        );
+      } else {
+        setError("An error occurred while fetching bookings");
+      }
       // Fallback to dummy data on error
       setBookings(dummyBookings);
     } finally {
@@ -62,6 +71,7 @@ export const useUserBookings = (params: UseBookingsParams = {}): UseBookingsRetu
 
   useEffect(() => {
     fetchBookings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(params)]);
 
   return {
@@ -69,11 +79,13 @@ export const useUserBookings = (params: UseBookingsParams = {}): UseBookingsRetu
     loading,
     error,
     pagination,
-    refetch: fetchBookings
+    refetch: fetchBookings,
   };
 };
 
-export const useHostBookings = (params: UseBookingsParams = {}): UseBookingsReturn => {
+export const useHostBookings = (
+  params: UseBookingsParams = {}
+): UseBookingsReturn => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,17 +95,24 @@ export const useHostBookings = (params: UseBookingsParams = {}): UseBookingsRetu
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await bookingsAPI.getHostBookings(params);
-      
+
       if (response.success) {
         setBookings(response.data.bookings);
         setPagination(response.data.pagination);
       } else {
-        setError(response.message || 'Failed to fetch bookings');
+        setError(response.message || "Failed to fetch bookings");
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred while fetching bookings');
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "message" in err) {
+        setError(
+          (err as { message?: string }).message ||
+            "An error occurred while fetching bookings"
+        );
+      } else {
+        setError("An error occurred while fetching bookings");
+      }
     } finally {
       setLoading(false);
     }
@@ -101,6 +120,7 @@ export const useHostBookings = (params: UseBookingsParams = {}): UseBookingsRetu
 
   useEffect(() => {
     fetchBookings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(params)]);
 
   return {
@@ -108,7 +128,7 @@ export const useHostBookings = (params: UseBookingsParams = {}): UseBookingsRetu
     loading,
     error,
     pagination,
-    refetch: fetchBookings
+    refetch: fetchBookings,
   };
 };
 
@@ -122,16 +142,17 @@ export const useBooking = (id: string) => {
       try {
         setLoading(true);
         setError(null);
-        
+
         const response = await bookingsAPI.getBooking(id);
-        
+
         if (response.success) {
           setBooking(response.data.booking);
         } else {
-          setError(response.message || 'Failed to fetch booking');
+          setError(response.message || "Failed to fetch booking");
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
-        setError(err.message || 'An error occurred while fetching booking');
+        setError(err.message || "An error occurred while fetching booking");
       } finally {
         setLoading(false);
       }

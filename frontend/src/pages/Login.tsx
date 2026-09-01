@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -16,9 +15,6 @@ const Login = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     login(email, password);
-    
-    // Note: In a real app, you'd wait for login success before redirecting
-    // For demo purposes, we'll navigate after successful authentication
   };
 
   const handleDemoLogin = (role: string) => {
@@ -40,6 +36,10 @@ const Login = () => {
     
     login(demoEmail, PASSWORD);
   };
+
+
+
+  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gaun-cream/30 py-12 px-4 sm:px-6 lg:px-8">
@@ -68,12 +68,14 @@ const Login = () => {
             <div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <a
-                  href="#"
-                  className="text-xs text-gaun-green hover:text-gaun-light-green"
-                >
-                  Forgot password?
-                </a>
+       <button
+  type="button"
+  className="text-xs text-gaun-green hover:text-gaun-light-green"
+  onClick={() => navigate('/forgot-password')} 
+>
+  Forgot password?
+</button>
+
               </div>
               <Input
                 id="password"

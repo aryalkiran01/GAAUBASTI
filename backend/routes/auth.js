@@ -6,7 +6,10 @@ const {
   getProfile,
   updateProfile,
   changePassword,
-  refreshToken
+  refreshToken,
+
+  forgotPassword,
+  resetPassword
 } = require('../controllers/authController');
 const { authenticate } = require('../middlewares/auth');
 const {
@@ -17,10 +20,11 @@ const {
 // Public routes
 router.post('/register', validateUserRegistration, register);
 router.post('/login', validateUserLogin, login);
+router.post('/forgot-password', forgotPassword); 
+router.post('/reset-password', resetPassword);   
 
 // Protected routes
-router.use(authenticate); // All routes below require authentication
-
+router.use(authenticate); 
 router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
 router.post('/change-password', changePassword);

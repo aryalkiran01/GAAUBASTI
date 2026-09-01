@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { listingsAPI } from '@/lib/api';
-import { Listing } from '@/types';
-import { dummyListings } from '@/lib/dummy-data';
+import { useState, useEffect } from "react";
+import { listingsAPI } from "@/lib/api";
+import { Listing } from "@/types";
+import { dummyListings } from "@/lib/dummy-data";
 
 interface UseListingsParams {
   location?: string;
@@ -29,7 +29,9 @@ interface UseListingsReturn {
   refetch: () => void;
 }
 
-export const useListings = (params: UseListingsParams = {}): UseListingsReturn => {
+export const useListings = (
+  params: UseListingsParams = {}
+): UseListingsReturn => {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,18 +41,18 @@ export const useListings = (params: UseListingsParams = {}): UseListingsReturn =
     try {
       setLoading(true);
       setError(null);
-      
+
       try {
         const response = await listingsAPI.getListings(params);
-        
+
         if (response.success) {
           setListings(response.data.listings);
           setPagination(response.data.pagination);
         } else {
-          throw new Error(response.message || 'Failed to fetch listings');
+          throw new Error(response.message || "Failed to fetch listings");
         }
       } catch (apiError) {
-        console.warn('API not available, using dummy data:', apiError);
+        console.warn("API not available, using dummy data:", apiError);
         // Fallback to dummy data if API is not available
         setListings(dummyListings);
         setPagination({
@@ -58,11 +60,12 @@ export const useListings = (params: UseListingsParams = {}): UseListingsReturn =
           totalPages: 1,
           totalListings: dummyListings.length,
           hasNextPage: false,
-          hasPrevPage: false
+          hasPrevPage: false,
         });
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      setError(err.message || 'An error occurred while fetching listings');
+      setError(err.message || "An error occurred while fetching listings");
       // Fallback to dummy data on error
       setListings(dummyListings);
     } finally {
@@ -72,6 +75,7 @@ export const useListings = (params: UseListingsParams = {}): UseListingsReturn =
 
   useEffect(() => {
     fetchListings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(params)]);
 
   return {
@@ -79,7 +83,7 @@ export const useListings = (params: UseListingsParams = {}): UseListingsReturn =
     loading,
     error,
     pagination,
-    refetch: fetchListings
+    refetch: fetchListings,
   };
 };
 
@@ -93,22 +97,27 @@ export const useFeaturedListings = () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         try {
           const response = await listingsAPI.getFeaturedListings();
-          
+
           if (response.success) {
             setListings(response.data.listings);
           } else {
-            throw new Error(response.message || 'Failed to fetch featured listings');
+            throw new Error(
+              response.message || "Failed to fetch featured listings"
+            );
           }
         } catch (apiError) {
-          console.warn('API not available, using dummy data:', apiError);
+          console.warn("API not available, using dummy data:", apiError);
           // Fallback to dummy data if API is not available
           setListings(dummyListings.slice(0, 4));
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
-        setError(err.message || 'An error occurred while fetching featured listings');
+        setError(
+          err.message || "An error occurred while fetching featured listings"
+        );
         // Fallback to dummy data on error
         setListings(dummyListings.slice(0, 4));
       } finally {
@@ -132,27 +141,28 @@ export const useListing = (id: string) => {
       try {
         setLoading(true);
         setError(null);
-        
+
         try {
           const response = await listingsAPI.getListing(id);
-          
+
           if (response.success) {
             setListing(response.data.listing);
           } else {
-            throw new Error(response.message || 'Failed to fetch listing');
+            throw new Error(response.message || "Failed to fetch listing");
           }
         } catch (apiError) {
-          console.warn('API not available, using dummy data:', apiError);
+          console.warn("API not available, using dummy data:", apiError);
           // Fallback to dummy data if API is not available
-          const dummyListing = dummyListings.find(l => l.id === id);
+          const dummyListing = dummyListings.find((l) => l.id === id);
           if (dummyListing) {
             setListing(dummyListing);
           } else {
-            throw new Error('Listing not found');
+            throw new Error("Listing not found");
           }
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
-        setError(err.message || 'An error occurred while fetching listing');
+        setError(err.message || "An error occurred while fetching listing");
       } finally {
         setLoading(false);
       }

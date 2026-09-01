@@ -36,7 +36,7 @@ const Signup = () => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
+                placeholder="Kiran Dai"
                 required
                 className="mt-1"
               />

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -63,6 +64,20 @@ export default function AvailabilityChecker({ listingId, onAvailabilityCheck }: 
           });
         }
       }
+      if (response.success) {
+  // Ensure boolean value
+  const available = response.data?.available ?? false;
+  onAvailabilityCheck(available, startDate, endDate);
+
+  toast({
+    title: available ? "Available!" : "Not available",
+    variant: available ? "default" : "destructive",
+    description: available
+      ? "These dates are available for booking"
+      : "These dates are already booked or unavailable",
+  });
+}
+
     } catch (error: any) {
       toast({
         variant: "destructive",

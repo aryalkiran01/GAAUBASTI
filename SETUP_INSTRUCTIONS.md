@@ -97,8 +97,9 @@ After running the seed script, you can use these demo accounts:
 
 - **Guest/Traveler**: `guest@example.com` / `password`
 - **Host**: `host@example.com` / `password`
+- **Host**: `aryalkiran@gmail.com` / `111111`
 - **Admin**: `admin@example.com` / `password`
-
+- **Admin**: `aryalkiran@gmail.com` / `111111`
 ### Role-Based Features
 
 #### Guest/Traveler Features:

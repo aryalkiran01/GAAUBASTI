@@ -31,7 +31,15 @@ export default function ListingEditDialog({ listing, isOpen, onClose, onSave }: 
   const handleSave = () => {
     if (!listing) return;
     
-    if (!title.trim() || !location.trim() || price <= 0) {
+    const locationIsEmpty =
+      typeof location === "string"
+        ? !location.trim()
+        : !location ||
+          !location.address?.trim() ||
+          !location.city?.trim() ||
+          !location.country?.trim();
+
+    if (!title.trim() || locationIsEmpty || price <= 0) {
       toast({
         variant: "destructive", 
         title: "Error",
@@ -101,7 +109,7 @@ export default function ListingEditDialog({ listing, isOpen, onClose, onSave }: 
             </Label>
             <Input
               id="location"
-              value={location}
+              value={typeof location === "string" ? location : location ? `${location.address}, ${location.city}${location.state ? ", " + location.state : ""}, ${location.country}` : ""}
               onChange={(e) => setLocation(e.target.value)}
               className="col-span-3"
             />

@@ -1,4 +1,4 @@
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -44,6 +44,17 @@ const Admin = () => {
   // Dialog open states
   const [dialogType, setDialogType] = useState<DialogType>(null);
   
+  // Filter state for listings
+  const [listingFilter, setListingFilter] = useState<'all' | 'pending' | 'verified'>('all');
+
+  // Filtered listings based on selection
+  const filteredListings = listings.filter(listing => {
+    if (listingFilter === 'all') return true;
+    if (listingFilter === 'pending') return !listing.isVerified;
+    if (listingFilter === 'verified') return listing.isVerified;
+    return true;
+  });
+
   // Fetch admin data
   useEffect(() => {
     const fetchAdminData = async () => {
@@ -82,7 +93,8 @@ const Admin = () => {
           setDashboardStats({
             totalUsers: dummyUsers.length,
             totalListings: dummyListings.length,
-            totalBookings: dummyBookings.length
+            totalBookings: dummyBookings.length,
+            pendingListings: dummyListings.filter(l => !l.isVerified).length
           });
         }
       } catch (error: any) {
@@ -115,6 +127,54 @@ const Admin = () => {
   if (!user || user.role !== "admin") {
     return null; // Prevent rendering until redirect happens
   }
+  
+  // Handle listing approval
+  const handleApproveListing = async (listingId: string) => {
+    try {
+      const response = await adminAPI.verifyListing(listingId, true);
+      if (response.success) {
+        setListings(listings.map(listing => 
+          listing.id === listingId 
+            ? { ...listing, isVerified: true, verifiedAt: new Date().toISOString() }
+            : listing
+        ));
+        toast({
+          title: "Listing Approved",
+          description: "The listing has been approved successfully",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Approval Failed",
+        description: error.message || "Failed to approve listing",
+      });
+    }
+  };
+
+  // Handle listing rejection
+  const handleRejectListing = async (listingId: string) => {
+    try {
+      const response = await adminAPI.verifyListing(listingId, false);
+      if (response.success) {
+        setListings(listings.map(listing => 
+          listing.id === listingId 
+            ? { ...listing, isVerified: false, verifiedAt: null }
+            : listing
+        ));
+        toast({
+          title: "Listing Rejected",
+          description: "The listing has been rejected",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Rejection Failed",
+        description: error.message || "Failed to reject listing",
+      });
+    }
+  };
   
   // Handle open dialog for different entities
   const handleEditUser = (userToEdit: User) => {
@@ -192,8 +252,8 @@ const Admin = () => {
         <h1 className="text-3xl font-serif font-bold mb-6">Admin Dashboard</h1>
         
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {Array.from({ length: 3 }).map((_, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            {Array.from({ length: 4 }).map((_, index) => (
               <div key={index} className="bg-white p-6 rounded-lg border">
                 <Skeleton className="h-4 w-24 mb-2" />
                 <Skeleton className="h-8 w-16" />
@@ -201,7 +261,7 @@ const Admin = () => {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-white p-6 rounded-lg border">
               <h3 className="text-muted-foreground mb-1">Total Users</h3>
               <p className="text-4xl font-medium">{dashboardStats?.totalUsers || users.length}</p>
@@ -214,10 +274,16 @@ const Admin = () => {
               <h3 className="text-muted-foreground mb-1">Active Bookings</h3>
               <p className="text-4xl font-medium">{dashboardStats?.totalBookings || bookings.filter(b => b.status === "confirmed").length}</p>
             </div>
+            <div className="bg-white p-6 rounded-lg border">
+              <h3 className="text-muted-foreground mb-1">Pending Listings</h3>
+              <p className="text-4xl font-medium text-amber-600">
+                {dashboardStats?.pendingListings || listings.filter(l => !l.isVerified).length}
+              </p>
+            </div>
           </div>
         )}
         
-        <Tabs defaultValue="users" className="w-full">
+        <Tabs defaultValue="listings" className="w-full">
           <TabsList>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="listings">Listings</TabsTrigger>
@@ -296,6 +362,35 @@ const Admin = () => {
           
           <TabsContent value="listings" className="mt-6">
             <div className="bg-white rounded-md border">
+              {/* Listing Filter Controls */}
+              <div className="p-4 border-b">
+                <div className="flex space-x-2">
+                  <Button
+                    variant={listingFilter === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setListingFilter('all')}
+                  >
+                    All Listings
+                  </Button>
+                  <Button
+                    variant={listingFilter === 'pending' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setListingFilter('pending')}
+                    className="bg-amber-100 text-amber-800 hover:bg-amber-200"
+                  >
+                    Pending Approval
+                  </Button>
+                  <Button
+                    variant={listingFilter === 'verified' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setListingFilter('verified')}
+                    className="bg-green-100 text-green-800 hover:bg-green-200"
+                  >
+                    Verified
+                  </Button>
+                </div>
+              </div>
+
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -303,26 +398,42 @@ const Admin = () => {
                     <TableHead>Title</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Price</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Rating</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {listings.map(listing => (
+                  {filteredListings.map(listing => (
                     <TableRow key={listing.id}>
                       <TableCell className="font-mono text-sm">{listing.id}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <img
-                            src={listing.images[0]}
+                            src={typeof listing.images[0] === "string" ? listing.images[0] : listing.images[0]?.url}
                             alt={listing.title}
                             className="h-6 w-6 rounded object-cover"
                           />
                           {listing.title}
                         </div>
                       </TableCell>
-                      <TableCell>{listing.location}</TableCell>
+                      <TableCell>
+                        {typeof listing.location === "string"
+                          ? listing.location
+                          : listing.location
+                          ? `${listing.location.address}, ${listing.location.city}${listing.location.state ? ", " + listing.location.state : ""}, ${listing.location.country}`
+                          : "Unknown"}
+                      </TableCell>
                       <TableCell>${listing.price}/night</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          listing.isVerified 
+                            ? "bg-green-100 text-green-800" 
+                            : "bg-amber-100 text-amber-800"
+                        }`}>
+                          {listing.isVerified ? "Verified" : "Pending"}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center">
                           <svg
@@ -337,17 +448,39 @@ const Admin = () => {
                               clipRule="evenodd"
                             />
                           </svg>
-                          <span className="ml-1">{listing.rating}</span>
+                          <span className="ml-1">{listing.averageRating || 0}</span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleEditListing(listing)}
-                        >
-                          Edit
-                        </Button>
+                        <div className="flex space-x-2">
+                          {!listing.isVerified && (
+                            <>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleApproveListing(listing.id)}
+                                className="bg-green-100 text-green-800 hover:bg-green-200"
+                              >
+                                Approve
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleRejectListing(listing.id)}
+                                className="bg-red-100 text-red-800 hover:bg-red-200"
+                              >
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleEditListing(listing)}
+                          >
+                            Edit
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

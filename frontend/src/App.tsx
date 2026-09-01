@@ -20,6 +20,8 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Payment from "./pages/Payment";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import ForgotPasswordPage  from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 // Components
 import Navbar from "./components/Navbar";
@@ -51,6 +53,8 @@ const App = () => (
                 <Route path="/payment" element={<Payment />} />
                 <Route path="/payment-success" element={<PaymentSuccess />} />
                 <Route path="*" element={<NotFound />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage  />} />
+<Route path="/reset-password" element={<ResetPassword />} />
               </Routes>
             </main>
             <Footer />
