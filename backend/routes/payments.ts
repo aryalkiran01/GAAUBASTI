@@ -2,7 +2,10 @@ export {};
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middlewares/auth');
-const { createPayment, verifyPayment, getPaymentStatus } = require('../controllers/paymentController');
+const { createPayment, verifyPayment, getPaymentStatus, handleStripeWebhook } = require('../controllers/paymentController');
+
+router.post('/webhook', handleStripeWebhook);
+router.post('/create-intent', createPayment);
 
 router.use(authenticate);
 router.post('/create', createPayment);

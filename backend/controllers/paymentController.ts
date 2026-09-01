@@ -97,7 +97,7 @@ const createPayment = async (req, res) => {
     }
 
     const { booking } = validation;
-    const provider = process.env.PAYMENT_PROVIDER || 'mock';
+    const provider = process.env.PAYMENT_PROVIDER || 'stripe';
     const activePayment = await Payment.findOne({
       booking: booking._id,
       payer: req.user._id,
@@ -134,7 +134,29 @@ const createPayment = async (req, res) => {
       });
     }
 
-    const key = idempotencyKey || `${booking._id.toString()}:${Date.now()}`;
+    const key = typeof idempotencyKey === 'string' && idempotencyKey.trim() ? idempotencyKey.trim() : `${booking._id.toString()}:${Date.now()}`;
+    const existingIdempotentPayment = await Payment.findOne({
+      booking: booking._id,
+      payer: req.user._id,
+      idempotencyKey: key
+    });
+
+    if (existingIdempotentPayment) {
+      return res.status(200).json({
+        success: true,
+        message: 'Payment already initialized for this booking',
+        data: {
+          paymentId: existingIdempotentPayment._id,
+          provider: existingIdempotentPayment.provider,
+          status: existingIdempotentPayment.status,
+          amount: existingIdempotentPayment.amount,
+          currency: existingIdempotentPayment.currency,
+          providerPaymentId: existingIdempotentPayment.providerPaymentId,
+          clientSecret: existingIdempotentPayment.provider === 'stripe' ? existingIdempotentPayment.metadata?.clientSecret || undefined : undefined
+        }
+      });
+    }
+
     const newPayment = await Payment.findOneAndUpdate(
       { booking: booking._id, idempotencyKey: key },
       {
@@ -188,7 +210,11 @@ const createPayment = async (req, res) => {
 
       await Payment.findByIdAndUpdate(newPayment._id, {
         providerPaymentId: paymentIntent.id,
-        status: 'processing'
+        status: 'processing',
+        metadata: {
+          ...newPayment.metadata?.toObject ? newPayment.metadata.toObject() : (newPayment.metadata || {}),
+          clientSecret: paymentIntent.client_secret
+        }
       });
 
       return res.status(200).json({
@@ -321,6 +347,89 @@ const verifyPayment = async (req, res) => {
   }
 };
 
+const handleStripeWebhook = async (req, res) => {
+  try {
+    const stripeSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+
+    if (!stripeKey || !stripeSecret) {
+      return res.status(500).json({
+        success: false,
+        message: 'Stripe webhook configuration is missing'
+      });
+    }
+
+    const signature = req.headers['stripe-signature'];
+    if (!signature) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing Stripe signature'
+      });
+    }
+
+    const stripe = require('stripe')(stripeKey);
+    const event = stripe.webhooks.constructEvent(req.body, signature, stripeSecret);
+    const eventObject = event.data && event.data.object ? event.data.object : null;
+
+    if (!eventObject) {
+      return res.status(400).json({ success: false, message: 'Invalid Stripe event payload' });
+    }
+
+    const paymentIntentId = eventObject.payment_intent || eventObject.id;
+    if (paymentIntentId) {
+      const payment = await Payment.findOne({ providerPaymentId: paymentIntentId });
+
+      if (payment) {
+        if (event.type === 'payment_intent.succeeded') {
+          payment.status = 'paid';
+          await payment.save();
+
+          const booking = await Booking.findById(payment.booking);
+          if (booking) {
+            booking.paymentStatus = 'paid';
+            if (booking.status === 'pending') {
+              booking.status = 'confirmed';
+            }
+            booking.paymentId = payment._id.toString();
+            await booking.save();
+          }
+        }
+
+        if (event.type === 'payment_intent.payment_failed') {
+          payment.status = 'failed';
+          await payment.save();
+
+          const booking = await Booking.findById(payment.booking);
+          if (booking) {
+            booking.paymentStatus = 'failed';
+            await booking.save();
+          }
+        }
+
+        if (event.type === 'charge.refunded') {
+          payment.status = 'refunded';
+          await payment.save();
+
+          const booking = await Booking.findById(payment.booking);
+          if (booking) {
+            booking.paymentStatus = 'refunded';
+            booking.status = 'refunded';
+            await booking.save();
+          }
+        }
+      }
+    }
+
+    return res.status(200).json({ success: true, received: true });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: 'Stripe webhook verification failed',
+      error: process.env.NODE_ENV === 'development' && process.env.DEBUG_ERRORS === 'true' ? error.message : undefined
+    });
+  }
+};
+
 const getPaymentStatus = async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.paymentId).populate('booking');
@@ -365,6 +474,7 @@ const getPaymentStatus = async (req, res) => {
 module.exports = {
   createPayment,
   verifyPayment,
+  handleStripeWebhook,
   getPaymentStatus,
   ensureBookingIsPayable,
   verifyPaymentOwnership,

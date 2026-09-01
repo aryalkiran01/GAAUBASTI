@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useListing } from "@/hooks/useListings";
-import { bookingsAPI } from "@/lib/api";
+import { bookingsAPI, conversationsAPI } from "@/lib/api";
 import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -84,6 +84,52 @@ const ListingDetail = () => {
     const nightsCount = Math.ceil((checkEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     setNights(nightsCount);
   };
+  const handleMessageHost = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to message the host.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const hostId = (listing as any)?.host?._id || (listing as any)?.host?.id || (listing as any)?.hostId;
+    if (!hostId) {
+      toast({
+        title: "Host unavailable",
+        description: "This listing does not currently have a host profile available.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await conversationsAPI.createConversation({
+        listingId: listing.id,
+        participantIds: [hostId],
+      });
+
+      if (response.success && response.data?.conversation) {
+        const conversationId = response.data.conversation._id || response.data.conversation.id;
+        navigate(`/messages?conversationId=${conversationId}`);
+        return;
+      }
+
+      toast({
+        variant: "destructive",
+        title: "Unable to start chat",
+        description: response.message || "We could not start a conversation right now.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Unable to start chat",
+        description: error.message || "We could not start a conversation right now.",
+      });
+    }
+  };
+
   const handleBooking = async () => {
     if (!user) {
       toast({
@@ -195,13 +241,18 @@ const ListingDetail = () => {
                   : `${listing.location.address}, ${listing.location.city}${listing.location.state ? `, ${listing.location.state}` : ""}, ${listing.location.country}`}
               </span>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm">
                 Share
               </Button>
               <Button variant="outline" size="sm">
                 Save
               </Button>
+              {user && (
+                <Button variant="outline" size="sm" onClick={handleMessageHost}>
+                  Message host
+                </Button>
+              )}
             </div>
           </div>
         </div>

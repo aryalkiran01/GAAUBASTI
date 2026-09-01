@@ -7,6 +7,7 @@ const {
   getProfile,
   updateProfile,
   changePassword,
+  verifyEmail,
   refreshToken,
 
   forgotPassword,
@@ -17,12 +18,14 @@ const {
   validateUserRegistration,
   validateUserLogin
 } = require('../middlewares/validation');
+const { loginLimiter, passwordLimiter } = require('../middlewares/rateLimiters');
 
 // Public routes
 router.post('/register', validateUserRegistration, register);
-router.post('/login', validateUserLogin, login);
-router.post('/forgot-password', forgotPassword); 
-router.post('/reset-password', resetPassword);   
+router.get('/verify-email/:token', verifyEmail);
+router.post('/login', loginLimiter, validateUserLogin, login);
+router.post('/forgot-password', passwordLimiter, forgotPassword); 
+router.post('/reset-password', passwordLimiter, resetPassword);   
 
 // Protected routes
 router.use(authenticate); 

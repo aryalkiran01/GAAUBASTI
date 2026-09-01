@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export type UserRole = 'guest' | 'host' | 'admin';
 
@@ -96,4 +97,33 @@ export interface Review {
     comment: string;
     respondedAt: string;
   };
+}
+
+export interface Conversation {
+  _id?: string;
+  id?: string;
+  participants: Array<User & { _id?: string }>;
+  listing?: string | Listing;
+  booking?: string;
+  lastMessageAt?: string | Date;
+}
+
+export interface Message {
+  _id?: string;
+  id?: string;
+  conversation?: string;
+  sender?: User & { _id?: string };
+  body?: string;
+  attachments?: string[];
+  createdAt?: string;
+}
+
+export interface NotificationItem {
+  _id?: string;
+  id?: string;
+  user?: string;
+  type?: string;
+  content?: Record<string, any>;
+  read?: boolean;
+  createdAt?: string;
 }

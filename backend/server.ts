@@ -5,7 +5,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const { globalLimiter } = require('./middlewares/rateLimiters');
 
 // Import routes and middleware
 const authRoutes = require('./routes/auth');
@@ -15,6 +18,11 @@ const bookingRoutes = require('./routes/bookings');
 const reviewRoutes = require('./routes/reviews');
 const adminRoutes = require('./routes/admin');
 const paymentRoutes = require('./routes/payments');
+const conversationRoutes = require('./routes/conversations');
+const notificationRoutes = require('./routes/notifications');
+const articleRoutes = require('./routes/articles');
+const wishlistRoutes = require('./routes/wishlist');
+const payoutRoutes = require('./routes/payouts');
 const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
@@ -88,13 +96,9 @@ app.use(cors(corsOptions));
 app.use(helmet());
 app.use(compression());
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: 'Too many requests from this IP, please try again later.'
-});
-app.use('/api/', limiter);
+app.use('/api/', globalLimiter);
+
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -108,6 +112,11 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/conversations', conversationRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/articles', articleRoutes);
+app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/payouts', payoutRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -132,6 +141,59 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 3000;
 let server;
 
+const initializeSocketIO = (httpServer) => {
+  const io = new Server(httpServer, {
+    cors: {
+      origin: allowedOrigins,
+      credentials: true
+    }
+  });
+
+  global.io = io;
+
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return next(new Error('Authentication required'));
+    }
+
+    try {
+      const decoded = jwt.verify(token, jwtSecret);
+      socket.user = { _id: decoded.userId };
+      return next();
+    } catch (error) {
+      return next(new Error('Invalid token'));
+    }
+  });
+
+  io.on('connection', (socket) => {
+    socket.on('joinConversation', (conversationId) => {
+      if (conversationId) {
+        socket.join(String(conversationId));
+      }
+    });
+
+    socket.on('typing:start', (payload) => {
+      if (payload?.conversationId) {
+        socket.to(payload.conversationId).emit('typing:start', {
+          userId: socket.user?._id,
+          conversationId: payload.conversationId
+        });
+      }
+    });
+
+    socket.on('typing:stop', (payload) => {
+      if (payload?.conversationId) {
+        socket.to(payload.conversationId).emit('typing:stop', {
+          userId: socket.user?._id,
+          conversationId: payload.conversationId
+        });
+      }
+    });
+  });
+};
+
 const startServer = async () => {
   try {
     await mongoose.connect(mongoUri);
@@ -143,6 +205,8 @@ const startServer = async () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
     });
+
+    initializeSocketIO(server);
   } catch (error) {
     console.error('Failed to start server');
     process.exitCode = 1;

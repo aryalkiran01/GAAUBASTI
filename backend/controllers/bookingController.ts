@@ -1,9 +1,11 @@
 export {};
+const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const Listing = require('../models/Listing');
 const User = require('../models/User');
 const {
   validateGuestCount,
+  validateBookingDates,
   canTransitionStatus,
   checkListingAvailability
 } = require('../services/bookingAvailability');
@@ -11,13 +13,33 @@ const {
 // Create new booking
 const createBooking = async (req, res) => {
   try {
-    const { listing: listingId, startDate, endDate, guests, specialRequests } = req.body;
+    const { listing: listingId, startDate, endDate, guests, specialRequests, idempotencyKey } = req.body;
 
     if (!listingId) {
       return res.status(400).json({
         success: false,
         message: 'Listing is required'
       });
+    }
+
+    const normalizedKey = typeof idempotencyKey === 'string' && idempotencyKey.trim() ? idempotencyKey.trim() : undefined;
+    if (normalizedKey) {
+      const existingBooking = await Booking.findOne({
+        guest: req.user._id,
+        idempotencyKey: normalizedKey
+      }).populate([
+        { path: 'listing', select: 'title location images' },
+        { path: 'guest', select: 'name email' },
+        { path: 'host', select: 'name email' }
+      ]);
+
+      if (existingBooking) {
+        return res.status(200).json({
+          success: true,
+          message: 'Booking already exists for this request',
+          data: { booking: existingBooking }
+        });
+      }
     }
 
     const listing = await Listing.findById(listingId).populate('host');
@@ -36,69 +58,121 @@ const createBooking = async (req, res) => {
       });
     }
 
-    const availability = await checkListingAvailability({
-      listingId,
-      startDate,
-      endDate
-    });
-
-    if (!availability.available) {
+    const dateValidation = validateBookingDates(startDate, endDate);
+    if (!dateValidation.valid) {
       return res.status(400).json({
         success: false,
-        message: availability.reason || 'Selected dates are unavailable'
+        message: dateValidation.message
       });
     }
 
-    const bookingStart = new Date(String(startDate));
-    const bookingEnd = new Date(String(endDate));
-    const nights = Math.ceil((Number(bookingEnd) - Number(bookingStart)) / (1000 * 60 * 60 * 24));
-    const basePrice = listing.price * nights;
-    const cleaningFee = 25;
-    const serviceFee = Math.round(basePrice * 0.1);
-    const taxes = Math.round(basePrice * 0.05);
-    const totalPrice = basePrice + cleaningFee + serviceFee + taxes;
+    const session = await mongoose.startSession();
+    let createdBooking: any = null;
 
-    const booking = new Booking({
-      listing: listingId,
-      guest: req.user._id,
-      host: listing.host._id,
-      startDate: bookingStart,
-      endDate: bookingEnd,
-      guests: {
-        adults: guestValidation.adults,
-        children: guestValidation.children
-      },
-      totalPrice,
-      priceBreakdown: {
-        basePrice,
-        cleaningFee,
-        serviceFee,
-        taxes
-      },
-      specialRequests
-    });
+    try {
+      await session.withTransaction(async () => {
+        const activeListing = await Listing.findById(listingId).session(session).populate('host');
+        if (!activeListing || !activeListing.isActive) {
+          const error: any = new Error('Listing not found or not available');
+          error.statusCode = 404;
+          throw error;
+        }
 
-    await booking.save();
+        const availability = await checkListingAvailability({
+          listingId,
+          startDate: dateValidation.start,
+          endDate: dateValidation.end,
+          excludeBookingId: null
+        });
 
-    await booking.populate([
+        if (!availability.available) {
+          const error: any = new Error(availability.reason || 'Selected dates are unavailable');
+          error.statusCode = 409;
+          throw error;
+        }
+
+        if (normalizedKey) {
+          const duplicateBooking = await Booking.findOne({
+            guest: req.user._id,
+            idempotencyKey: normalizedKey
+          }).session(session);
+
+          if (duplicateBooking) {
+            createdBooking = duplicateBooking;
+            return;
+          }
+        }
+
+        const bookingStart = new Date(String(startDate));
+        const bookingEnd = new Date(String(endDate));
+        const nights = Math.ceil((Number(bookingEnd) - Number(bookingStart)) / (1000 * 60 * 60 * 24));
+        const basePrice = activeListing.price * nights;
+        const cleaningFee = 25;
+        const serviceFee = Math.round(basePrice * 0.1);
+        const taxes = Math.round(basePrice * 0.05);
+        const totalPrice = basePrice + cleaningFee + serviceFee + taxes;
+
+        const booking = new Booking({
+          listing: listingId,
+          guest: req.user._id,
+          host: activeListing.host._id,
+          startDate: bookingStart,
+          endDate: bookingEnd,
+          guests: {
+            adults: guestValidation.adults,
+            children: guestValidation.children
+          },
+          totalPrice,
+          priceBreakdown: {
+            basePrice,
+            cleaningFee,
+            serviceFee,
+            taxes
+          },
+          specialRequests,
+          idempotencyKey: normalizedKey,
+          status: 'pending'
+        });
+
+        await booking.save({ session });
+        createdBooking = booking;
+      });
+    } finally {
+      session.endSession();
+    }
+
+    if (!createdBooking) {
+      return res.status(200).json({
+        success: true,
+        message: 'Booking already exists for this request',
+        data: { booking: await Booking.findOne({ guest: req.user._id, idempotencyKey: normalizedKey }).populate([
+          { path: 'listing', select: 'title location images' },
+          { path: 'guest', select: 'name email' },
+          { path: 'host', select: 'name email' }
+        ]) }
+      });
+    }
+
+    const populatedBooking = await Booking.findById(createdBooking._id).populate([
       { path: 'listing', select: 'title location images' },
       { path: 'guest', select: 'name email' },
       { path: 'host', select: 'name email' }
     ]);
 
-    listing.totalBookings += 1;
-    await listing.save();
-
     res.status(201).json({
       success: true,
       message: 'Booking created successfully',
-      data: { booking }
+      data: { booking: populatedBooking }
     });
   } catch (error: any) {
-    res.status(500).json({
+    const isDuplicateKey = error && error.code === 11000;
+    const statusCode = error.statusCode || (isDuplicateKey ? 409 : 500);
+    const safeErrorMessage = error && error.message ? error.message : 'Failed to create booking';
+    const message = statusCode === 409 ? (safeErrorMessage || 'Selected dates are unavailable') : 'Failed to create booking';
+    res.status(statusCode).json({
       success: false,
-      message: 'Failed to create booking',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message,
+      error: process.env.NODE_ENV === 'development' ? safeErrorMessage : undefined
     });
   }
 };

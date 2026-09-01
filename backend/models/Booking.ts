@@ -59,6 +59,12 @@ const bookingSchema = new mongoose.Schema({
     default: 'pending'
   },
   paymentId: String, // External payment processor ID
+  idempotencyKey: {
+    type: String,
+    sparse: true,
+    unique: true,
+    index: true
+  },
   specialRequests: {
     type: String,
     maxlength: [500, 'Special requests cannot exceed 500 characters']
@@ -83,6 +89,12 @@ const bookingSchema = new mongoose.Schema({
 bookingSchema.index({ guest: 1, createdAt: -1 });
 bookingSchema.index({ host: 1, createdAt: -1 });
 bookingSchema.index({ listing: 1, startDate: 1, endDate: 1 });
+bookingSchema.index({ listing: 1, startDate: 1, endDate: 1 }, {
+  unique: true,
+  partialFilterExpression: {
+    status: { $in: ['pending', 'confirmed'] }
+  }
+});
 bookingSchema.index({ status: 1 });
 bookingSchema.index({ startDate: 1, endDate: 1 });
 

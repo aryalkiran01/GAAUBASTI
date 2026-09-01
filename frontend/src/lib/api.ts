@@ -260,6 +260,17 @@ export const listingsAPI = {
     });
   },
 
+  getWishlist: async () => {
+    return await apiRequest("/wishlist");
+  },
+
+  toggleWishlist: async (listingId: string) => {
+    return await apiRequest("/wishlist", {
+      method: "POST",
+      body: JSON.stringify({ listingId }),
+    });
+  },
+
   deleteListing: async (id: string) => {
     return await apiRequest(`/listings/${id}`, {
       method: "DELETE",
@@ -271,6 +282,42 @@ export const listingsAPI = {
     return await apiRequest(
       `/listings/host/my-listings${queryString ? `?${queryString}` : ""}`
     );
+  },
+};
+
+export const conversationsAPI = {
+  getConversations: async () => {
+    return await apiRequest("/conversations");
+  },
+
+  createConversation: async (payload: any) => {
+    return await apiRequest("/conversations", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getMessages: async (conversationId: string) => {
+    return await apiRequest(`/conversations/${conversationId}/messages`);
+  },
+
+  sendMessage: async (conversationId: string, payload: any) => {
+    return await apiRequest(`/conversations/${conversationId}/messages`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+};
+
+export const notificationsAPI = {
+  list: async () => {
+    return await apiRequest("/notifications");
+  },
+
+  markRead: async (notificationId: string) => {
+    return await apiRequest(`/notifications/${notificationId}/read`, {
+      method: "PATCH",
+    });
   },
 };
 

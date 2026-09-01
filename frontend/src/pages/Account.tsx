@@ -7,7 +7,6 @@ import { useUserBookings } from "@/hooks/useBookings";
 import { format } from "date-fns";
 import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { dummyListings } from "@/lib/dummy-data";
 
 const Account = () => {
   const { user } = useAuth();
@@ -108,11 +107,8 @@ const Account = () => {
                 ) : bookings.length > 0 ? (
                   <div className="space-y-4">
                     {bookings.map((booking) => {
-                      // Handle both string and object types for listing
-                      const listingData = typeof booking.listing === 'string' 
-                        ? dummyListings.find(l => l.id === booking.listing)
-                        : booking.listing;
-                        
+                      const listingData = typeof booking.listing === 'string' ? null : booking.listing;
+                      
                       return (
                         <div key={booking.id} className="flex flex-col md:flex-row bg-white border rounded-lg overflow-hidden">
                           <div className="md:w-1/4">

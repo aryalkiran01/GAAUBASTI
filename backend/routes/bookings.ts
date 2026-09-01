@@ -15,12 +15,13 @@ const {
   validateBooking,
   validateObjectId
 } = require('../middlewares/validation');
+const { bookingCreateLimiter } = require('../middlewares/rateLimiters');
 
 // All routes require authentication
 router.use(authenticate);
 
 // Traveler routes
-router.post('/', requireGuest, validateBooking, createBooking);
+router.post('/', bookingCreateLimiter, requireGuest, validateBooking, createBooking);
 router.get('/my-bookings', requireTraveler, getUserBookings);
 router.get('/:id', validateObjectId('id'), getBooking);
 router.patch('/:id/cancel', requireTraveler, validateObjectId('id'), cancelBooking);

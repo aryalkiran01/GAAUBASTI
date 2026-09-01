@@ -17,7 +17,6 @@ import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { Booking, DialogType, Listing, User } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
-import { dummyUsers, dummyListings, dummyBookings } from "@/lib/dummy-data";
 
 // Import our new dialog components
 import UserEditDialog from "@/components/admin/UserEditDialog";
@@ -61,41 +60,27 @@ const Admin = () => {
       try {
         setLoading(true);
         
-        try {
-          const [statsResponse, usersResponse, listingsResponse, bookingsResponse] = await Promise.all([
-            adminAPI.getDashboardStats(),
-            adminAPI.getAllUsers(),
-            adminAPI.getAllListings(),
-            adminAPI.getAllBookings({})
-          ]);
-          
-          if (statsResponse.success) {
-            setDashboardStats(statsResponse.data.stats);
-          }
-          
-          if (usersResponse.success) {
-            setUsers(usersResponse.data.users);
-          }
-          
-          if (listingsResponse.success) {
-            setListings(listingsResponse.data.listings);
-          }
-          
-          if (bookingsResponse.success) {
-            setBookings(bookingsResponse.data.bookings);
-          }
-        } catch (apiError) {
-          console.warn('API not available, using dummy data:', apiError);
-          // Fallback to dummy data
-          setUsers(dummyUsers);
-          setListings(dummyListings);
-          setBookings(dummyBookings);
-          setDashboardStats({
-            totalUsers: dummyUsers.length,
-            totalListings: dummyListings.length,
-            totalBookings: dummyBookings.length,
-            pendingListings: dummyListings.filter(l => !l.isVerified).length
-          });
+        const [statsResponse, usersResponse, listingsResponse, bookingsResponse] = await Promise.all([
+          adminAPI.getDashboardStats(),
+          adminAPI.getAllUsers(),
+          adminAPI.getAllListings(),
+          adminAPI.getAllBookings({})
+        ]);
+        
+        if (statsResponse.success) {
+          setDashboardStats(statsResponse.data.stats);
+        }
+        
+        if (usersResponse.success) {
+          setUsers(usersResponse.data.users);
+        }
+        
+        if (listingsResponse.success) {
+          setListings(listingsResponse.data.listings);
+        }
+        
+        if (bookingsResponse.success) {
+          setBookings(bookingsResponse.data.bookings);
         }
       } catch (error: any) {
         toast({
@@ -103,10 +88,15 @@ const Admin = () => {
           title: "Error loading admin data",
           description: error.message || "Failed to load admin dashboard data",
         });
-        // Fallback to dummy data on error
-        setUsers(dummyUsers);
-        setListings(dummyListings);
-        setBookings(dummyBookings);
+        setUsers([]);
+        setListings([]);
+        setBookings([]);
+        setDashboardStats({
+          totalUsers: 0,
+          totalListings: 0,
+          totalBookings: 0,
+          pendingListings: 0,
+        });
       } finally {
         setLoading(false);
       }

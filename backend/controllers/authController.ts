@@ -1,4 +1,5 @@
 export {};
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const OTP = require('../models/Otp'); 
@@ -45,27 +46,39 @@ const register = async (req, res) => {
       });
     }
 
-    // Create new user
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedVerificationToken = crypto
+      .createHash('sha256')
+      .update(verificationToken)
+      .digest('hex');
+
     const user = new User({
       name,
       email,
       password,
       role,
-      username
+      username,
+      verificationToken: hashedVerificationToken,
+      verificationTokenExpires: Date.now() + 24 * 60 * 60 * 1000
     });
 
     await user.save();
 
-    // Generate token
+    const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/verify-email/${verificationToken}`;
+    await sendEmail({
+      to: user.email,
+      subject: 'Verify your Gaubasti account',
+      text: `Hi ${user.name},\n\nPlease verify your account by visiting: ${verifyUrl}\n\nThis link expires in 24 hours.`
+    });
+
     const token = generateToken(user._id);
 
-    // Update last login
     user.lastLogin = new Date();
     await user.save();
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
+      message: 'User registered successfully. Please verify your email to complete setup.',
       data: { user, token }
     });
   } catch (error: any) {
@@ -314,6 +327,47 @@ const resetPassword = async (req, res) => {
 
 
 // Refresh token
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.params;
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification token is required'
+      });
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({
+      verificationToken: hashedToken,
+      verificationTokenExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification link is invalid or expired'
+      });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = null;
+    user.verificationTokenExpires = null;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully'
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify email',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 const refreshToken = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -338,6 +392,7 @@ module.exports = {
   getProfile,
   updateProfile,
   changePassword,
+  verifyEmail,
   refreshToken,
   forgotPassword,
   resetPassword

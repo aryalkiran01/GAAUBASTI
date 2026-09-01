@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { listingsAPI } from "@/lib/api";
 import { Listing } from "@/types";
-import { dummyListings } from "@/lib/dummy-data";
 
 interface UseListingsParams {
   location?: string;
@@ -42,31 +41,21 @@ export const useListings = (
       setLoading(true);
       setError(null);
 
-      try {
-        const response = await listingsAPI.getListings(params);
+      const response = await listingsAPI.getListings(params);
 
-        if (response.success) {
-          setListings(response.data.listings);
-          setPagination(response.data.pagination);
-        } else {
-          throw new Error(response.message || "Failed to fetch listings");
-        }
-      } catch {
-        // Fallback to dummy data if the API is temporarily unavailable.
-        setListings(dummyListings);
-        setPagination({
-          currentPage: 1,
-          totalPages: 1,
-          totalListings: dummyListings.length,
-          hasNextPage: false,
-          hasPrevPage: false,
-        });
+      if (response.success) {
+        setListings(response.data.listings);
+        setPagination(response.data.pagination);
+      } else {
+        setError(response.message || "Failed to fetch listings");
+        setListings([]);
+        setPagination(null);
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message || "An error occurred while fetching listings");
-      // Fallback to dummy data on error
-      setListings(dummyListings);
+      setListings([]);
+      setPagination(null);
     } finally {
       setLoading(false);
     }
@@ -97,27 +86,22 @@ export const useFeaturedListings = () => {
         setLoading(true);
         setError(null);
 
-        try {
-          const response = await listingsAPI.getFeaturedListings();
+        const response = await listingsAPI.getFeaturedListings();
 
-          if (response.success) {
-            setListings(response.data.listings);
-          } else {
-            throw new Error(
-              response.message || "Failed to fetch featured listings"
-            );
-          }
-        } catch {
-          // Fallback to dummy data if the API is temporarily unavailable.
-          setListings(dummyListings.slice(0, 4));
+        if (response.success) {
+          setListings(response.data.listings);
+        } else {
+          setError(
+            response.message || "Failed to fetch featured listings"
+          );
+          setListings([]);
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         setError(
           err.message || "An error occurred while fetching featured listings"
         );
-        // Fallback to dummy data on error
-        setListings(dummyListings.slice(0, 4));
+        setListings([]);
       } finally {
         setLoading(false);
       }
@@ -140,26 +124,18 @@ export const useListing = (id: string) => {
         setLoading(true);
         setError(null);
 
-        try {
-          const response = await listingsAPI.getListing(id);
+        const response = await listingsAPI.getListing(id);
 
-          if (response.success) {
-            setListing(response.data.listing);
-          } else {
-            throw new Error(response.message || "Failed to fetch listing");
-          }
-        } catch {
-          // Fallback to dummy data if the API is temporarily unavailable.
-          const dummyListing = dummyListings.find((l) => l.id === id);
-          if (dummyListing) {
-            setListing(dummyListing);
-          } else {
-            throw new Error("Listing not found");
-          }
+        if (response.success) {
+          setListing(response.data.listing);
+        } else {
+          setError(response.message || "Failed to fetch listing");
+          setListing(null);
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         setError(err.message || "An error occurred while fetching listing");
+        setListing(null);
       } finally {
         setLoading(false);
       }
