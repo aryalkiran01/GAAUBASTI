@@ -8,6 +8,18 @@ const toUserId = (value) => {
   return value.toString();
 };
 
+const getJwtSecret = () => {
+  if (process.env.JWT_SECRET) {
+    return process.env.JWT_SECRET;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET must be configured in production');
+  }
+
+  return 'development-secret-key';
+};
+
 // Verify JWT token
 const authenticate = async (req, res, next) => {
   try {
@@ -20,7 +32,7 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
     const user = await User.findById(decoded.userId).select('-password');
 
     if (!user) {

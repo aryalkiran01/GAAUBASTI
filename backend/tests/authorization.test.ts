@@ -3,6 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { requireAdmin, requireOwnership } = require('../middlewares/roleAuth');
 const { requireOwnershipOrAdmin } = require('../middlewares/auth');
+const { sanitizeListingPayloadForUpdate } = require('../controllers/listingController');
 
 const createRes = () => ({
   code: null,
@@ -101,4 +102,27 @@ test('self-ownership middleware rejects forged ownership attempts', () => {
 
   assert.equal(res.code, 403);
   assert.equal(nextCalled, false);
+});
+
+test('listing updates strip mass-assignment and privileged fields', () => {
+  const payload = {
+    title: 'Updated title',
+    host: 'host-evil',
+    isVerified: true,
+    verifiedBy: 'admin-evil',
+    totalBookings: 99,
+    averageRating: 5,
+    reviewCount: 10,
+    description: 'A valid description for a listing update.'
+  };
+
+  const safePayload = sanitizeListingPayloadForUpdate(payload);
+
+  assert.equal(safePayload.title, 'Updated title');
+  assert.equal(safePayload.host, undefined);
+  assert.equal(safePayload.isVerified, undefined);
+  assert.equal(safePayload.verifiedBy, undefined);
+  assert.equal(safePayload.totalBookings, undefined);
+  assert.equal(safePayload.averageRating, undefined);
+  assert.equal(safePayload.reviewCount, undefined);
 });

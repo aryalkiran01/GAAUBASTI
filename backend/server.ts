@@ -32,6 +32,18 @@ const getRequiredEnvVars = () => {
   return required;
 };
 
+const getJwtSecret = () => {
+  if (process.env.JWT_SECRET) {
+    return process.env.JWT_SECRET;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Missing required environment variable in production: JWT_SECRET');
+  }
+
+  return 'development-secret-key';
+};
+
 const requiredEnvVars = getRequiredEnvVars();
 const missingRequiredEnvVars = requiredEnvVars.filter((key) => {
   return process.env.NODE_ENV === 'production' && !process.env[key];
@@ -42,10 +54,10 @@ if (missingRequiredEnvVars.length > 0) {
 }
 
 const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/gaunbasti';
-const jwtSecret = process.env.JWT_SECRET || 'development-secret-key';
+const jwtSecret = getJwtSecret();
 
 if (!process.env.JWT_SECRET && process.env.NODE_ENV !== 'production') {
-  console.warn('JWT_SECRET not set. Using a development fallback secret.');
+  console.warn('JWT_SECRET not set. Using a temporary development secret for local testing.');
 }
 
 // Configure CORS

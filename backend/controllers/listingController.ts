@@ -4,6 +4,69 @@ const User = require('../models/User');
 const Booking = require('../models/Booking');
 const { checkListingAvailability, validateBookingDates } = require('../services/bookingAvailability');
 
+const LISTING_ALLOWED_CREATE_FIELDS = [
+  'title', 'description', 'location', 'price', 'images', 'amenities', 'maxGuests',
+  'bedrooms', 'bathrooms', 'category', 'houseRules', 'checkInTime', 'checkOutTime',
+  'cancellationPolicy'
+];
+
+const LISTING_ALLOWED_UPDATE_FIELDS = [
+  'title', 'description', 'location', 'price', 'images', 'amenities', 'maxGuests',
+  'bedrooms', 'bathrooms', 'category', 'houseRules', 'checkInTime', 'checkOutTime',
+  'cancellationPolicy', 'isActive'
+];
+
+const buildAllowedListingPayload = (payload: Record<string, any> = {}, allowedFields = LISTING_ALLOWED_CREATE_FIELDS) => {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  const safePayload: Record<string, any> = {};
+
+  for (const field of allowedFields) {
+    if (Object.prototype.hasOwnProperty.call(source, field)) {
+      safePayload[field] = source[field];
+    }
+  }
+
+  return safePayload;
+};
+
+const sanitizeListingPayloadForCreate = (payload: Record<string, any> = {}) => {
+  const safePayload: Record<string, any> = buildAllowedListingPayload(payload, LISTING_ALLOWED_CREATE_FIELDS);
+
+  if (safePayload.location && typeof safePayload.location === 'object') {
+    const location = safePayload.location as Record<string, any>;
+    const cleanedLocation: Record<string, any> = {};
+
+    if (location.address) cleanedLocation.address = location.address;
+    if (location.city) cleanedLocation.city = location.city;
+    if (location.state) cleanedLocation.state = location.state;
+    if (location.country) cleanedLocation.country = location.country;
+    if (location.coordinates) cleanedLocation.coordinates = location.coordinates;
+
+    safePayload.location = cleanedLocation;
+  }
+
+  return safePayload;
+};
+
+const sanitizeListingPayloadForUpdate = (payload: Record<string, any> = {}) => {
+  const safePayload: Record<string, any> = buildAllowedListingPayload(payload, LISTING_ALLOWED_UPDATE_FIELDS);
+
+  if (safePayload.location && typeof safePayload.location === 'object') {
+    const location = safePayload.location as Record<string, any>;
+    const cleanedLocation: Record<string, any> = {};
+
+    if (location.address) cleanedLocation.address = location.address;
+    if (location.city) cleanedLocation.city = location.city;
+    if (location.state) cleanedLocation.state = location.state;
+    if (location.country) cleanedLocation.country = location.country;
+    if (location.coordinates) cleanedLocation.coordinates = location.coordinates;
+
+    safePayload.location = cleanedLocation;
+  }
+
+  return safePayload;
+};
+
 // Get all listings with filtering and pagination
 const getListings = async (req, res) => {
   try {
@@ -141,7 +204,7 @@ const createListing = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Only hosts or admins can create listings' });
     }
 
-    const payload = req.body || {};
+    const payload = sanitizeListingPayloadForCreate(req.body || {});
     const normalizedPrice = Number(payload.price);
     const normalizedGuests = Number(payload.maxGuests);
 
@@ -225,22 +288,32 @@ const updateListing = async (req, res) => {
         message: 'Listing not found'
       });
     }
-    // If listing is being updated by host, set verification to false
-    if (req.user.role === 'host') {
-      req.body.isVerified = false;
-      req.body.verifiedAt = null;
-      req.body.verifiedBy = null;
-    }
-if (req.file) {
-      req.body.image = req.file.path || req.file.secure_url; // update image
-    }
+   const updates = sanitizeListingPayloadForUpdate(req.body || {});
 
+   // If listing is being updated by host, set verification to false
+   if (req.user.role === 'host') {
+     updates.isVerified = false;
+     updates.verifiedAt = null;
+     updates.verifiedBy = null;
+   }
 
-    const updatedListing = await Listing.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    ).populate('host', 'name avatar');
+   if (req.file) {
+     const uploadedImage = {
+       url: req.file.path || req.file.secure_url,
+       publicId: req.file.filename || req.file.public_id,
+       caption: 'Updated image'
+     };
+
+     updates.images = Array.isArray(updates.images)
+       ? [...updates.images, uploadedImage]
+       : [uploadedImage];
+   }
+
+   const updatedListing = await Listing.findByIdAndUpdate(
+     req.params.id,
+     updates,
+     { new: true, runValidators: true }
+   ).populate('host', 'name avatar');
 
     res.json({
       success: true,
@@ -418,5 +491,7 @@ module.exports = {
   deleteListing,
   getHostListings,
   checkAvailability,
-  getFeaturedListings
+  getFeaturedListings,
+  sanitizeListingPayloadForCreate,
+  sanitizeListingPayloadForUpdate
 };

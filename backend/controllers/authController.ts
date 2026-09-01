@@ -3,9 +3,21 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const OTP = require('../models/Otp'); 
 
+const getJwtSecret = () => {
+  if (process.env.JWT_SECRET) {
+    return process.env.JWT_SECRET;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET must be configured in production');
+  }
+
+  return 'development-secret-key';
+};
+
 // Generate JWT token
 const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+  return jwt.sign({ userId }, getJwtSecret(), {
     expiresIn: '7d'
   });
 };
