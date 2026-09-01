@@ -11,6 +11,24 @@ const normalizeAmount = (value) => {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 };
 
+const getConfiguredPaymentProvider = () => {
+  const provider = (process.env.PAYMENT_PROVIDER || '').trim().toLowerCase();
+
+  if (!provider) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('PAYMENT_PROVIDER is required in production. Configure a real payment provider such as Stripe.');
+    }
+
+    return 'stripe';
+  }
+
+  if (provider !== 'stripe') {
+    throw new Error(`Unsupported payment provider: ${provider}. Only Stripe is allowed in production.`);
+  }
+
+  return provider;
+};
+
 const ensureBookingIsPayable = async ({ bookingId, userId, amount, listingId }) => {
   const booking = await Booking.findById(bookingId).populate('listing');
 
@@ -97,7 +115,16 @@ const createPayment = async (req, res) => {
     }
 
     const { booking } = validation;
-    const provider = process.env.PAYMENT_PROVIDER || 'stripe';
+    let provider;
+    try {
+      provider = getConfiguredPaymentProvider();
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+
     const activePayment = await Payment.findOne({
       booking: booking._id,
       payer: req.user._id,
@@ -232,16 +259,9 @@ const createPayment = async (req, res) => {
       });
     }
 
-    return res.status(200).json({
-      success: true,
-      message: 'Payment initialized securely on the server',
-      data: {
-        paymentId: newPayment._id,
-        provider: 'mock',
-        status: 'pending',
-        amount: normalizedAmount,
-        currency: String(currency || 'USD').toUpperCase()
-      }
+    return res.status(501).json({
+      success: false,
+      message: 'No supported payment provider is configured for this environment.'
     });
   } catch (error: any) {
     res.status(500).json({
@@ -287,34 +307,39 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    if (payment.provider === 'stripe') {
-      const stripeKey = process.env.STRIPE_SECRET_KEY;
-      if (!stripeKey) {
-        return res.status(500).json({
-          success: false,
-          message: 'Stripe is configured as the payment provider but the STRIPE_SECRET_KEY is missing.'
-        });
-      }
+    if (payment.provider !== 'stripe') {
+      return res.status(501).json({
+        success: false,
+        message: 'This payment provider is not supported. Configure Stripe for production-safe verification.'
+      });
+    }
 
-      let stripe;
-      try {
-        stripe = require('stripe')(stripeKey);
-      } catch (providerError) {
-        return res.status(500).json({
-          success: false,
-          message: 'Stripe integration is not installed in this environment.'
-        });
-      }
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeKey) {
+      return res.status(500).json({
+        success: false,
+        message: 'Stripe is configured as the payment provider but the STRIPE_SECRET_KEY is missing.'
+      });
+    }
 
-      const intent = await stripe.paymentIntents.retrieve(providerPaymentId || payment.providerPaymentId);
-      const amountMatches = Number(intent.amount) === Math.round(Number(payment.amount) * 100);
+    let stripe;
+    try {
+      stripe = require('stripe')(stripeKey);
+    } catch (providerError) {
+      return res.status(500).json({
+        success: false,
+        message: 'Stripe integration is not installed in this environment.'
+      });
+    }
 
-      if (intent.status !== 'succeeded' || !amountMatches) {
-        return res.status(400).json({
-          success: false,
-          message: 'Payment verification failed'
-        });
-      }
+    const intent = await stripe.paymentIntents.retrieve(providerPaymentId || payment.providerPaymentId);
+    const amountMatches = Number(intent.amount) === Math.round(Number(payment.amount) * 100);
+
+    if (intent.status !== 'succeeded' || !amountMatches) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment verification failed'
+      });
     }
 
     payment.status = 'paid';
@@ -356,6 +381,14 @@ const handleStripeWebhook = async (req, res) => {
       return res.status(500).json({
         success: false,
         message: 'Stripe webhook configuration is missing'
+      });
+    }
+
+    const configuredProvider = getConfiguredPaymentProvider();
+    if (configuredProvider !== 'stripe') {
+      return res.status(501).json({
+        success: false,
+        message: 'Stripe payment provider is not configured for this environment.'
       });
     }
 
@@ -478,6 +511,7 @@ module.exports = {
   getPaymentStatus,
   ensureBookingIsPayable,
   verifyPaymentOwnership,
-  normalizeAmount
+  normalizeAmount,
+  getConfiguredPaymentProvider
 };
 

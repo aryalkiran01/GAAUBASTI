@@ -2,6 +2,8 @@ export {};
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const errorHandler = require('../middlewares/errorHandler');
+const { getConfiguredPaymentProvider } = require('../controllers/paymentController');
+const { createReport } = require('../controllers/reportController');
 
 const createRes = () => ({
   statusCode: null as number | null,
@@ -48,4 +50,34 @@ test('error handler sanitizes validation failures to a 422 response', () => {
   assert.equal(res.payload.success, false);
   assert.match(res.payload.message, /Price must be positive/i);
   assert.doesNotMatch(res.payload.message, /stack/i);
+});
+
+test('payment provider rejects a missing production configuration instead of using a mock fallback', () => {
+  const previousNodeEnv = process.env.NODE_ENV;
+  const previousProvider = process.env.PAYMENT_PROVIDER;
+
+  process.env.NODE_ENV = 'production';
+  delete process.env.PAYMENT_PROVIDER;
+
+  assert.throws(() => getConfiguredPaymentProvider(), /PAYMENT_PROVIDER.*required/i);
+
+  process.env.NODE_ENV = previousNodeEnv || 'test';
+  if (previousProvider === undefined) {
+    delete process.env.PAYMENT_PROVIDER;
+  } else {
+    process.env.PAYMENT_PROVIDER = previousProvider;
+  }
+});
+
+test('report creation rejects incomplete payloads before writing to the database', async () => {
+  const res = createRes();
+
+  await createReport({
+    user: { _id: '507f1f77bcf86cd799439011' },
+    body: { reportedEntityType: 'listing' }
+  }, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.payload.success, false);
+  assert.match(res.payload.message, /required/i);
 });

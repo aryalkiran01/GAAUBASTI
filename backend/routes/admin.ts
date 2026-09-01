@@ -13,8 +13,11 @@ const {
   reactivateUser,
   getFlaggedReviews,
   moderateReview,
-  getAnalytics
+  getAnalytics,
+  getAuditLogs,
+  getReportsForAdmin
 } = require('../controllers/adminController');
+const { updateReportStatus } = require('../controllers/reportController');
 const { authenticate } = require('../middlewares/auth');
 const { requireAdmin } = require('../middlewares/roleAuth');
 const { validateObjectId } = require('../middlewares/validation');
@@ -26,6 +29,7 @@ router.use(requireAdmin);
 // Dashboard and analytics
 router.get('/dashboard', getDashboardStats);
 router.get('/analytics', getAnalytics);
+router.get('/audit-logs', getAuditLogs);
 
 // User management
 router.get('/users', getAllUsers);
@@ -39,8 +43,10 @@ router.get('/bookings', getAllBookings);
 router.patch('/listings/:id/verify', validateObjectId('id'), verifyListing);
 router.delete('/listings/:id', validateObjectId('id'), deleteListing);
 
-// Review moderation
+// Review moderation and reports
 router.get('/reviews/flagged', getFlaggedReviews);
 router.patch('/reviews/:id/moderate', validateObjectId('id'), moderateReview);
+router.get('/reports', getReportsForAdmin);
+router.patch('/reports/:id/status', validateObjectId('id'), updateReportStatus);
 
 module.exports = router;

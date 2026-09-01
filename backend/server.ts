@@ -21,6 +21,7 @@ const paymentRoutes = require('./routes/payments');
 const conversationRoutes = require('./routes/conversations');
 const notificationRoutes = require('./routes/notifications');
 const articleRoutes = require('./routes/articles');
+const reportRoutes = require('./routes/reports');
 const wishlistRoutes = require('./routes/wishlist');
 const payoutRoutes = require('./routes/payouts');
 const errorHandler = require('./middlewares/errorHandler');
@@ -33,7 +34,12 @@ const getRequiredEnvVars = () => {
   if (!mongoUri) {
     required.push('MONGODB_URI');
   }
-  const paymentProvider = (process.env.PAYMENT_PROVIDER || 'mock').toLowerCase();
+
+  if (process.env.NODE_ENV === 'production') {
+    required.push('PAYMENT_PROVIDER');
+  }
+
+  const paymentProvider = (process.env.PAYMENT_PROVIDER || '').trim().toLowerCase();
   if (paymentProvider === 'stripe') {
     required.push('STRIPE_SECRET_KEY');
   }
@@ -112,6 +118,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/reports', reportRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/articles', articleRoutes);

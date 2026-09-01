@@ -3,6 +3,8 @@ const User = require('../models/User');
 const Listing = require('../models/Listing');
 const Booking = require('../models/Booking');
 const Review = require('../models/Review');
+const AuditLog = require('../models/AuditLog');
+const Report = require('../models/Report');
 
 // Get dashboard statistics
 const getDashboardStats = async (req, res) => {
@@ -622,6 +624,81 @@ const deleteListing = async (req, res) => {
   }
 };
 
+const getAuditLogs = async (req, res) => {
+  try {
+    const { actor, action, targetType, page = 1, limit = 20 } = req.query;
+    const filter: Record<string, any> = {};
+    if (actor) filter.actor = actor;
+    if (action) filter.action = { $regex: String(action), $options: 'i' };
+    if (targetType) filter.targetType = targetType;
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const [logs, total] = await Promise.all([
+      AuditLog.find(filter)
+        .populate('actor', 'name email role')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit)),
+      AuditLog.countDocuments(filter)
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        logs,
+        pagination: {
+          currentPage: Number(page),
+          totalPages: Math.ceil(total / Number(limit)),
+          totalLogs: total
+        }
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch audit logs',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+const getReportsForAdmin = async (req, res) => {
+  try {
+    const { status, reportedEntityType, page = 1, limit = 20 } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+    const filter: Record<string, any> = {};
+    if (status) filter.status = status;
+    if (reportedEntityType) filter.reportedEntityType = reportedEntityType;
+
+    const [reports, total] = await Promise.all([
+      Report.find(filter)
+        .populate('reporter', 'name email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit)),
+      Report.countDocuments(filter)
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        reports,
+        pagination: {
+          currentPage: Number(page),
+          totalPages: Math.ceil(total / Number(limit)),
+          totalReports: total
+        }
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch reports',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getAllBookings,
@@ -634,5 +711,7 @@ module.exports = {
   reactivateUser,
   getFlaggedReviews,
   moderateReview,
-  getAnalytics
+  getAnalytics,
+  getAuditLogs,
+  getReportsForAdmin
 };
