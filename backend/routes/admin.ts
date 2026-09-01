@@ -1,26 +1,11 @@
 export {};
-const express = require('express');
+  import express from 'express';
 const router = express.Router();
-const {
-  getDashboardStats,
-  getAllBookings,
-  getAllUsers,
-  updateUser,
-  getAllListings,
-  verifyListing,
-  deleteListing,
-  deactivateUser,
-  reactivateUser,
-  getFlaggedReviews,
-  moderateReview,
-  getAnalytics,
-  getAuditLogs,
-  getReportsForAdmin
-} = require('../controllers/adminController');
-const { updateReportStatus } = require('../controllers/reportController');
-const { authenticate } = require('../middlewares/auth');
-const { requireAdmin } = require('../middlewares/roleAuth');
-const { validateObjectId } = require('../middlewares/validation');
+import { getDashboardStats, getAllBookings, getAllUsers, updateUser, getAllListings, verifyListing, deleteListing, deactivateUser, reactivateUser, getFlaggedReviews, moderateReview, getAnalytics, getAuditLogs, getReportsForAdmin } from '../controllers/adminController';
+import { updateReportStatus } from '../controllers/reportController';
+import { authenticate } from '../middlewares/auth';
+import { requireAdmin } from '../middlewares/roleAuth';
+import { validateObjectId } from '../middlewares/validation';
 
 // All admin routes require authentication and admin role
 router.use(authenticate);

@@ -1,8 +1,8 @@
 export {};
-const express = require('express');
+    import express from 'express';
 const router = express.Router();
-const { authenticate, requireAdmin } = require('../middlewares/auth');
-const { getArticles, getArticleBySlug, createArticle, updateArticle, deleteArticle } = require('../controllers/articleController');
+import { authenticate, requireAdmin } from '../middlewares/auth';
+import { getArticles, getArticleBySlug, createArticle, updateArticle, deleteArticle } from '../controllers/articleController';
 
 router.get('/', getArticles);
 router.get('/:slug', getArticleBySlug);

@@ -76,7 +76,7 @@ const requireOwnership = (Model, resourceField = 'host') => {
   };
 };
 
-module.exports = {
+export {
   requireRole,
   requireAdmin,
   requireHost,

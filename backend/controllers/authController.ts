@@ -1,8 +1,8 @@
 export {};
-const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const OTP = require('../models/Otp'); 
+  import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import User from '../models/User';
+import OTP from '../models/Otp'; 
 
 const getJwtSecret = () => {
   if (process.env.JWT_SECRET) {
@@ -236,7 +236,7 @@ const changePassword = async (req, res) => {
   }
 };
 
-const sendEmail = require('../utils/sendemail');
+import sendEmail from '../utils/sendemail';
 
 
 // --- Forgot Password: send OTP ---
@@ -386,7 +386,7 @@ const refreshToken = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   register,
   login,
   getProfile,

@@ -1,5 +1,5 @@
 export {};
-const Notification = require('../models/Notification');
+  import Notification from '../models/Notification';
 
 const getNotifications = async (req, res) => {
   try {
@@ -28,7 +28,7 @@ const markNotificationRead = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   getNotifications,
   markNotificationRead
 };

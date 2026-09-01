@@ -1,5 +1,5 @@
 export {};
-const rateLimit = require('express-rate-limit');
+  import rateLimit from 'express-rate-limit';
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -40,7 +40,7 @@ const bookingCreateLimiter = rateLimit({
   message: 'Too many booking creation requests. Please try again later.'
 });
 
-module.exports = {
+export {
   globalLimiter,
   loginLimiter,
   passwordLimiter,

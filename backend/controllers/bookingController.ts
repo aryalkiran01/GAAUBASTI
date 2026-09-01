@@ -1,14 +1,9 @@
 export {};
-const mongoose = require('mongoose');
-const Booking = require('../models/Booking');
-const Listing = require('../models/Listing');
-const User = require('../models/User');
-const {
-  validateGuestCount,
-  validateBookingDates,
-  canTransitionStatus,
-  checkListingAvailability
-} = require('../services/bookingAvailability');
+  import mongoose from 'mongoose';
+import Booking from '../models/Booking';
+import Listing from '../models/Listing';
+import User from '../models/User';
+import { validateGuestCount, validateBookingDates, canTransitionStatus, checkListingAvailability } from '../services/bookingAvailability';
 
 // Create new booking
 const createBooking = async (req, res) => {
@@ -478,7 +473,7 @@ const cancelBooking = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   createBooking,
   getUserBookings,
   getHostBookings,

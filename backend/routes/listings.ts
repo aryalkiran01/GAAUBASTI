@@ -1,25 +1,12 @@
 export {};
-const express = require('express');
+  import express from 'express';
 const router = express.Router();
-const {
-  getListings,
-  getListing,
-  createListing,
-  updateListing,
-  deleteListing,
-  getHostListings,
-  checkAvailability,
-  getFeaturedListings
-} = require('../controllers/listingController');
-const Listing = require('../models/Listing');
+import { getListings, getListing, createListing, updateListing, deleteListing, getHostListings, checkAvailability, getFeaturedListings } from '../controllers/listingController';
+import Listing from '../models/Listing';
 
-const { authenticate } = require('../middlewares/auth');
-const { requireHost, requireOwnership } = require('../middlewares/roleAuth');
-const {
-  validateListing,
-  validateObjectId,
-  validateListingQuery
-} = require('../middlewares/validation');
+import { authenticate } from '../middlewares/auth';
+import { requireHost, requireOwnership } from '../middlewares/roleAuth';
+import { validateListing, validateObjectId, validateListingQuery } from '../middlewares/validation';
 
 // Public routes
 router.get('/', validateListingQuery, getListings);

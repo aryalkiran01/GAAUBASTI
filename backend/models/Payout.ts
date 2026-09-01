@@ -1,5 +1,5 @@
 export {};
-const mongoose = require('mongoose');
+  import mongoose from 'mongoose';
 
 const payoutSchema = new mongoose.Schema({
   host: {
@@ -35,4 +35,4 @@ const payoutSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Payout', payoutSchema);
+export default mongoose.model('Payout', payoutSchema);

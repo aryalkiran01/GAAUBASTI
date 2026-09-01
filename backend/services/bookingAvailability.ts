@@ -1,6 +1,6 @@
 export {};
-const Booking = require('../models/Booking');
-const Listing = require('../models/Listing');
+  import Booking from '../models/Booking';
+import Listing from '../models/Listing';
 
 const BLOCKING_BOOKING_STATUSES = ['pending', 'confirmed'];
 
@@ -205,7 +205,7 @@ const checkListingAvailability = async ({ listingId, startDate, endDate, exclude
   };
 };
 
-module.exports = {
+export {
   BLOCKING_BOOKING_STATUSES,
   parseDate,
   validateBookingDates,

@@ -1,5 +1,5 @@
 export {};
-const mongoose = require('mongoose');
+  import mongoose from 'mongoose';
 
 const articleSchema = new mongoose.Schema({
   category: {
@@ -37,4 +37,4 @@ const articleSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Article', articleSchema);
+export default mongoose.model('Article', articleSchema);

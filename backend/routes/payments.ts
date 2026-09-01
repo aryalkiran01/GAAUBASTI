@@ -1,8 +1,8 @@
 export {};
-const express = require('express');
+    import express from 'express';
 const router = express.Router();
-const { authenticate } = require('../middlewares/auth');
-const { createPayment, verifyPayment, getPaymentStatus, handleStripeWebhook } = require('../controllers/paymentController');
+import { authenticate } from '../middlewares/auth';
+import { createPayment, verifyPayment, getPaymentStatus, handleStripeWebhook } from '../controllers/paymentController';
 
 router.post('/webhook', handleStripeWebhook);
 router.post('/create-intent', createPayment);

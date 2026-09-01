@@ -1,8 +1,8 @@
 export {};
-const Conversation = require('../models/Conversation');
-const Message = require('../models/Message');
-const Listing = require('../models/Listing');
-const { notifyUsers } = require('../utils/notifications');
+  import Conversation from '../models/Conversation';
+import Message from '../models/Message';
+import Listing from '../models/Listing';
+import { notifyUsers } from '../utils/notifications';
 
 const normalizeParticipants = (participants = [], currentUserId) => {
   const ids = participants
@@ -133,7 +133,7 @@ const sendMessage = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   getConversations,
   getOrCreateConversation,
   getMessages,

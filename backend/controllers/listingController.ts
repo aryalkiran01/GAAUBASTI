@@ -1,8 +1,8 @@
 export {};
-const Listing = require('../models/Listing');
-const User = require('../models/User');
-const Booking = require('../models/Booking');
-const { checkListingAvailability, validateBookingDates } = require('../services/bookingAvailability');
+  import Listing from '../models/Listing';
+import User from '../models/User';
+import Booking from '../models/Booking';
+import { checkListingAvailability, validateBookingDates } from '../services/bookingAvailability';
 
 const LISTING_ALLOWED_CREATE_FIELDS = [
   'title', 'description', 'location', 'price', 'images', 'amenities', 'maxGuests',
@@ -483,7 +483,7 @@ const getFeaturedListings = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   getListings,
   getListing,
   createListing,

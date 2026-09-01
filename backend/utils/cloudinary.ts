@@ -1,7 +1,7 @@
 export {};
-const cloudinary = require('cloudinary').v2;
-const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
+  import cloudinary from 'cloudinary';
+import multer from 'multer';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -70,7 +70,7 @@ const uploadImage = async (filePath, folder = 'gaunbasti') => {
   }
 };
 
-module.exports = {
+export {
   cloudinary,
   upload,
   deleteImage,

@@ -1,6 +1,6 @@
 export {};
-const Booking = require('../models/Booking');
-const Payment = require('../models/Payment');
+  import Booking from '../models/Booking';
+import Payment from '../models/Payment';
 
 const normalizeAmount = (value) => {
   if (typeof value === 'string') {
@@ -504,7 +504,7 @@ const getPaymentStatus = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   createPayment,
   verifyPayment,
   handleStripeWebhook,

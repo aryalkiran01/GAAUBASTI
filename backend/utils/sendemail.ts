@@ -1,5 +1,5 @@
 export {};
-const nodemailer = require('nodemailer');
+import nodemailer from "nodemailer";
 
 const sendEmail = async ({ to, subject, text }) => {
   const transporter = nodemailer.createTransport({
@@ -20,5 +20,4 @@ const sendEmail = async ({ to, subject, text }) => {
   });
 };
 
-module.exports = sendEmail;
-
+export default sendEmail;

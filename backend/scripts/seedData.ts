@@ -1,12 +1,13 @@
 export {};
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+  import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 require('dotenv').config();
 
-const User = require('../models/User');
-const Listing = require('../models/Listing');
-const Booking = require('../models/Booking');
-const Review = require('../models/Review');
+import User from '../models/User';
+import Listing from '../models/Listing';
+import Booking from '../models/Booking';
+import Review from '../models/Review';
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/gaunbasti')

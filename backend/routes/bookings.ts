@@ -1,21 +1,11 @@
 export {};
-const express = require('express');
+  import express from 'express';
 const router = express.Router();
-const {
-  createBooking,
-  getUserBookings,
-  getHostBookings,
-  getBooking,
-  updateBookingStatus,
-  cancelBooking
-} = require('../controllers/bookingController');
-const { authenticate } = require('../middlewares/auth');
-const { requireHost, requireGuest, requireTraveler } = require('../middlewares/roleAuth');
-const {
-  validateBooking,
-  validateObjectId
-} = require('../middlewares/validation');
-const { bookingCreateLimiter } = require('../middlewares/rateLimiters');
+import { createBooking, getUserBookings, getHostBookings, getBooking, updateBookingStatus, cancelBooking } from '../controllers/bookingController';
+import { authenticate } from '../middlewares/auth';
+import { requireHost, requireGuest, requireTraveler } from '../middlewares/roleAuth';
+import { validateBooking, validateObjectId } from '../middlewares/validation';
+import { bookingCreateLimiter } from '../middlewares/rateLimiters';
 
 // All routes require authentication
 router.use(authenticate);

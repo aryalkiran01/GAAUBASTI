@@ -1,21 +1,10 @@
 export {};
-const express = require('express');
+  import express from 'express';
 const router = express.Router();
-const {
-  createReview,
-  getListingReviews,
-  getUserReviews,
-  updateReview,
-  deleteReview,
-  respondToReview,
-  flagReview
-} = require('../controllers/reviewController');
-const { authenticate } = require('../middlewares/auth');
-const { requireHost, requireTraveler } = require('../middlewares/roleAuth');
-const {
-  validateReview,
-  validateObjectId
-} = require('../middlewares/validation');
+import { createReview, getListingReviews, getUserReviews, updateReview, deleteReview, respondToReview, flagReview } from '../controllers/reviewController';
+import { authenticate } from '../middlewares/auth';
+import { requireHost, requireTraveler } from '../middlewares/roleAuth';
+import { validateReview, validateObjectId } from '../middlewares/validation';
 
 // Public routes
 router.get('/listing/:listingId', validateObjectId('listingId'), getListingReviews);

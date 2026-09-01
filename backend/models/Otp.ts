@@ -1,5 +1,5 @@
 export {};
-const mongoose = require('mongoose');
+  import mongoose from 'mongoose';
 
 const OTPSchema = new mongoose.Schema({
   email: {
@@ -22,4 +22,4 @@ const OTPSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('OTP', OTPSchema);
+export default mongoose.model('OTP', OTPSchema);
