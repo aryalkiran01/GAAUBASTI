@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,22 @@ import { PaymentDetails } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { bookingsAPI } from "@/lib/api";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import StripePaymentForm from "@/components/StripePaymentForm";
+import { Loader as Loader2 } from "lucide-react";
+
+const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
+
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
+
+interface PaymentIntentData {
+  paymentId: string;
+  providerPaymentId: string;
+  clientSecret: string;
+  amount: number;
+  currency: string;
+}
 
 const Payment = () => {
   const navigate = useNavigate();
@@ -14,7 +29,9 @@ const Payment = () => {
   const { toast } = useToast();
   const paymentDetails = location.state?.paymentDetails as PaymentDetails;
 
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [paymentIntentData, setPaymentIntentData] = useState<PaymentIntentData | null>(null);
+  const [initError, setInitError] = useState<string | null>(null);
 
   if (!paymentDetails) {
     return (
@@ -36,53 +53,65 @@ const Payment = () => {
     );
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsProcessing(true);
+  const handleInitializePayment = async () => {
+    setIsInitializing(true);
+    setInitError(null);
 
     try {
       const paymentResponse = await bookingsAPI.createPayment({
         bookingId: paymentDetails.bookingId,
         listingId: paymentDetails.listingId,
         amount: paymentDetails.amount,
-        currency: paymentDetails.currency || "USD"
+        currency: paymentDetails.currency || "USD",
       });
 
       if (!paymentResponse.success || !paymentResponse.data?.paymentId) {
         throw new Error(paymentResponse.message || "Unable to start payment");
       }
 
-      const verificationResponse = await bookingsAPI.verifyPayment(
-        paymentResponse.data.paymentId,
-        paymentResponse.data.providerPaymentId
-      );
+      const clientSecret = paymentResponse.data.clientSecret;
 
-      if (!verificationResponse.success) {
-        throw new Error(verificationResponse.message || "Payment verification failed");
+      if (!clientSecret) {
+        throw new Error("Payment provider did not return a client secret. Check that Stripe is configured on the server.");
       }
 
-      toast({
-        title: "Payment Successful",
-        description: `Your payment of $${paymentDetails.amount} has been processed successfully.`
-      });
-
-      navigate("/payment-success", {
-        state: {
-          paymentDetails: {
-            ...paymentDetails,
-            status: "completed"
-          }
-        }
+      setPaymentIntentData({
+        paymentId: paymentResponse.data.paymentId,
+        providerPaymentId: paymentResponse.data.providerPaymentId,
+        clientSecret,
+        amount: paymentResponse.data.amount ?? paymentDetails.amount,
+        currency: paymentResponse.data.currency ?? paymentDetails.currency ?? "USD",
       });
     } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to initialize payment";
+      setInitError(message);
       toast({
-        title: "Payment failed",
-        description: error instanceof Error ? error.message : "Unable to complete payment",
-        variant: "destructive"
+        variant: "destructive",
+        title: "Payment initialization failed",
+        description: message,
       });
     } finally {
-      setIsProcessing(false);
+      setIsInitializing(false);
     }
+  };
+
+  const handlePaymentSuccess = () => {
+    navigate("/payment-success", {
+      state: {
+        paymentDetails: {
+          ...paymentDetails,
+          status: "completed",
+        },
+      },
+    });
+  };
+
+  const appearance = {
+    theme: "stripe" as const,
+    variables: {
+      colorPrimary: "#14532D",
+    },
   };
 
   return (
@@ -92,7 +121,7 @@ const Payment = () => {
           <CardHeader>
             <CardTitle className="text-2xl">Complete Your Payment</CardTitle>
             <CardDescription>
-              Secure server-side payment verification for your stay
+              Secure payment processed by Stripe
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -113,19 +142,56 @@ const Payment = () => {
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="rounded-md border bg-muted/40 p-4 text-sm text-muted-foreground">
-                  Your payment is verified server-side before the booking is confirmed.
+              {initError && (
+                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mb-4">
+                  {initError}
                 </div>
+              )}
 
-                <Button
-                  type="submit"
-                  className="w-full bg-gaun-green hover:bg-gaun-light-green"
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? "Processing..." : `Pay $${paymentDetails.amount}`}
-                </Button>
-              </form>
+              {paymentIntentData ? (
+                stripePromise ? (
+                  <Elements
+                    stripe={stripePromise}
+                    options={{
+                      clientSecret: paymentIntentData.clientSecret,
+                      appearance,
+                    }}
+                  >
+                    <StripePaymentForm
+                      paymentId={paymentIntentData.paymentId}
+                      providerPaymentId={paymentIntentData.providerPaymentId}
+                      amount={paymentIntentData.amount}
+                      bookingId={paymentDetails.bookingId}
+                      onSuccess={handlePaymentSuccess}
+                    />
+                  </Elements>
+                ) : (
+                  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                    Stripe is not configured. Set VITE_STRIPE_PUBLISHABLE_KEY in your environment.
+                  </div>
+                )
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-md border bg-muted/40 p-4 text-sm text-muted-foreground">
+                    Your payment is verified server-side before the booking is confirmed. Click below to enter your card details securely via Stripe.
+                  </div>
+
+                  <Button
+                    className="w-full bg-gaun-green hover:bg-gaun-light-green"
+                    onClick={handleInitializePayment}
+                    disabled={isInitializing}
+                  >
+                    {isInitializing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Preparing payment...
+                      </>
+                    ) : (
+                      `Pay $${paymentDetails.amount}`
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
