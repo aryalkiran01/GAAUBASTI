@@ -245,6 +245,20 @@ export const bookingsAPI = {
     });
   },
 
+  createPayment: async (paymentData: any) => {
+    return await apiRequest("/payments/create", {
+      method: "POST",
+      body: JSON.stringify(paymentData),
+    });
+  },
+
+  verifyPayment: async (paymentId: string, providerPaymentId?: string) => {
+    return await apiRequest(`/payments/${paymentId}/verify`, {
+      method: "POST",
+      body: JSON.stringify({ providerPaymentId }),
+    });
+  },
+
   getUserBookings: async (params: any = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return await apiRequest(

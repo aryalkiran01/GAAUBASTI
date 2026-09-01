@@ -70,6 +70,7 @@ export interface PaymentDetails {
   nights: number;
   startDate?: Date;
   status: PaymentStatus;
+  currency?: string;
 }
 
 // Adding a new type for dialogs

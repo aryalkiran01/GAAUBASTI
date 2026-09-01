@@ -13,11 +13,18 @@ const listingRoutes = require('./routes/listings');
 const bookingRoutes = require('./routes/bookings');
 const reviewRoutes = require('./routes/reviews');
 const adminRoutes = require('./routes/admin');
+const paymentRoutes = require('./routes/payments');
 const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 
 const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
+const paymentProvider = (process.env.PAYMENT_PROVIDER || 'mock').toLowerCase();
+
+if (paymentProvider === 'stripe') {
+  requiredEnvVars.push('STRIPE_SECRET_KEY');
+}
+
 const missingRequiredEnvVars = requiredEnvVars.filter((key) => {
   return process.env.NODE_ENV === 'production' && !process.env[key];
 });
@@ -83,6 +90,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/listings', listingRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/payments', paymentRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 

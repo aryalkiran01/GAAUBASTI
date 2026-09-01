@@ -119,28 +119,31 @@ const ListingDetail = () => {
         listing: listing.id,
         startDate: selectedDate.toISOString(),
         endDate: endDate.toISOString(),
-        guests: { adults: 1, children: 0 }, // Default for now
+        guests: { adults: 1, children: 0 },
         totalPrice: calculateTotalPrice()
       };
-      console.log("Listing ID being sent:", listing?.id);
 
       const response = await bookingsAPI.createBooking(bookingData);
-      
+
       if (response.success) {
+        const booking = response.data?.booking;
+        const bookingId = booking?._id || booking?.id;
+
         toast({
           title: "Booking created",
           description: "Your booking has been created successfully!",
         });
-        
-        // Navigate to payment page with booking details
+
         const paymentDetails: PaymentDetails = {
+          bookingId,
           listingId: listing.id,
           amount: calculateTotalPrice(),
           nights: nights,
           startDate: selectedDate,
-          status: 'pending'
+          status: 'pending',
+          currency: 'USD'
         };
-        
+
         navigate("/payment", { state: { paymentDetails } });
       } else {
         toast({

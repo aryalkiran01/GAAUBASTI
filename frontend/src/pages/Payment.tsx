@@ -2,24 +2,19 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PaymentDetails } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
+import { bookingsAPI } from "@/lib/api";
 
 const Payment = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   const paymentDetails = location.state?.paymentDetails as PaymentDetails;
-  
+
   const [isProcessing, setIsProcessing] = useState(false);
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
-  const [cvc, setCvc] = useState("");
-  const [nameOnCard, setNameOnCard] = useState("");
 
   if (!paymentDetails) {
     return (
@@ -41,19 +36,53 @@ const Payment = () => {
     );
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
-    
-    // Simulate payment processing
-    setTimeout(() => {
-      setIsProcessing(false);
+
+    try {
+      const paymentResponse = await bookingsAPI.createPayment({
+        bookingId: paymentDetails.bookingId,
+        listingId: paymentDetails.listingId,
+        amount: paymentDetails.amount,
+        currency: paymentDetails.currency || "USD"
+      });
+
+      if (!paymentResponse.success || !paymentResponse.data?.paymentId) {
+        throw new Error(paymentResponse.message || "Unable to start payment");
+      }
+
+      const verificationResponse = await bookingsAPI.verifyPayment(
+        paymentResponse.data.paymentId,
+        paymentResponse.data.providerPaymentId
+      );
+
+      if (!verificationResponse.success) {
+        throw new Error(verificationResponse.message || "Payment verification failed");
+      }
+
       toast({
         title: "Payment Successful",
-        description: `Your payment of $${paymentDetails.amount} has been processed successfully.`,
+        description: `Your payment of $${paymentDetails.amount} has been processed successfully.`
       });
-      navigate("/payment-success", { state: { paymentDetails } });
-    }, 2000);
+
+      navigate("/payment-success", {
+        state: {
+          paymentDetails: {
+            ...paymentDetails,
+            status: "completed"
+          }
+        }
+      });
+    } catch (error) {
+      toast({
+        title: "Payment failed",
+        description: error instanceof Error ? error.message : "Unable to complete payment",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -63,7 +92,7 @@ const Payment = () => {
           <CardHeader>
             <CardTitle className="text-2xl">Complete Your Payment</CardTitle>
             <CardDescription>
-              Secure payment for your stay
+              Secure server-side payment verification for your stay
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -83,61 +112,14 @@ const Payment = () => {
                   <span>${paymentDetails.amount}</span>
                 </div>
               </div>
-              
+
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nameOnCard">Name on Card</Label>
-                  <Input 
-                    id="nameOnCard"
-                    value={nameOnCard}
-                    onChange={(e) => setNameOnCard(e.target.value)}
-                    required
-                    placeholder="Kiran"
-                  />
+                <div className="rounded-md border bg-muted/40 p-4 text-sm text-muted-foreground">
+                  Your payment is verified server-side before the booking is confirmed.
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="cardNumber">Card Number</Label>
-                  <Input 
-                    id="cardNumber"
-                    value={cardNumber}
-                    onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, "").slice(0, 16))}
-                    required
-                    placeholder="4242 4242 4242 4242"
-                    maxLength={16}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    For demo, you can enter any 16-digit number
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="expiryDate">Expiry Date</Label>
-                    <Input 
-                      id="expiryDate"
-                      value={expiryDate}
-                      onChange={(e) => setExpiryDate(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                      required
-                      placeholder="MMYY"
-                      maxLength={4}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cvc">CVC</Label>
-                    <Input 
-                      id="cvc"
-                      value={cvc}
-                      onChange={(e) => setCvc(e.target.value.replace(/\D/g, "").slice(0, 3))}
-                      required
-                      placeholder="123"
-                      maxLength={3}
-                    />
-                  </div>
-                </div>
-                
-                <Button 
-                  type="submit" 
+
+                <Button
+                  type="submit"
                   className="w-full bg-gaun-green hover:bg-gaun-light-green"
                   disabled={isProcessing}
                 >
