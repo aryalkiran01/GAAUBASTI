@@ -1,6 +1,7 @@
 import { createContext, useState, useContext, ReactNode, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { User } from "../types";
-import { authAPI, getAuthToken, removeAuthToken } from "../lib/api"; 
+import { authAPI, getAuthToken, removeAuthToken } from "../lib/api";
 import { useToast } from "@/components/ui/use-toast";
 
 interface AuthContextType {
@@ -20,6 +21,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -64,9 +66,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
        setTimeout(() => {
          if (response.data.user.role === 'admin') {
-           window.location.href = '/admin';
+           navigate('/admin');
          } else {
-           window.location.href = '/account';
+           navigate('/account');
          }
        }, 1000);
        return;
@@ -169,7 +171,7 @@ catch (error: any) {
       // Ignore cleanup errors and continue with local logout.
     }
     setUser(null);
-    window.location.href = '/';
+    navigate('/');
     toast({
       title: "Logged out",
       description: "You have been successfully logged out",
@@ -190,7 +192,7 @@ catch (error: any) {
        });
 
        setTimeout(() => {
-         window.location.href = '/account';
+         navigate('/account');
        }, 1000);
        return;
      }
