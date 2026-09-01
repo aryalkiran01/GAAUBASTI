@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
-import { PASSWORD } from "@/lib/dummy-data";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -16,30 +15,6 @@ const Login = () => {
     e.preventDefault();
     login(email, password);
   };
-
-  const handleDemoLogin = (role: string) => {
-    let demoEmail = "";
-    
-    switch (role) {
-      case "guest":
-        demoEmail = "guest@example.com";
-        break;
-      case "host":
-        demoEmail = "host@example.com";
-        break;
-      case "admin":
-        demoEmail = "admin@example.com";
-        break;
-      default:
-        demoEmail = "guest@example.com";
-    }
-    
-    login(demoEmail, PASSWORD);
-  };
-
-
-
-  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gaun-cream/30 py-12 px-4 sm:px-6 lg:px-8">
@@ -96,45 +71,6 @@ const Login = () => {
           >
             {isLoading ? "Logging in..." : "Log in"}
           </Button>
-
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="bg-white px-4 text-sm text-muted-foreground">or try demo accounts</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => handleDemoLogin("guest")}
-              disabled={isLoading}
-            >
-              Guest
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => handleDemoLogin("host")}
-              disabled={isLoading}
-            >
-              Host
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => handleDemoLogin("admin")}
-              disabled={isLoading}
-            >
-              Admin
-            </Button>
-          </div>
 
           <div className="text-center text-sm">
             <span className="text-muted-foreground">Don't have an account?</span>{" "}

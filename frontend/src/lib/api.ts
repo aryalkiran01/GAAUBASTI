@@ -26,7 +26,6 @@ const createHeaders = (includeAuth: boolean = true): HeadersInit => {
 
   if (includeAuth) {
     const token = getAuthToken();
-    console.log("Auth token:", token);
 
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;

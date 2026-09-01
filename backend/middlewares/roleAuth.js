@@ -34,49 +34,34 @@ const requireOwnership = (Model, resourceField = 'host') => {
       });
     }
 
-    if (req.user.role === 'admin') return next();
+    if (req.user.role === 'admin') {
+      return next();
+    }
 
     try {
       const resource = await Model.findById(req.params.id);
       if (!resource) {
         return res.status(404).json({ success: false, message: 'Resource not found' });
       }
-        const ownerId = resource[resourceField]?._id?.toString() || resource[resourceField]?.toString();
+
+      const resourceOwnerId = resource[resourceField];
+      const ownerId = resourceOwnerId && typeof resourceOwnerId === 'object' && resourceOwnerId._id
+        ? resourceOwnerId._id.toString()
+        : resourceOwnerId?.toString?.();
 
       if (!ownerId || ownerId !== req.user._id.toString()) {
-        return res.status(403).json({ success: false, message: 'Access denied. You can only access your own resources.' });
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only access your own resources.'
+        });
       }
-
-
-    if (!resource[resourceField] || resource[resourceField].toString() !== req.user._id.toString()) {
-  return res.status(403).json({
-    success: false,
-    message: 'Access denied. You can only access your own resources.'
-  });
-}
 
       req.resource = resource;
       next();
-    
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Authorization check failed' });
+      return res.status(500).json({ success: false, message: 'Authorization check failed' });
     }
   };
-};
-
-
-// Helper function to get model based on route
-const getModelByRoute = (routePath) => {
-  if (routePath.includes('listings')) {
-    return require('../models/Listing');
-  }
-  if (routePath.includes('bookings')) {
-    return require('../models/Booking');
-  }
-  if (routePath.includes('reviews')) {
-    return require('../models/Review');
-  }
-  return null;
 };
 
 module.exports = {

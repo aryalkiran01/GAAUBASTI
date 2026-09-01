@@ -17,19 +17,34 @@ const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 
+const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
+const missingRequiredEnvVars = requiredEnvVars.filter((key) => {
+  return process.env.NODE_ENV === 'production' && !process.env[key];
+});
+
+if (missingRequiredEnvVars.length > 0) {
+  throw new Error(`Missing required environment variables in production: ${missingRequiredEnvVars.join(', ')}`);
+}
+
+const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/gaunbasti';
+const jwtSecret = process.env.JWT_SECRET || 'development-secret-key';
+
+if (!process.env.JWT_SECRET && process.env.NODE_ENV !== 'production') {
+  console.warn('JWT_SECRET not set. Using a development fallback secret.');
+}
+
 // Configure CORS
 const allowedOrigins = [
   'http://localhost:8080',
   'https://gaaubasti-19rzg9sr5-aryalkiran01s-projects.vercel.app',
   'https://gaaubasti.vercel.app',
-  process.env.FRONTEND_URL // Add this if you have a custom domain
-].filter(Boolean); // Remove any falsy values
+  process.env.FRONTEND_URL
+].filter(Boolean);
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl requests)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.indexOf(origin) === -1) {
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
       return callback(new Error(msg), false);
@@ -59,7 +74,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/gaunbasti')
+mongoose.connect(mongoUri)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
