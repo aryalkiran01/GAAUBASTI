@@ -1,3 +1,4 @@
+export {};
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { validateBookingDates, checkListingAvailability, canTransitionStatus } = require('../services/bookingAvailability');
@@ -97,3 +98,4 @@ test('half-open interval allows checkout on same day as next check-in', () => {
   const result = require('../services/bookingAvailability').overlappingDateWindow(startA, endA, startB, endB);
   assert.equal(result, false);
 });
+

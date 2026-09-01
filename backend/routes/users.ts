@@ -1,3 +1,4 @@
+export {};
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
@@ -22,7 +23,7 @@ router.get('/:id', validateObjectId('id'), async (req, res) => {
       success: true,
       data: { user }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch user profile',
@@ -65,7 +66,7 @@ router.put('/:id', validateObjectId('id'), requireOwnershipOrAdmin(), async (req
       message: 'Profile updated successfully',
       data: { user }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to update profile',

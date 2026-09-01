@@ -1,3 +1,4 @@
+export {};
 const Listing = require('../models/Listing');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
@@ -22,7 +23,7 @@ const getListings = async (req, res) => {
     } = req.query;
 
     // Build filter object
-    const filter = { isActive: true, isVerified: true };
+    const filter: any = { isActive: true, isVerified: true };
 
     if (location) {
       filter.$or = [
@@ -55,7 +56,7 @@ const getListings = async (req, res) => {
     }
 
     // Build sort object
-    const sort = {};
+    const sort: Record<string, number> = {};
     sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     // Execute query with pagination
@@ -83,7 +84,7 @@ const getListings = async (req, res) => {
         }
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch listings',
@@ -120,7 +121,7 @@ const getListing = async (req, res) => {
       success: true,
       data: { listing }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch listing',
@@ -132,20 +133,65 @@ const getListing = async (req, res) => {
 // Create new listing (hosts only)
 const createListing = async (req, res) => {
   try {
-    let images = [];
-    if (req.file) {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    if (req.user.role !== 'host' && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only hosts or admins can create listings' });
+    }
+
+    const payload = req.body || {};
+    const normalizedPrice = Number(payload.price);
+    const normalizedGuests = Number(payload.maxGuests);
+
+    if (!payload.title || String(payload.title).trim().length < 5) {
+      return res.status(400).json({ success: false, message: 'Title must be at least 5 characters long' });
+    }
+    if (!payload.description || String(payload.description).trim().length < 20) {
+      return res.status(400).json({ success: false, message: 'Description must be at least 20 characters long' });
+    }
+    if (!payload.location || !payload.location.city || !payload.location.address) {
+      return res.status(400).json({ success: false, message: 'Location city and address are required' });
+    }
+    if (!Number.isFinite(normalizedPrice) || normalizedPrice < 0) {
+      return res.status(400).json({ success: false, message: 'Price must be a non-negative number' });
+    }
+    if (!Number.isInteger(normalizedGuests) || normalizedGuests < 1) {
+      return res.status(400).json({ success: false, message: 'Maximum guests must be at least 1' });
+    }
+
+    const images: Array<{ url: string; publicId?: string; caption?: string }> = [];
+    const bodyImages = Array.isArray(payload.images) ? payload.images : [];
+
+    for (const image of bodyImages) {
+      if (!image || typeof image.url !== 'string' || !image.url.trim()) {
+        continue;
+      }
       images.push({
-        url: req.file.path || req.file.secure_url,
-        publicId: req.file.filename || req.file.public_id,
-        caption: 'Main image'
+        url: image.url.trim(),
+        publicId: typeof image.publicId === 'string' ? image.publicId.trim() : undefined,
+        caption: typeof image.caption === 'string' ? image.caption.trim().slice(0, 200) : undefined
       });
     }
 
-  
+    if (req.file) {
+      const fileUrl = req.file.path || req.file.secure_url;
+      if (fileUrl) {
+        images.push({
+          url: String(fileUrl),
+          publicId: req.file.filename || req.file.public_id,
+          caption: 'Main image'
+        });
+      }
+    }
+
     const listingData = {
-      ...req.body,
+      ...payload,
       host: req.user._id,
-      image:images
+      images: images.length > 0 ? images : undefined,
+      price: normalizedPrice,
+      maxGuests: normalizedGuests
     };
 
     const listing = new Listing(listingData);
@@ -158,7 +204,7 @@ const createListing = async (req, res) => {
       message: 'Listing created successfully',
       data: { listing }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to create listing',
@@ -201,7 +247,7 @@ if (req.file) {
       message: 'Listing updated successfully',
       data: { listing: updatedListing }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to update listing',
@@ -244,7 +290,7 @@ const deleteListing = async (req, res) => {
       success: true,
       message: 'Listing deleted successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to delete listing',
@@ -278,7 +324,7 @@ const getHostListings = async (req, res) => {
         }
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch host listings',
@@ -330,7 +376,7 @@ const checkAvailability = async (req, res) => {
         } : null
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to check availability',
@@ -355,7 +401,7 @@ const getFeaturedListings = async (req, res) => {
       success: true,
       data: { listings }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch featured listings',

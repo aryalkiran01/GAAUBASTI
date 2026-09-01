@@ -1,3 +1,4 @@
+export {};
 // Role-based authorization middleware
 const requireRole = (roles) => {
   return (req, res, next) => {
@@ -58,7 +59,7 @@ const requireOwnership = (Model, resourceField = 'host') => {
 
       req.resource = resource;
       next();
-    } catch (error) {
+    } catch (error: any) {
       return res.status(500).json({ success: false, message: 'Authorization check failed' });
     }
   };
@@ -71,3 +72,4 @@ module.exports = {
   requireTraveler,
   requireOwnership
 };
+

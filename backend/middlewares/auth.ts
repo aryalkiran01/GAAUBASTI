@@ -1,3 +1,4 @@
+export {};
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
@@ -32,7 +33,7 @@ const authenticate = async (req, res, next) => {
 
     req.user = user;
     next();
-  } catch (error) {
+  } catch (error: any) {
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({
         success: false,

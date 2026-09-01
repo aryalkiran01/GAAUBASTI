@@ -1,3 +1,4 @@
+export {};
 const mongoose = require('mongoose');
 
 const OTPSchema = new mongoose.Schema({

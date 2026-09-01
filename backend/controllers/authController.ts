@@ -1,3 +1,4 @@
+export {};
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const OTP = require('../models/Otp'); 
@@ -55,7 +56,7 @@ const register = async (req, res) => {
       message: 'User registered successfully',
       data: { user, token }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Registration failed',
@@ -114,7 +115,7 @@ const login = async (req, res) => {
         token
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Login failed',
@@ -134,7 +135,7 @@ const getProfile = async (req, res) => {
       success: true,
       data: { user }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch profile',
@@ -167,7 +168,7 @@ const updateProfile = async (req, res) => {
       message: 'Profile updated successfully',
       data: { user }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to update profile',
@@ -201,7 +202,7 @@ const changePassword = async (req, res) => {
       success: true,
       message: 'Password changed successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to change password',
@@ -239,7 +240,7 @@ const forgotPassword = async (req, res) => {
 
     console.log(`Generated OTP for ${email}: ${otp}`);
     res.json({ success: true, message: 'OTP sent to your email' });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in forgotPassword:", error.message);
     res.status(500).json({
       success: false,
@@ -285,7 +286,7 @@ const resetPassword = async (req, res) => {
 
     console.log("Password reset successfully");
     res.json({ success: true, message: 'Password reset successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Reset error:", error);
     res.status(500).json({
       success: false,
@@ -306,7 +307,7 @@ const refreshToken = async (req, res) => {
       success: true,
       data: { token }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to refresh token',

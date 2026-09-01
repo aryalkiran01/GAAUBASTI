@@ -1,3 +1,4 @@
+export {};
 const mongoose = require('mongoose');
 
 const reviewSchema = new mongoose.Schema({
@@ -106,21 +107,21 @@ reviewSchema.index({ isPublic: 1, isVerified: 1 });
 reviewSchema.index({ booking: 1 }, { unique: true });
 
 // Virtual for helpful votes (can be implemented later)
-reviewSchema.virtual('helpfulVotes').get(function() {
+reviewSchema.virtual('helpfulVotes').get(function(this: any) {
   return 0; // Placeholder for future implementation
 });
 
 // Update listing's average rating after review save/update/delete
-reviewSchema.post('save', async function() {
+reviewSchema.post('save', async function(this: any) {
   await this.constructor.updateListingRating(this.listing);
 });
 
-reviewSchema.post('remove', async function() {
+reviewSchema.post('remove', async function(this: any) {
   await this.constructor.updateListingRating(this.listing);
 });
 
 // Static method to update listing rating
-reviewSchema.statics.updateListingRating = async function(listingId) {
+reviewSchema.statics.updateListingRating = async function(listingId: any) {
   const Listing = mongoose.model('Listing');
   const listing = await Listing.findById(listingId);
   if (listing) {
@@ -129,7 +130,7 @@ reviewSchema.statics.updateListingRating = async function(listingId) {
 };
 
 // Method to check if review can be edited
-reviewSchema.methods.canBeEdited = function(userId) {
+reviewSchema.methods.canBeEdited = function(this: any, userId: any) {
   // Reviews can be edited by the guest who wrote them within 30 days
   const daysSinceCreated = (Date.now() - this.createdAt) / (1000 * 60 * 60 * 24);
   return this.guest.toString() === userId.toString() && daysSinceCreated <= 30;

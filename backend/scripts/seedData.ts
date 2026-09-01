@@ -1,3 +1,4 @@
+export {};
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
@@ -65,7 +66,7 @@ const users = await User.create([
 User.schema.indexes();
 
 
-    console.log('👥 Created users');
+    console.log('ðŸ‘¥ Created users');
 
     // Create listings
     const hostUser = users.find(u => u.role === 'host');
@@ -252,7 +253,7 @@ const bookings = await Booking.create([
     console.log('Admin: admin@example.com / password');
     
     process.exit(0);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error seeding data:', error);
     process.exit(1);
   }

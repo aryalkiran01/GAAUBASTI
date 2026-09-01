@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "rootDir": ".",
+    "outDir": "./dist",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noImplicitAny": false,
+    "strictNullChecks": true,
+    "useUnknownInCatchVariables": false,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "typeRoots": ["./node_modules/@types", "./types"]
+  },
+  "include": ["**/*.ts", "**/*.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}

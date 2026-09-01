@@ -1,3 +1,4 @@
+export {};
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
@@ -43,7 +44,7 @@ const deleteImage = async (publicId) => {
   try {
     const result = await cloudinary.uploader.destroy(publicId);
     return result;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting image from Cloudinary:', error);
     throw error;
   }
@@ -59,7 +60,7 @@ const uploadImage = async (filePath, folder = 'gaunbasti') => {
       ]
     });
     return result;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading image to Cloudinary:', error);
     throw error;
   }

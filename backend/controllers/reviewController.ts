@@ -1,3 +1,4 @@
+export {};
 const Review = require('../models/Review');
 const Booking = require('../models/Booking');
 const Listing = require('../models/Listing');
@@ -65,7 +66,7 @@ const createReview = async (req, res) => {
       message: 'Review created successfully',
       data: { review }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to create review',
@@ -80,7 +81,7 @@ const getListingReviews = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const filter = { 
+    const filter: any = { 
       listing: req.params.listingId,
       isPublic: true
     };
@@ -105,7 +106,7 @@ const getListingReviews = async (req, res) => {
         }
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch reviews',
@@ -140,7 +141,7 @@ const getUserReviews = async (req, res) => {
         }
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch user reviews',
@@ -188,7 +189,7 @@ const updateReview = async (req, res) => {
       message: 'Review updated successfully',
       data: { review }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to update review',
@@ -226,7 +227,7 @@ const deleteReview = async (req, res) => {
       success: true,
       message: 'Review deleted successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to delete review',
@@ -282,7 +283,7 @@ const respondToReview = async (req, res) => {
       message: 'Response added successfully',
       data: { review }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to respond to review',
@@ -319,7 +320,7 @@ const flagReview = async (req, res) => {
       success: true,
       message: 'Review flagged for moderation'
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to flag review',

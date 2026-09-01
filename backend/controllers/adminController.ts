@@ -1,3 +1,4 @@
+export {};
 const User = require('../models/User');
 const Listing = require('../models/Listing');
 const Booking = require('../models/Booking');
@@ -55,7 +56,7 @@ const getDashboardStats = async (req, res) => {
         }
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch dashboard stats',
@@ -70,7 +71,7 @@ const getAllUsers = async (req, res) => {
     const { page = 1, limit = 20, role, search } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const filter = {};
+    const filter: any = {};
     if (role) filter.role = role;
     if (search) {
       filter.$or = [
@@ -98,7 +99,7 @@ const getAllUsers = async (req, res) => {
         }
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch users',
@@ -130,7 +131,7 @@ const updateUser = async (req, res) => {
       message: 'User updated successfully',
       data: { user }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to update user',
@@ -145,7 +146,7 @@ const getAllListings = async (req, res) => {
     const { page = 1, limit = 20, status, search } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const filter = {};
+    const filter: any = {};
     if (status === 'pending') filter.isVerified = false;
     if (status === 'verified') filter.isVerified = true;
     if (status === 'inactive') filter.isActive = false;
@@ -176,7 +177,7 @@ const getAllListings = async (req, res) => {
         }
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch listings',
@@ -212,7 +213,7 @@ const verifyListing = async (req, res) => {
       message: `Listing ${isVerified ? 'verified' : 'rejected'} successfully`,
       data: { listing }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to verify listing',
@@ -227,7 +228,7 @@ const getAllBookings = async (req, res) => {
     const { page = 1, limit = 20, status, search } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const filter = {};
+    const filter: any = {};
     if (status) filter.status = status;
 
     const [bookings, total] = await Promise.all([
@@ -252,7 +253,7 @@ const getAllBookings = async (req, res) => {
         }
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch bookings',
@@ -288,7 +289,7 @@ const getFlaggedReviews = async (req, res) => {
         }
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch flagged reviews',
@@ -328,7 +329,7 @@ const moderateReview = async (req, res) => {
       message: `Review ${action}d successfully`,
       data: { review }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to moderate review',
@@ -469,7 +470,7 @@ const getAnalytics = async (req, res) => {
         locationStats
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch analytics',
@@ -523,7 +524,7 @@ const deactivateUser = async (req, res) => {
       message: 'User account deactivated successfully',
       data: { user }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to deactivate user',
@@ -553,7 +554,7 @@ const reactivateUser = async (req, res) => {
       message: 'User account reactivated successfully',
       data: { user }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to reactivate user',
@@ -596,7 +597,7 @@ const deleteListing = async (req, res) => {
       success: true,
       message: 'Listing deleted successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to delete listing',

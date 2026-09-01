@@ -1,3 +1,4 @@
+export {};
 const Booking = require('../models/Booking');
 const Payment = require('../models/Payment');
 
@@ -45,6 +46,13 @@ const createPayment = async (req, res) => {
   try {
     const { bookingId, listingId, amount, currency = 'USD', idempotencyKey } = req.body;
     const normalizedAmount = normalizeAmount(amount);
+
+    if (normalizedAmount === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid payment amount is required'
+      });
+    }
 
     const validation = await ensureBookingIsPayable({
       bookingId,
@@ -162,7 +170,7 @@ const createPayment = async (req, res) => {
         currency: String(currency || 'USD').toUpperCase()
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to initialize payment',
@@ -247,7 +255,7 @@ const verifyPayment = async (req, res) => {
         status: 'paid'
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to verify payment',
@@ -277,7 +285,7 @@ const getPaymentStatus = async (req, res) => {
         currency: payment.currency
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch payment status',
@@ -291,3 +299,4 @@ module.exports = {
   verifyPayment,
   getPaymentStatus
 };
+

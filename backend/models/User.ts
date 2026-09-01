@@ -1,3 +1,4 @@
+export {};
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -100,25 +101,25 @@ userSchema.virtual('bookings', {
 });
 
 // Hash password before saving
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function(this: any, next: (err?: Error) => void) {
   if (!this.isModified('password')) return next();
   
   try {
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
     next();
-  } catch (error) {
+  } catch (error: any) {
     next(error);
   }
 });
 
 // Compare password method
-userSchema.methods.comparePassword = async function(candidatePassword) {
+userSchema.methods.comparePassword = async function(this: any, candidatePassword: string) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
 // Remove sensitive data from JSON output
-userSchema.methods.toJSON = function() {
+userSchema.methods.toJSON = function(this: any) {
   const userObject = this.toObject();
   delete userObject.password;
   delete userObject.__v;

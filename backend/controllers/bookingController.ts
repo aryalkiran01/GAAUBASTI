@@ -1,3 +1,4 @@
+export {};
 const Booking = require('../models/Booking');
 const Listing = require('../models/Listing');
 const User = require('../models/User');
@@ -48,9 +49,9 @@ const createBooking = async (req, res) => {
       });
     }
 
-    const bookingStart = new Date(startDate);
-    const bookingEnd = new Date(endDate);
-    const nights = Math.ceil((bookingEnd - bookingStart) / (1000 * 60 * 60 * 24));
+    const bookingStart = new Date(String(startDate));
+    const bookingEnd = new Date(String(endDate));
+    const nights = Math.ceil((Number(bookingEnd) - Number(bookingStart)) / (1000 * 60 * 60 * 24));
     const basePrice = listing.price * nights;
     const cleaningFee = 25;
     const serviceFee = Math.round(basePrice * 0.1);
@@ -93,7 +94,7 @@ const createBooking = async (req, res) => {
       message: 'Booking created successfully',
       data: { booking }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to create booking',
@@ -108,7 +109,7 @@ const getUserBookings = async (req, res) => {
     const { page = 1, limit = 10, status } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const filter = { guest: req.user._id };
+    const filter: any = { guest: req.user._id };
     if (status) {
       filter.status = status;
     }
@@ -134,7 +135,7 @@ const getUserBookings = async (req, res) => {
         }
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch bookings',
@@ -149,7 +150,7 @@ const getHostBookings = async (req, res) => {
     const { page = 1, limit = 10, status } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const filter = { host: req.user._id };
+    const filter: any = { host: req.user._id };
     if (status) {
       filter.status = status;
     }
@@ -175,7 +176,7 @@ const getHostBookings = async (req, res) => {
         }
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch host bookings',
@@ -215,7 +216,7 @@ const getBooking = async (req, res) => {
       success: true,
       data: { booking }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch booking',
@@ -322,7 +323,7 @@ const updateBookingStatus = async (req, res) => {
       message: `Booking ${status} successfully`,
       data: { booking }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to update booking status',
@@ -394,7 +395,7 @@ const cancelBooking = async (req, res) => {
         refundAmount
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to cancel booking',

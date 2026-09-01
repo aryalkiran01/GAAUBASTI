@@ -1,3 +1,4 @@
+export {};
 const mongoose = require('mongoose');
 
 const paymentSchema = new mongoose.Schema({
@@ -56,3 +57,4 @@ const paymentSchema = new mongoose.Schema({
 paymentSchema.index({ booking: 1, idempotencyKey: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Payment', paymentSchema);
+

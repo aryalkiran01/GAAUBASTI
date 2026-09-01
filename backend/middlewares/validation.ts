@@ -1,3 +1,4 @@
+export {};
 const { body, param, query, validationResult } = require('express-validator');
 
 // Handle validation errors
@@ -99,6 +100,16 @@ const validateListing = [
     .optional()
     .isArray()
     .withMessage('Amenities must be an array'),
+
+  body('images')
+    .optional()
+    .isArray({ max: 10 })
+    .withMessage('Images must be an array with at most 10 items'),
+
+  body('images.*.url')
+    .optional()
+    .isURL({ protocols: ['http', 'https'] })
+    .withMessage('Each image URL must be a valid http(s) URL'),
 
   handleValidationErrors
 ];
@@ -232,3 +243,4 @@ module.exports = {
   validateObjectId,
   validateListingQuery
 };
+

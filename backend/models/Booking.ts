@@ -1,3 +1,4 @@
+export {};
 const mongoose = require('mongoose');
 
 const bookingSchema = new mongoose.Schema({
@@ -86,18 +87,18 @@ bookingSchema.index({ status: 1 });
 bookingSchema.index({ startDate: 1, endDate: 1 });
 
 // Virtual for number of nights
-bookingSchema.virtual('nights').get(function() {
+bookingSchema.virtual('nights').get(function(this: any) {
   const timeDiff = this.endDate.getTime() - this.startDate.getTime();
   return Math.ceil(timeDiff / (1000 * 3600 * 24));
 });
 
 // Virtual for total guests
-bookingSchema.virtual('totalGuests').get(function() {
+bookingSchema.virtual('totalGuests').get(function(this: any) {
   return this.guests.adults + this.guests.children;
 });
 
 // Validation: End date must be after start date
-bookingSchema.pre('validate', function(next) {
+bookingSchema.pre('validate', function(this: any, next: (err?: Error) => void) {
   if (this.endDate <= this.startDate) {
     next(new Error('End date must be after start date'));
   } else {
@@ -106,7 +107,7 @@ bookingSchema.pre('validate', function(next) {
 });
 
 // Validation: Booking dates cannot be in the past
-bookingSchema.pre('validate', function(next) {
+bookingSchema.pre('validate', function(this: any, next: (err?: Error) => void) {
   const now = new Date();
   now.setHours(0, 0, 0, 0); // Start of today
   
@@ -118,7 +119,7 @@ bookingSchema.pre('validate', function(next) {
 });
 
 // Method to check if booking can be cancelled
-bookingSchema.methods.canBeCancelled = function() {
+bookingSchema.methods.canBeCancelled = function(this: any) {
   const now = new Date();
   const timeDiff = this.startDate.getTime() - now.getTime();
   const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
@@ -128,7 +129,7 @@ bookingSchema.methods.canBeCancelled = function() {
 };
 
 // Method to calculate refund amount based on cancellation policy
-bookingSchema.methods.calculateRefund = function(cancellationPolicy = 'moderate') {
+bookingSchema.methods.calculateRefund = function(this: any, cancellationPolicy = 'moderate') {
   if (!this.canBeCancelled()) return 0;
   
   const now = new Date();

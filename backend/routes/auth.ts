@@ -1,3 +1,4 @@
+export {};
 const express = require('express');
 const router = express.Router();
 const {
@@ -31,3 +32,4 @@ router.post('/change-password', changePassword);
 router.post('/refresh-token', refreshToken);
 
 module.exports = router;
+

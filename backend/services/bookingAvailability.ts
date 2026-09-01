@@ -1,3 +1,4 @@
+export {};
 const Booking = require('../models/Booking');
 const Listing = require('../models/Listing');
 
@@ -40,7 +41,7 @@ const validateBookingDates = (startDate, endDate) => {
       start,
       end
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
       valid: false,
       message: error.message || 'Invalid date provided'
@@ -110,8 +111,8 @@ const canTransitionStatus = (currentStatus, nextStatus) => {
   return getAllowedStatusTransitions(currentStatus).includes(nextStatus);
 };
 
-const findConflictingBooking = async ({ listingId, startDate, endDate, excludeBookingId = null }) => {
-  const query = {
+const findConflictingBooking = async ({ listingId, startDate, endDate, excludeBookingId = null }: any) => {
+  const query: any = {
     listing: listingId,
     status: { $in: BLOCKING_BOOKING_STATUSES },
     startDate: { $lt: new Date(endDate) },
@@ -214,3 +215,4 @@ module.exports = {
   canTransitionStatus,
   checkListingAvailability
 };
+
