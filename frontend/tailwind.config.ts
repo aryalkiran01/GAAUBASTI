@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -15,7 +14,7 @@ export default {
 			center: true,
 			padding: '2rem',
 			screens: {
-				'2xl': '1400px'
+				'2xl': '1320px'
 			}
 		},
 		extend: {
@@ -36,6 +35,14 @@ export default {
 				destructive: {
 					DEFAULT: 'hsl(var(--destructive))',
 					foreground: 'hsl(var(--destructive-foreground))'
+				},
+				success: {
+					DEFAULT: 'hsl(var(--success))',
+					foreground: 'hsl(var(--success-foreground))'
+				},
+				warning: {
+					DEFAULT: 'hsl(var(--warning))',
+					foreground: 'hsl(var(--warning-foreground))'
 				},
 				muted: {
 					DEFAULT: 'hsl(var(--muted))',
@@ -64,8 +71,8 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				gaun: {
-					'green': '#2F5233',
-					'light-green': '#4E7A51',
+					'green': '#14532D',
+					'light-green': '#1A6B3C',
 					'cream': '#F5F5DC',
 					'light-cream': '#E5E5CB',
 					'brown': '#8B4513',
@@ -73,9 +80,11 @@ export default {
 				}
 			},
 			borderRadius: {
-				lg: 'var(--radius)',
-				md: 'calc(var(--radius) - 2px)',
-				sm: 'calc(var(--radius) - 4px)'
+				'xl': 'calc(var(--radius) + 4px)',
+				'2xl': 'calc(var(--radius) + 8px)',
+				'lg': 'var(--radius)',
+				'md': 'calc(var(--radius) - 2px)',
+				'sm': 'calc(var(--radius) - 4px)'
 			},
 			keyframes: {
 				'accordion-down': {
@@ -103,16 +112,42 @@ export default {
 						opacity: '1',
 						transform: 'translateY(0)'
 					}
+				},
+				'fade-in-up': {
+					'0%': {
+						opacity: '0',
+						transform: 'translateY(20px)'
+					},
+					'100%': {
+						opacity: '1',
+						transform: 'translateY(0)'
+					}
+				},
+				'scale-in': {
+					'0%': {
+						opacity: '0',
+						transform: 'scale(0.95)'
+					},
+					'100%': {
+						opacity: '1',
+						transform: 'scale(1)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
-				'fade-in': 'fade-in 0.5s ease-out'
+				'fade-in': 'fade-in 0.4s ease-out',
+				'fade-in-up': 'fade-in-up 0.5s ease-out',
+				'scale-in': 'scale-in 0.2s ease-out'
 			},
 			fontFamily: {
-				'sans': ['Inter', 'sans-serif'],
-				'serif': ['Playfair Display', 'serif'],
+				'sans': ['Inter', 'system-ui', 'sans-serif'],
+				'display': ['Fraunces', 'Georgia', 'serif'],
+			},
+			spacing: {
+				'18': '4.5rem',
+				'22': '5.5rem',
 			}
 		}
 	},

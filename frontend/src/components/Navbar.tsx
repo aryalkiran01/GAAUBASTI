@@ -1,5 +1,4 @@
-
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -10,195 +9,257 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, Menu } from "lucide-react";
-import { useState } from "react";
+import { LogOut, User, Menu, X, LayoutDashboard, Home as HomeIcon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
+  const isHomePage = location.pathname === "/";
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  const isTransparent = isHomePage && !scrolled;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
+    <header
+      className={cn(
+        "sticky top-0 z-50 w-full transition-all duration-300",
+        isTransparent
+          ? "bg-transparent border-transparent"
+          : "bg-background/80 backdrop-blur-md border-b border-border"
+      )}
+    >
+      <div className="container flex h-16 md:h-20 items-center justify-between">
         <div className="flex items-center gap-2">
-          <Link to="/" className="flex items-center">
-          <img
-    src="/gaubasti-logo.png" 
-    alt="Gaubasti Logo"
-    className="w-12 h-12 object-contain"
-  />
-
-            <span className="font-serif text-2xl font-bold text-gaun-green">Gaun Basti</span>
+          <Link to="/" className="flex items-center gap-2.5">
+            <img
+              src="/gaubasti-logo.png"
+              alt="Gau Basti"
+              className="w-9 h-9 object-contain"
+            />
+            <span
+              className={cn(
+                "font-display text-xl md:text-2xl font-semibold tracking-tight transition-colors",
+                isTransparent ? "text-white" : "text-foreground"
+              )}
+            >
+              Gau Basti
+            </span>
           </Link>
         </div>
-        
+
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6">
-          <Link to="/" className="text-sm font-medium hover:text-gaun-green">
-            Home
-          </Link>
-          <Link to="/listings" className="text-sm font-medium hover:text-gaun-green">
-            Stay
-          </Link>
-          <Link to="/about" className="text-sm font-medium hover:text-gaun-green">
-            About
-          </Link>
-          <Link to="/contact" className="text-sm font-medium hover:text-gaun-green">
-            Contact
-          </Link>
-          
+        <nav className="hidden md:flex items-center gap-8">
+          {[
+            { to: "/", label: "Home" },
+            { to: "/listings", label: "Stays" },
+            { to: "/about", label: "About" },
+            { to: "/contact", label: "Contact" },
+          ].map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-primary",
+                isTransparent
+                  ? "text-white/90 hover:text-white"
+                  : "text-foreground/80 hover:text-foreground",
+                location.pathname === item.to && !isTransparent && "text-primary"
+              )}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Desktop Auth */}
+        <div className="hidden md:flex items-center gap-3">
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
+                <button
+                  className={cn(
+                    "flex items-center gap-2 rounded-full p-0.5 pr-3 transition-all hover:bg-secondary/80",
+                    isTransparent && "hover:bg-white/15"
+                  )}
+                >
+                  <Avatar className="h-9 w-9 border-2 border-border">
                     <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                      {user.name.charAt(0)}
+                    </AvatarFallback>
                   </Avatar>
-                </Button>
+                  <span
+                    className={cn(
+                      "text-sm font-medium",
+                      isTransparent ? "text-white" : "text-foreground"
+                    )}
+                  >
+                    {user.name.split(" ")[0]}
+                  </span>
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  <Link to="/account">Account</Link>
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium">{user.name}</p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/account" className="flex items-center cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>My Account</span>
+                  </Link>
                 </DropdownMenuItem>
                 {user.role === "admin" && (
-                  <DropdownMenuItem>
-                    <Link to="/admin">Admin Dashboard</Link>
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin" className="flex items-center cursor-pointer">
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      <span>Admin Dashboard</span>
+                    </Link>
                   </DropdownMenuItem>
                 )}
                 {user.role === "host" && (
-                  <DropdownMenuItem>
-                    <Link to="/host">Host Dashboard</Link>
+                  <DropdownMenuItem asChild>
+                    <Link to="/host" className="flex items-center cursor-pointer">
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      <span>Host Dashboard</span>
+                    </Link>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>
+                <DropdownMenuItem
+                  onClick={logout}
+                  className="text-destructive focus:text-destructive cursor-pointer"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="flex items-center gap-2">
+            <>
               <Link to="/login">
-                <Button variant="ghost" size="sm">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    isTransparent && "text-white hover:bg-white/15 hover:text-white"
+                  )}
+                >
                   Log in
                 </Button>
               </Link>
               <Link to="/signup">
-                <Button variant="default" size="sm" className="bg-gaun-green hover:bg-gaun-light-green">
+                <Button size="sm" variant={isTransparent ? "secondary" : "default"}>
                   Sign up
                 </Button>
               </Link>
-            </div>
+            </>
           )}
-        </nav>
-        
+        </div>
+
         {/* Mobile Menu Button */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="md:hidden" 
+        <button
+          className="md:hidden p-2 -mr-2"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Toggle menu"
         >
-          <Menu className="h-5 w-5" />
-        </Button>
+          {isMobileMenuOpen ? (
+            <X className={cn("h-5 w-5", isTransparent && "text-white")} />
+          ) : (
+            <Menu className={cn("h-5 w-5", isTransparent && "text-white")} />
+          )}
+        </button>
       </div>
-      
+
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t bg-background py-4">
-          <div className="container space-y-4">
-            <Link 
-              to="/" 
-              className="block text-sm font-medium hover:text-gaun-green"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Home
-            </Link>
-            <Link 
-              to="/listings" 
-              className="block text-sm font-medium hover:text-gaun-green"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Stay
-            </Link>
-            <Link 
-              to="/about" 
-              className="block text-sm font-medium hover:text-gaun-green"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              About
-            </Link>
-            <Link 
-              to="/contact" 
-              className="block text-sm font-medium hover:text-gaun-green"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Contact
-            </Link>
-            
-            {user ? (
-              <div className="space-y-2 pt-2 border-t">
-                <Link 
-                  to="/account" 
-                  className="flex items-center text-sm font-medium hover:text-gaun-green"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <User className="mr-2 h-4 w-4" />
-                  Account
-                </Link>
-                {user.role === "admin" && (
-                  <Link 
-                    to="/admin" 
-                    className="flex items-center text-sm font-medium hover:text-gaun-green"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Admin Dashboard
-                  </Link>
+        <div className="md:hidden border-t border-border bg-background animate-fade-in">
+          <div className="container py-6 space-y-1">
+            {[
+              { to: "/", label: "Home", icon: HomeIcon },
+              { to: "/listings", label: "Stays", icon: null },
+              { to: "/about", label: "About", icon: null },
+              { to: "/contact", label: "Contact", icon: null },
+            ].map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  "block px-3 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-secondary",
+                  location.pathname === item.to && "bg-secondary text-primary"
                 )}
-                {user.role === "host" && (
-                  <Link 
-                    to="/host" 
-                    className="flex items-center text-sm font-medium hover:text-gaun-green"
-                    onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {item.label}
+              </Link>
+            ))}
+
+            <div className="pt-3 mt-3 border-t border-border space-y-2">
+              {user ? (
+                <>
+                  <Link
+                    to="/account"
+                    className="flex items-center px-3 py-3 rounded-lg text-sm font-medium hover:bg-secondary"
                   >
-                    Host Dashboard
+                    <User className="mr-2 h-4 w-4" />
+                    My Account
                   </Link>
-                )}
-                <Button 
-                  variant="ghost" 
-                  className="flex items-center text-sm font-medium hover:text-gaun-green w-full justify-start p-0"
-                  onClick={() => {
-                    logout();
-                    setIsMobileMenuOpen(false);
-                  }}
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Log out
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2 pt-2 border-t">
-                <Link 
-                  to="/login" 
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Button variant="ghost" className="w-full">
-                    Log in
-                  </Button>
-                </Link>
-                <Link 
-                  to="/signup" 
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Button className="w-full bg-gaun-green hover:bg-gaun-light-green">
-                    Sign up
-                  </Button>
-                </Link>
-              </div>
-            )}
+                  {user.role === "admin" && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center px-3 py-3 rounded-lg text-sm font-medium hover:bg-secondary"
+                    >
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      Admin Dashboard
+                    </Link>
+                  )}
+                  {user.role === "host" && (
+                    <Link
+                      to="/host"
+                      className="flex items-center px-3 py-3 rounded-lg text-sm font-medium hover:bg-secondary"
+                    >
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      Host Dashboard
+                    </Link>
+                  )}
+                  <button
+                    onClick={logout}
+                    className="flex items-center w-full px-3 py-3 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/5"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Log out
+                  </button>
+                </>
+              ) : (
+                <div className="flex flex-col gap-2 pt-2">
+                  <Link to="/login">
+                    <Button variant="outline" className="w-full">
+                      Log in
+                    </Button>
+                  </Link>
+                  <Link to="/signup">
+                    <Button className="w-full">
+                      Sign up
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

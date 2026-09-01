@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { authAPI } from "../lib/api"; 
+import { authAPI } from "../lib/api";
+import { Mail, CircleCheck as CheckCircle2, ArrowLeft } from "lucide-react";
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
@@ -15,11 +16,10 @@ const ForgotPasswordPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
-      // Use the API function directly since it's not available in AuthContext
       const response = await authAPI.forgotPassword(email);
-      
+
       if (response.success) {
         setIsSubmitted(true);
         toast({
@@ -43,49 +43,51 @@ const ForgotPasswordPage = () => {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gaun-cream/30 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-sm text-center">
-          <div className="text-green-600 text-5xl mb-4">✓</div>
-          <h1 className="text-2xl font-bold text-gaun-green">Check Your Email</h1>
-          <p className="text-muted-foreground">
-            We've sent a 6-digit OTP to <strong>{email}</strong>. 
-            Use it to reset your password.
-          </p>
-          <div className="pt-4">
-            <Link to="/reset-password">
-              <Button className="bg-gaun-green hover:bg-gaun-light-green">
-                Reset Password
-              </Button>
-            </Link>
+      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
+        <div className="max-w-sm w-full space-y-6 text-center">
+          <div className="h-14 w-14 rounded-full bg-success/10 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="h-7 w-7 text-success" />
           </div>
-          <p className="text-sm text-muted-foreground">
-            Didn't receive the email?{" "}
-            <button 
-              onClick={() => setIsSubmitted(false)}
-              className="text-gaun-green hover:underline"
-            >
-              Try again
-            </button>
-          </p>
+          <div>
+            <h1 className="text-2xl font-display font-semibold mb-2">Check your email</h1>
+            <p className="text-sm text-muted-foreground">
+              We've sent a 6-digit OTP to <strong>{email}</strong>. Use it to reset your password.
+            </p>
+          </div>
+          <Link to="/reset-password">
+            <Button className="w-full">Reset password</Button>
+          </Link>
+          <button
+            onClick={() => setIsSubmitted(false)}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Didn't receive the email? Try again
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gaun-cream/30 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-sm">
-        <div className="text-center">
-          <h1 className="text-3xl font-serif font-bold text-gaun-green">Reset Password</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
+      <div className="max-w-sm w-full space-y-6">
+        <Link to="/login" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="h-4 w-4" />
+          Back to login
+        </Link>
+
+        <div>
+          <h1 className="text-3xl font-display font-semibold tracking-tight mb-2">Reset password</h1>
+          <p className="text-sm text-muted-foreground">
             Enter your email to receive a verification code
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="email">Email address</Label>
+        <form className="space-y-5" onSubmit={handleSubmit}>
+          <div>
+            <Label htmlFor="email">Email address</Label>
+            <div className="relative mt-1.5">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="email"
                 type="email"
@@ -93,28 +95,14 @@ const ForgotPasswordPage = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
-                className="mt-1"
+                className="pl-10"
               />
             </div>
           </div>
 
-          <Button
-            type="submit"
-            className="w-full bg-gaun-green hover:bg-gaun-light-green"
-            disabled={isLoading}
-          >
+          <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
             {isLoading ? "Sending OTP..." : "Send OTP"}
           </Button>
-
-          <div className="text-center text-sm">
-            <span className="text-muted-foreground">Remember your password?</span>{" "}
-            <Link
-              to="/login"
-              className="text-gaun-green hover:text-gaun-light-green"
-            >
-              Back to login
-            </Link>
-          </div>
         </form>
       </div>
     </div>

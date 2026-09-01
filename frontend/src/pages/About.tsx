@@ -1,22 +1,26 @@
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Users, Heart, Globe, ArrowRight } from "lucide-react";
 
 const About = () => {
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section 
-        className="relative py-20 md:py-24 flex items-center"
+      {/* Hero */}
+      <section
+        className="relative py-24 md:py-32 flex items-center"
         style={{
-          backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1589308078059-be1415eab4c3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')",
+          backgroundImage:
+            "linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url('https://images.pexels.com/photos/15501229/pexels-photo-15501229.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080')",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       >
         <div className="container">
           <div className="max-w-2xl text-white">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold mb-4">
-              About Gaun Basti
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-semibold tracking-tight mb-4">
+              About Gau Basti
             </h1>
-            <p className="text-xl md:text-2xl opacity-90">
+            <p className="text-xl md:text-2xl text-white/85 leading-relaxed">
               Connecting travelers with authentic Nepali homestay experiences
             </p>
           </div>
@@ -24,146 +28,100 @@ const About = () => {
       </section>
 
       {/* Our Story */}
-      <section className="py-16 bg-white">
+      <section className="py-20 md:py-28">
         <div className="container">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl font-serif font-semibold mb-6">Our Story</h2>
-              <p className="text-lg mb-4">
-                Gaun Basti was founded in 2020 with a simple mission: to connect travelers with authentic Nepali homestay experiences while supporting local communities.
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
+            <div className="space-y-5">
+              <h2 className="text-3xl md:text-4xl font-display font-semibold tracking-tight">Our story</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                Gau Basti was founded in 2020 with a simple mission: to connect travelers with authentic Nepali homestay experiences while supporting local communities.
               </p>
-              <p className="text-lg mb-4">
+              <p className="text-muted-foreground leading-relaxed">
                 Our founders, having grown up in the beautiful villages of Nepal, recognized the unique opportunity to share the rich cultural heritage of rural Nepal with visitors from around the world.
               </p>
-              <p className="text-lg">
+              <p className="text-muted-foreground leading-relaxed">
                 What started as a small initiative with just five homestays has now grown into a community of over 100 hosts across Nepal, each offering a unique glimpse into local life and traditions.
               </p>
             </div>
-            <div className="rounded-lg overflow-hidden">
+            <div className="aspect-[4/5] rounded-2xl overflow-hidden">
               <img
-                src="https://i.pinimg.com/originals/3b/70/bf/3b70bf3871a7670082ca152af26bd3b2.jpg"
+                src="https://images.pexels.com/photos/3352873/pexels-photo-3352873.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1500"
                 alt="Traditional Nepali home"
-                className="w-full h-auto"
+                className="h-full w-full object-cover"
               />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Our Mission */}
-      <section className="py-16 bg-gaun-cream">
+      {/* Mission */}
+      <section className="py-20 md:py-28 bg-secondary/50">
         <div className="container">
-          <h2 className="text-3xl font-serif font-semibold mb-12 text-center">Our Mission</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <div className="h-12 w-12 bg-gaun-green/20 rounded-full flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gaun-green"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <div className="text-center max-w-2xl mx-auto mb-12 md:mb-16">
+            <h2 className="text-3xl md:text-4xl font-display font-semibold tracking-tight mb-3">Our mission</h2>
+            <p className="text-muted-foreground text-lg">We believe tourism should benefit everyone it touches</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { icon: Users, title: "Community support", desc: "We provide economic opportunities for rural communities by connecting them with travelers, ensuring tourism benefits go directly to local families." },
+              { icon: Heart, title: "Cultural preservation", desc: "We help preserve and promote Nepali traditions, architecture, and lifestyle by creating sustainable tourism that values cultural heritage." },
+              { icon: Globe, title: "Authentic connections", desc: "We facilitate meaningful interactions between travelers and locals, creating rich cultural exchanges and unforgettable experiences." },
+            ].map((item) => (
+              <div key={item.title} className="bg-white rounded-2xl p-6 md:p-8 shadow-sm">
+                <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mb-5">
+                  <item.icon className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="font-display text-xl font-semibold mb-2">{item.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
               </div>
-              <h3 className="text-xl font-medium mb-2">Community Support</h3>
-              <p className="text-muted-foreground">
-                We provide economic opportunities for rural communities by connecting them with travelers, ensuring that tourism benefits go directly to local families.
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <div className="h-12 w-12 bg-gaun-green/20 rounded-full flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gaun-green"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M12 18v-6"></path><path d="M8 18v-1"></path><path d="M16 18v-3"></path></svg>
-              </div>
-              <h3 className="text-xl font-medium mb-2">Cultural Preservation</h3>
-              <p className="text-muted-foreground">
-                We help preserve and promote Nepali traditions, architecture, and lifestyle by creating sustainable tourism that values cultural heritage.
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <div className="h-12 w-12 bg-gaun-green/20 rounded-full flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gaun-green"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-              </div>
-              <h3 className="text-xl font-medium mb-2">Authentic Connections</h3>
-              <p className="text-muted-foreground">
-                We facilitate meaningful interactions between travelers and locals, creating rich cultural exchanges and unforgettable experiences.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Team */}
-      <section className="py-16 bg-white">
+      <section className="py-20 md:py-28">
         <div className="container">
-          <h2 className="text-3xl font-serif font-semibold mb-12 text-center">Meet Our Team</h2>
+          <h2 className="text-3xl md:text-4xl font-display font-semibold tracking-tight mb-12 text-center">Meet our team</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Team Member 1 */}
-            <div className="text-center">
-              <div className="mb-4 rounded-full overflow-hidden mx-auto w-40 h-40">
-                <img
-                  src="/WhatsApp Image 2025-06-08 at 19.58.10_f0f236d9.jpg"
-                  alt="KUSHAL THAPA"
-                  className="w-full h-full object-cover"
-                />
+            {[
+              { name: "Kiran Aryal", role: "Founder & CEO", img: "/WhatsApp Image 2025-06-08 at 19.58.10_f0f236d9.jpg" },
+              { name: "Kushal Thapa", role: "Co-founder & COO", img: "/IMG-20250128-WA0003.jpg" },
+              { name: "Nabin Pun", role: "Technical Lead", img: "/WhatsApp Image 2025-01-28 at 21.20.36_2d6875c4.jpg" },
+              { name: "Rohit Khanal", role: "Technical Manager", img: "/WhatsApp Image 2025-01-28 at 21.36.19_4ec2fbd6.jpg" },
+            ].map((member) => (
+              <div key={member.name} className="text-center">
+                <div className="mb-4 rounded-full overflow-hidden mx-auto w-36 h-36 ring-2 ring-border">
+                  <img src={member.img} alt={member.name} className="w-full h-full object-cover" />
+                </div>
+                <h3 className="font-display font-semibold">{member.name}</h3>
+                <p className="text-sm text-primary">{member.role}</p>
               </div>
-              <h3 className="text-xl font-medium">Kiran Aryal</h3>
-              <p className="text-gaun-green">Founder & CEO</p>
-            </div>
-            {/* Team Member 2 */}
-            <div className="text-center">
-              <div className="mb-4 rounded-full overflow-hidden mx-auto w-40 h-40">
-                <img
-                  src="/IMG-20250128-WA0003.jpg"
-                  alt="Kushal Thapa"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <h3 className="text-xl font-medium">Kushal Thapa</h3>
-              <p className="text-gaun-green">Co-founder & COO</p>
-            </div>
-            {/* Team Member 3 */}
-            <div className="text-center">
-              <div className="mb-4 rounded-full overflow-hidden mx-auto w-40 h-40">
-                <img
-                  src="/WhatsApp Image 2025-01-28 at 21.20.36_2d6875c4.jpg"
-                  alt="Sunil Thapa"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <h3 className="text-xl font-medium">NABIN PUN</h3>
-              <p className="text-gaun-green">Technical Lead</p>
-            </div>
-            {/* Team Member 4 */}
-            <div className="text-center">
-              <div className="mb-4 rounded-full overflow-hidden mx-auto w-40 h-40">
-                <img
-                  src="/WhatsApp Image 2025-01-28 at 21.36.19_4ec2fbd6.jpg"
-                  alt="Puja Tamang"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <h3 className="text-xl font-medium">ROHIT KHANAL</h3>
-              <p className="text-gaun-green">TECHNICAL Manager</p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Call to Action */}
-      <section className="py-16 bg-gaun-green text-white">
+      {/* CTA */}
+      <section className="py-20 md:py-28 bg-primary text-white">
         <div className="container">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="mb-6 md:mb-0">
-              <h2 className="text-3xl font-serif font-semibold mb-2">Join our community</h2>
-              <p className="text-white/80">Become a host or start your adventure today</p>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="max-w-xl">
+              <h2 className="text-3xl md:text-4xl font-display font-semibold tracking-tight mb-3">Join our community</h2>
+              <p className="text-white/70 text-lg">Become a host or start your adventure today</p>
             </div>
-            <div className="flex gap-4">
-              <a 
-                href="/contact" 
-                className="inline-flex items-center justify-center px-6 py-3 border border-white text-base font-medium rounded-md shadow-sm text-gaun-green bg-white hover:bg-gaun-cream transition-colors"
-              >
-                Become a Host
-              </a>
-              <a 
-                href="/listings" 
-                className="inline-flex items-center justify-center px-6 py-3 border border-white text-base font-medium rounded-md shadow-sm bg-transparent hover:bg-white/10 transition-colors"
-              >
-                Browse Homestays
-              </a>
+            <div className="flex gap-3">
+              <Link to="/contact">
+                <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-white/90">
+                  Become a host
+                </Button>
+              </Link>
+              <Link to="/listings">
+                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+                  Browse stays
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

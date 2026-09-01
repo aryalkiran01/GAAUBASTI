@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
+import { Mountain } from "lucide-react";
 
 const Signup = () => {
   const [name, setName] = useState("");
@@ -18,76 +18,91 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gaun-cream/30 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-sm">
-        <div className="text-center">
-          <h1 className="text-3xl font-serif font-bold text-gaun-green">Create an account</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Join Gaun Basti to discover authentic Nepali homestays
-          </p>
+    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
+      {/* Left: Image */}
+      <div className="hidden md:block relative">
+        <img
+          src="https://images.pexels.com/photos/8220089/pexels-photo-8220089.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600"
+          alt="Nepal rice terraces"
+          className="h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent flex items-end p-12">
+          <div className="text-white">
+            <Mountain className="h-8 w-8 mb-4" />
+            <h2 className="text-3xl font-display font-semibold leading-tight max-w-xs">
+              Your Nepal adventure starts here.
+            </h2>
+          </div>
         </div>
+      </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name">Full name</Label>
-              <Input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Kiran Dai"
-                required
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email address</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="mt-1"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Must be at least 6 characters
-              </p>
-            </div>
+      {/* Right: Form */}
+      <div className="flex items-center justify-center p-6 md:p-12 bg-background">
+        <div className="w-full max-w-sm space-y-6">
+          <div>
+            <h1 className="text-3xl font-display font-semibold tracking-tight mb-2">
+              Create an account
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Join Gau Basti to discover authentic Nepali homestays
+            </p>
           </div>
 
-          <Button
-            type="submit"
-            className="w-full bg-gaun-green hover:bg-gaun-light-green"
-            disabled={isLoading}
-          >
-            {isLoading ? "Creating account..." : "Sign up"}
-          </Button>
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="name">Full name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Kiran Dai"
+                  required
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="mt-1.5"
+                />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Must be at least 6 characters
+                </p>
+              </div>
+            </div>
 
-          <div className="text-center text-sm">
-            <span className="text-muted-foreground">Already have an account?</span>{" "}
-            <Link
-              to="/login"
-              className="text-gaun-green hover:text-gaun-light-green"
-            >
-              Log in
-            </Link>
-          </div>
-        </form>
+            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+              {isLoading ? "Creating account..." : "Sign up"}
+            </Button>
+
+            <p className="text-center text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <Link to="/login" className="text-primary font-medium hover:underline">
+                Log in
+              </Link>
+            </p>
+          </form>
+        </div>
       </div>
     </div>
   );

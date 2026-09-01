@@ -1,8 +1,10 @@
-
 import SearchForm from "@/components/SearchForm";
 import ListingCard from "@/components/ListingCard";
 import { useFeaturedListings } from "@/hooks/useListings";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Star, MapPin, Compass, CalendarCheck, Heart, ArrowRight } from "lucide-react";
 
 const Index = () => {
   const { listings: featuredListings, loading } = useFeaturedListings();
@@ -10,39 +12,64 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Hero Section */}
-      <section 
-        className="relative py-24 md:py-32 flex items-center"
+      <section
+        className="relative min-h-[90vh] flex items-end pb-12 md:pb-20"
         style={{
-          backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1506038634487-60a69ae4b7b1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')",
+          backgroundImage:
+            "linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.5) 100%), url('https://images.pexels.com/photos/32225790/pexels-photo-32225790.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1280')",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       >
         <div className="container">
-          <div className="max-w-2xl text-white space-y-6">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold">
-              Experience authentic Nepali hospitality
+          <div className="max-w-3xl space-y-6 animate-fade-in-up">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-display font-semibold text-white leading-[1.05] tracking-tight text-balance">
+              Stay somewhere
+              <br />
+              worth remembering.
             </h1>
-            <p className="text-xl md:text-2xl opacity-90">
-              Discover beautiful homestays in the heart of Nepal's scenic villages
+            <p className="text-lg md:text-xl text-white/85 max-w-xl leading-relaxed">
+              Discover authentic homestays, cottages, and unique stays in the
+              heart of Nepal's scenic villages.
             </p>
-            <div className="pt-4">
-              <SearchForm />
-            </div>
           </div>
         </div>
       </section>
 
-      {/* Featured Listings */}
-      <section className="py-16 bg-white">
+      {/* Floating Search */}
+      <section className="relative -mt-20 md:-mt-24 z-10">
         <div className="container">
-          <h2 className="text-3xl font-serif font-semibold mb-8">Featured Stays</h2>
+          <SearchForm />
+        </div>
+      </section>
+
+      {/* Featured Listings */}
+      <section className="py-20 md:py-28">
+        <div className="container">
+          <div className="flex items-end justify-between mb-10 md:mb-14">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-display font-semibold tracking-tight mb-2">
+                Featured stays
+              </h2>
+              <p className="text-muted-foreground text-base md:text-lg">
+                Handpicked properties loved by our travelers
+              </p>
+            </div>
+            <Link
+              to="/listings"
+              className="hidden md:inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+            >
+              View all stays
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {Array.from({ length: 4 }).map((_, index) => (
                 <div key={index} className="space-y-3">
-                  <Skeleton className="h-48 w-full rounded-lg" />
-                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="aspect-[4/3] w-full rounded-2xl" />
+                  <Skeleton className="h-5 w-3/4" />
                   <Skeleton className="h-4 w-1/2" />
                 </div>
               ))}
@@ -56,144 +83,187 @@ const Index = () => {
               ))}
             </div>
           )}
-          <div className="mt-12 text-center">
-            <a 
-              href="/listings" 
-              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gaun-green hover:bg-gaun-light-green"
-            >
-              View All Stays
-            </a>
+
+          <div className="mt-10 md:hidden">
+            <Link to="/listings">
+              <Button variant="outline" className="w-full">
+                View all stays
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* Why Choose Us */}
-      <section className="py-16 bg-gaun-cream">
+      {/* Editorial Destination Section */}
+      <section className="py-20 md:py-28 bg-secondary/50">
         <div className="container">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <h2 className="text-3xl font-serif font-semibold mb-4">Why Choose Gaun Basti</h2>
-            <p className="text-lg text-muted-foreground">
-              We offer authentic experiences that connect you with local culture and communities
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
+            <div className="relative">
+              <div className="aspect-[4/5] rounded-2xl overflow-hidden">
+                <img
+                  src="https://images.pexels.com/photos/15501229/pexels-photo-15501229.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1500"
+                  alt="Traditional Nepali village"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="absolute -bottom-6 -right-6 hidden md:block">
+                <div className="bg-white rounded-2xl shadow-lg p-5 max-w-[200px]">
+                  <div className="flex items-center gap-1 mb-1">
+                    <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                    <span className="font-semibold text-sm">4.9</span>
+                    <span className="text-xs text-muted-foreground">avg rating</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    from 2,000+ happy travelers
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-5">
+              <h2 className="text-3xl md:text-4xl font-display font-semibold tracking-tight leading-tight">
+                Nepal beyond the usual
+              </h2>
+              <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
+                From traditional mud houses in Bandipur to treehouses in Chitwan
+                and lakeside cabins in Pokhara — every stay is a gateway to
+                real Nepali village life.
+              </p>
+              <div className="space-y-4 pt-2">
+                {[
+                  { icon: Compass, title: "Authentic destinations", desc: "Stay in real villages, not tourist traps" },
+                  { icon: Heart, title: "Local hosts, real stories", desc: "Every booking supports a local family" },
+                  { icon: MapPin, title: "Curated by location", desc: "Mountains, lakes, jungles, and heritage towns" },
+                ].map((item) => (
+                  <div key={item.title} className="flex items-start gap-4">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <item.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-sm md:text-base">{item.title}</h3>
+                      <p className="text-sm text-muted-foreground">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="py-20 md:py-28">
+        <div className="container">
+          <div className="text-center max-w-2xl mx-auto mb-12 md:mb-16">
+            <h2 className="text-3xl md:text-4xl font-display font-semibold tracking-tight mb-3">
+              How it works
+            </h2>
+            <p className="text-muted-foreground text-base md:text-lg">
+              Book your stay in three simple steps
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow-sm text-center">
-              <div className="h-12 w-12 bg-gaun-green/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gaun-green"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+            {[
+              { step: "01", icon: Compass, title: "Browse", desc: "Explore curated homestays across Nepal's most beautiful regions." },
+              { step: "02", icon: CalendarCheck, title: "Reserve", desc: "Check availability and book your dates in just a few clicks." },
+              { step: "03", icon: Heart, title: "Experience", desc: "Arrive, settle in, and live like a local with your host family." },
+            ].map((item) => (
+              <div key={item.step} className="text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
+                  <span className="font-display text-2xl font-semibold text-primary/30">
+                    {item.step}
+                  </span>
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <item.icon className="h-5 w-5 text-primary" />
+                  </div>
+                </div>
+                <h3 className="font-display text-xl font-semibold mb-2">{item.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {item.desc}
+                </p>
               </div>
-              <h3 className="text-xl font-medium mb-2">Authentic Experiences</h3>
-              <p className="text-muted-foreground">
-                Immerse yourself in local traditions and culture with our carefully selected homestays.
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm text-center">
-              <div className="h-12 w-12 bg-gaun-green/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gaun-green"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
-              </div>
-              <h3 className="text-xl font-medium mb-2">Seamless Booking</h3>
-              <p className="text-muted-foreground">
-                Easy and secure online booking process with instant confirmations.
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm text-center">
-              <div className="h-12 w-12 bg-gaun-green/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gaun-green"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-              </div>
-              <h3 className="text-xl font-medium mb-2">Community Support</h3>
-              <p className="text-muted-foreground">
-                Your bookings directly benefit local communities and families.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="py-16 bg-white">
+      <section className="py-20 md:py-28 bg-secondary/50">
         <div className="container">
-          <h2 className="text-3xl font-serif font-semibold mb-8 text-center">Guest Stories</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-gaun-cream p-6 rounded-lg">
-              <div className="flex items-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
-              </div>
-              <p className="italic mb-6">
-                "Our stay at the Riverside Cottage was magical. The hosts were incredibly welcoming and the home-cooked meals were a highlight of our trip!"
-              </p>
-              <div className="flex items-center">
-                <div className="h-10 w-10 rounded-full overflow-hidden mr-3">
-                  <img src="/IMG-20250128-WA0003.jpg" alt="lushal from USA" className="h-full w-full object-cover" />
+          <div className="text-center max-w-2xl mx-auto mb-12 md:mb-16">
+            <h2 className="text-3xl md:text-4xl font-display font-semibold tracking-tight mb-3">
+              Guest stories
+            </h2>
+            <p className="text-muted-foreground text-base md:text-lg">
+              What travelers say about their Gau Basti experience
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                quote: "Our stay at the Riverside Cottage was magical. The hosts were incredibly welcoming and the home-cooked meals were a highlight of our trip!",
+                name: "Kushal Thapa",
+                location: "from Arghakhanchi",
+                avatar: "/IMG-20250128-WA0003.jpg",
+              },
+              {
+                quote: "The mountain view from our villa was breathtaking! We enjoyed the cultural activities and learned so much about local traditions.",
+                name: "Michael Jackson",
+                location: "from Kantipur",
+                avatar: "/IMG-20250128-WA0005.jpg",
+              },
+              {
+                quote: "Staying in the traditional mud house was the highlight of our Nepal trip. The authentic experience and warm hospitality made it unforgettable.",
+                name: "Juduwa Bhai",
+                location: "from Australia",
+                avatar: "/IMG-20250128-WA0006.jpg",
+              },
+            ].map((testimonial, i) => (
+              <div key={i} className="bg-white rounded-2xl p-6 md:p-8 shadow-sm">
+                <div className="flex items-center gap-1 mb-4">
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <Star key={idx} className="h-4 w-4 text-amber-500 fill-amber-500" />
+                  ))}
                 </div>
-                <div>
-                  <h4 className="font-medium">Kushal Thapa</h4>
-                  <p className="text-sm text-muted-foreground">from UNITED STATE OF ARGHAKHANCHI(USA)</p>
-                </div>
-              </div>
-            </div>  
-            <div className="bg-gaun-cream p-6 rounded-lg">
-              <div className="flex items-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
-              </div>
-              <p className="italic mb-6">
-                "The mountain view from our villa was breathtaking! We enjoyed the cultural activities and learned so much about local traditions."
-              </p>
-              <div className="flex items-center">
-                <div className="h-10 w-10 rounded-full overflow-hidden mr-3">
-                  <img src="/IMG-20250128-WA0005.jpg" alt="Michael from Germany" className="h-full w-full object-cover" />
-                </div>
-                <div>
-                  <h4 className="font-medium">Michael JACKON</h4>
-                  <p className="text-sm text-muted-foreground">from Kantipur</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gaun-cream p-6 rounded-lg">
-              <div className="flex items-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2F5233" className="h-5 w-5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"></path></svg>
-              </div>
-              <p className="italic mb-6">
-                "Staying in the traditional mud house was the highlight of our Nepal trip. The authentic experience and warm hospitality made it unforgettable."
-              </p>
-              <div className="flex items-center">
-                <div className="h-10 w-10 rounded-full overflow-hidden mr-3">
-                  <img src="/IMG-20250128-WA0006.jpg" alt="JUDUWA BHAI" className="h-full w-full object-cover" />
-                </div>
-                <div>
-                  <h4 className="font-medium">JUDUWA BHAI</h4>
-                  <p className="text-sm text-muted-foreground">from Australia</p>
+                <p className="text-sm md:text-base text-foreground/80 leading-relaxed mb-6">
+                  "{testimonial.quote}"
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-full overflow-hidden bg-secondary shrink-0">
+                    <img
+                      src={testimonial.avatar}
+                      alt={testimonial.name}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-sm">{testimonial.name}</h4>
+                    <p className="text-xs text-muted-foreground">{testimonial.location}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Call to Action */}
-      <section className="py-16 bg-gaun-green text-white">
+      <section className="py-20 md:py-28 bg-primary text-white">
         <div className="container">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="mb-6 md:mb-0">
-              <h2 className="text-3xl font-serif font-semibold mb-2">Ready for your Nepal adventure?</h2>
-              <p className="text-white/80">Discover the perfect homestay for your journey</p>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="max-w-xl">
+              <h2 className="text-3xl md:text-4xl font-display font-semibold tracking-tight mb-3">
+                Ready for your Nepal adventure?
+              </h2>
+              <p className="text-white/70 text-base md:text-lg">
+                Discover the perfect homestay for your next journey
+              </p>
             </div>
-            <a 
-              href="/listings" 
-              className="inline-flex items-center justify-center px-6 py-3 border border-white text-base font-medium rounded-md shadow-sm text-gaun-green bg-white hover:bg-gaun-cream transition-colors"
-            >
-              Browse Homestays
-            </a>
+            <Link to="/listings">
+              <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-white/90">
+                Browse homestays
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
