@@ -1,14 +1,38 @@
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import { Listing } from "../types";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star, MapPin, Bed, Bath, Users } from "lucide-react";
+import { Star, MapPin, Bed, Bath, Users, Heart } from "lucide-react";
+import { listingsAPI } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ListingCardProps {
   listing: Listing;
 }
 
 export default function ListingCard({ listing }: ListingCardProps) {
+  const [saved, setSaved] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const handleSave = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!user) {
+      toast({ title: "Login required", description: "Please log in to save favorites." });
+      return;
+    }
+    const response = await listingsAPI.toggleWishlist(listing.id);
+    if (response.success) {
+      setSaved(response.data?.saved ?? !saved);
+      toast({ title: response.data?.saved ? "Saved to favorites" : "Removed from favorites" });
+    } else {
+      toast({ variant: "destructive", title: "Could not update favorites", description: response.message });
+    }
+  };
+
   const getImageUrl = (images: string[] | Array<{url: string}>) => {
     if (Array.isArray(images) && images.length > 0) {
       return typeof images[0] === 'string' ? images[0] : images[0].url;
@@ -38,6 +62,14 @@ export default function ListingCard({ listing }: ListingCardProps) {
               <span className="text-muted-foreground font-normal"> / night</span>
             </Badge>
           </div>
+          <button
+            type="button"
+            aria-label={saved ? "Remove from favorites" : "Save to favorites"}
+            onClick={handleSave}
+            className="absolute top-3 right-3 h-9 w-9 rounded-full bg-white/95 flex items-center justify-center shadow-sm hover:bg-white transition-colors"
+          >
+            <Heart className={`h-4 w-4 ${saved ? "fill-destructive text-destructive" : "text-foreground"}`} />
+          </button>
         </div>
         <div className="p-4 md:p-5">
           <div className="flex items-start justify-between gap-2 mb-1.5">

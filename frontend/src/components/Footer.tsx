@@ -78,24 +78,24 @@ export default function Footer() {
             <h3 className="text-sm font-semibold text-background mb-4">Support</h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="#" className="text-background/60 hover:text-background transition-colors">
+                <Link to="/help" className="text-background/60 hover:text-background transition-colors">
                   Help Center
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-background/60 hover:text-background transition-colors">
+                <Link to="/safety" className="text-background/60 hover:text-background transition-colors">
                   Safety Information
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-background/60 hover:text-background transition-colors">
+                <Link to="/cancellation-policy" className="text-background/60 hover:text-background transition-colors">
                   Cancellation Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-background/60 hover:text-background transition-colors">
+                <Link to="/help" className="text-background/60 hover:text-background transition-colors">
                   FAQ
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

@@ -13,6 +13,8 @@ import { PaymentDetails } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import AvailabilityChecker from "@/components/AvailabilityChecker";
 import ReviewSection from "@/components/ReviewSection";
+import ReportModal from "@/components/ReportModal";
+import { Flag } from "lucide-react";
 
 const ListingDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +24,7 @@ const ListingDetail = () => {
   const [nights, setNights] = useState(1);
   const [isBooking, setIsBooking] = useState(false);
   const [isAvailable, setIsAvailable] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -253,6 +256,12 @@ const ListingDetail = () => {
                   Message host
                 </Button>
               )}
+              {user && (
+                <Button variant="outline" size="sm" onClick={() => setShowReport(true)}>
+                  <Flag className="h-3.5 w-3.5" />
+                  Report
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -427,6 +436,14 @@ const ListingDetail = () => {
           </div>
         </div>
       </div>
+
+      <ReportModal
+        open={showReport}
+        onClose={() => setShowReport(false)}
+        entityType="listing"
+        entityId={listing.id}
+        entityName={listing.title}
+      />
     </div>
   );
 };
