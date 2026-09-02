@@ -119,7 +119,7 @@ const getListings = async (req, res) => {
     }
 
     // Build sort object
-    const sort: Record<string, number> = {};
+    const sort: any = {};
     sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     // Execute query with pagination

@@ -1,5 +1,5 @@
 export {};
-  import cloudinary from 'cloudinary';
+import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 

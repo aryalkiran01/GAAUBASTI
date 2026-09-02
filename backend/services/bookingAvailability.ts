@@ -144,8 +144,8 @@ const checkListingAvailability = async ({ listingId, startDate, endDate, exclude
     };
   }
 
-  let listing = await Listing.findById(listingId);
-  listing = listing && typeof listing.toObject === 'function' ? listing.toObject() : listing;
+  const listingDoc = await Listing.findById(listingId);
+  const listing = listingDoc ? (typeof listingDoc.toObject === 'function' ? listingDoc.toObject() : listingDoc) : null;
 
   if (!listing) {
     return {
@@ -216,3 +216,6 @@ export {
   checkListingAvailability
 };
 
+
+
+export { validateGuestCount, validateBookingDates, canTransitionStatus, checkListingAvailability }

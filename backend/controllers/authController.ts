@@ -114,7 +114,7 @@ const login = async (req, res) => {
     }
 
     // Check password
-    const isPasswordValid = await user.comparePassword(password);
+    const isPasswordValid = await (user as any).comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -211,7 +211,7 @@ const changePassword = async (req, res) => {
     const user = await User.findById(req.user._id).select('+password');
 
     // Verify current password
-    const isCurrentPasswordValid = await user.comparePassword(currentPassword);
+    const isCurrentPasswordValid = await (user as any).comparePassword(currentPassword);
     if (!isCurrentPasswordValid) {
       return res.status(400).json({
         success: false,
@@ -292,7 +292,7 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid OTP' });
     }
 
-    if (otpRecord.expires < Date.now()) {
+    if (new Date(otpRecord.expires).getTime() < Date.now()) {
       return res.status(400).json({ success: false, message: 'OTP expired' });
     }
 
@@ -351,8 +351,8 @@ const verifyEmail = async (req, res) => {
     }
 
     user.isVerified = true;
-    user.verificationToken = null;
-    user.verificationTokenExpires = null;
+    (user as any).verificationToken = null;
+    (user as any).verificationTokenExpires = null;
     await user.save();
 
     res.json({

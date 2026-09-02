@@ -32,7 +32,7 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, getJwtSecret());
+    const decoded = jwt.verify(token, getJwtSecret()) as any;
     const user = await User.findById(decoded.userId).select('-password');
 
     if (!user) {

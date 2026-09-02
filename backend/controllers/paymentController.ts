@@ -73,7 +73,7 @@ const verifyPaymentOwnership = async ({ paymentId, userId, userRole, providerPay
     return { status: 403, error: 'You do not own this payment' };
   }
 
-  if (!isAdmin && payment.booking && payment.booking.guest && payment.booking.guest.toString() !== userId.toString()) {
+  if (!isAdmin && payment.booking && (payment.booking as any).guest && (payment.booking as any).guest.toString() !== userId.toString()) {
     return { status: 403, error: 'You cannot verify this booking payment' };
   }
 
@@ -179,7 +179,7 @@ const createPayment = async (req, res) => {
           amount: existingIdempotentPayment.amount,
           currency: existingIdempotentPayment.currency,
           providerPaymentId: existingIdempotentPayment.providerPaymentId,
-          clientSecret: existingIdempotentPayment.provider === 'stripe' ? existingIdempotentPayment.metadata?.clientSecret || undefined : undefined
+          clientSecret: existingIdempotentPayment.provider === 'stripe' ? (existingIdempotentPayment.metadata as any)?.clientSecret || undefined : undefined
         }
       });
     }
@@ -239,7 +239,7 @@ const createPayment = async (req, res) => {
         providerPaymentId: paymentIntent.id,
         status: 'processing',
         metadata: {
-          ...newPayment.metadata?.toObject ? newPayment.metadata.toObject() : (newPayment.metadata || {}),
+          ...((newPayment.metadata as any)?.toObject ? (newPayment.metadata as any).toObject() : (newPayment.metadata || {})),
           clientSecret: paymentIntent.client_secret
         }
       });
@@ -346,7 +346,7 @@ const verifyPayment = async (req, res) => {
     payment.providerPaymentId = providerPaymentId || payment.providerPaymentId;
     await payment.save();
 
-    const booking = payment.booking;
+    const booking = payment.booking as any;
     if (booking && booking.status !== 'confirmed') {
       booking.status = 'confirmed';
       booking.paymentStatus = 'paid';
@@ -475,7 +475,7 @@ const getPaymentStatus = async (req, res) => {
     }
 
     const isOwner = payment.payer && payment.payer.toString() === req.user._id.toString();
-    const isBookingGuest = payment.booking && payment.booking.guest && payment.booking.guest.toString() === req.user._id.toString();
+    const isBookingGuest = payment.booking && (payment.booking as any).guest && (payment.booking as any).guest.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
 
     if (!isOwner && !isBookingGuest && !isAdmin) {

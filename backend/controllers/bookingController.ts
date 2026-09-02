@@ -363,7 +363,7 @@ const updateBookingStatus = async (req, res) => {
         });
 
         if (!matches) {
-          await listingForDates.addUnavailableDates(booking.startDate, booking.endDate, 'Booked');
+          await (listingForDates as any).addUnavailableDates(booking.startDate, booking.endDate, 'Booked');
         }
       }
     }
@@ -428,14 +428,14 @@ const cancelBooking = async (req, res) => {
       });
     }
 
-    if (!booking.canBeCancelled()) {
+    if (!(booking as any).canBeCancelled()) {
       return res.status(400).json({
         success: false,
         message: 'Booking cannot be cancelled at this time'
       });
     }
 
-    const refundAmount = booking.calculateRefund(booking.listing.cancellationPolicy);
+    const refundAmount = (booking as any).calculateRefund((booking.listing as any)?.cancellationPolicy);
 
     booking.status = 'cancelled';
     booking.cancellationReason = cancellationReason;

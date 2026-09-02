@@ -116,7 +116,7 @@ reviewSchema.post('save', async function(this: any) {
   await this.constructor.updateListingRating(this.listing);
 });
 
-reviewSchema.post('remove', async function(this: any) {
+(reviewSchema as any).post('delete', async function(this: any) {
   await this.constructor.updateListingRating(this.listing);
 });
 
