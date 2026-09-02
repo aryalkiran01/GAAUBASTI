@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { conversationsAPI } from "@/lib/api";
+import { useConversationSocket, type ServerMessage } from "@/hooks/useSocket";
 
 const getUserId = (user: any) => user?._id || user?.id;
 
@@ -17,10 +18,35 @@ const Messages = () => {
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const selectedConversation = useMemo(
     () => conversations.find((conversation) => (conversation._id || conversation.id) === selectedConversationId) || null,
     [conversations, selectedConversationId]
+  );
+
+  const handleNewMessage = useCallback((message: ServerMessage) => {
+    setMessages((current) => {
+      const messageId = message._id || (message as any).id;
+      if (current.some((m) => (m._id || m.id) === messageId)) {
+        return current;
+      }
+      return [...current, message];
+    });
+    setConversations((current) =>
+      current.map((conv) => {
+        const convId = conv._id || conv.id;
+        if (convId === message.conversationId) {
+          return { ...conv, lastMessageAt: message.createdAt };
+        }
+        return conv;
+      })
+    );
+  }, []);
+
+  const { typingUser, sendTypingStart, sendTypingStop } = useConversationSocket(
+    selectedConversationId,
+    handleNewMessage
   );
 
   const loadConversations = useCallback(async () => {
@@ -72,6 +98,10 @@ const Messages = () => {
     loadMessages(selectedConversationId);
   }, [selectedConversationId, loadMessages]);
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   const handleSelectConversation = (conversationId: string) => {
     setSelectedConversationId(conversationId);
     setSearchParams({ conversationId });
@@ -90,12 +120,27 @@ const Messages = () => {
       });
 
       if (response.success && response.data?.message) {
-        setMessages((currentMessages) => [...currentMessages, response.data.message]);
+        setMessages((currentMessages) => {
+          const newMsg = response.data.message;
+          const newId = newMsg._id || newMsg.id;
+          if (currentMessages.some((m) => (m._id || m.id) === newId)) {
+            return currentMessages;
+          }
+          return [...currentMessages, newMsg];
+        });
         setDraft("");
+        sendTypingStop(selectedConversationId);
         await loadConversations();
       }
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleDraftChange = (value: string) => {
+    setDraft(value);
+    if (selectedConversationId) {
+      sendTypingStart(selectedConversationId);
     }
   };
 
@@ -175,6 +220,9 @@ const Messages = () => {
                       </div>
                     );
                   })}
+                  {typingUser && typingUser !== getUserId(user) && (
+                    <div className="text-xs text-muted-foreground italic">typing…</div>
+                  )}
                 </div>
               </div>
 
@@ -185,12 +233,17 @@ const Messages = () => {
                   messages.map((message: any) => {
                     const senderId = getUserId(message.sender || {});
                     const isMine = senderId === getUserId(user);
+                    const isSystem = !!message.systemType;
 
                     return (
-                      <div key={message._id || message.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+                      <div key={message._id || message.id} className={`flex ${isMine ? "justify-end" : "justify-start"} ${isSystem ? "justify-center" : ""}`}>
                         <div
                           className={`max-w-[75%] rounded-xl px-3 py-2 ${
-                            isMine ? "bg-gaun-green text-white" : "bg-muted text-foreground"
+                            isSystem
+                              ? "bg-muted/50 text-muted-foreground text-xs text-center italic"
+                              : isMine
+                                ? "bg-gaun-green text-white"
+                                : "bg-muted text-foreground"
                           }`}
                         >
                           <div className="text-sm whitespace-pre-wrap">{message.body || "Sent a file"}</div>
@@ -202,12 +255,13 @@ const Messages = () => {
                     );
                   })
                 )}
+                <div ref={messagesEndRef} />
               </div>
 
               <div className="flex gap-2 border-t p-4">
                 <Input
                   value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
+                  onChange={(event) => handleDraftChange(event.target.value)}
                   placeholder="Type a message…"
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
