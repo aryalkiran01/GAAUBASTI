@@ -9,4 +9,4 @@ router.post('/', toggleWishlist);
 router.get('/', getWishlist);
 router.delete('/:listingId', removeWishlistItem);
 
-module.exports = router;
+export default router;

@@ -84,5 +84,5 @@ const errorHandler = (err: any, req: any, res: any, next: any) => {
   res.status(payload.statusCode || 500).json(response);
 };
 
-module.exports = errorHandler;
-module.exports.getSafeErrorPayload = getSafeErrorPayload;
+export default errorHandler;
+export { getSafeErrorPayload };

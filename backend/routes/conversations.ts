@@ -10,4 +10,4 @@ router.post('/', getOrCreateConversation);
 router.get('/:id/messages', getMessages);
 router.post('/:id/messages', sendMessage);
 
-module.exports = router;
+export default router;

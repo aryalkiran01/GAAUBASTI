@@ -20,5 +20,5 @@ router.put('/profile', updateProfile);
 router.post('/change-password', changePassword);
 router.post('/refresh-token', refreshToken);
 
-module.exports = router;
+export default router;
 

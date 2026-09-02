@@ -215,7 +215,3 @@ export {
   canTransitionStatus,
   checkListingAvailability
 };
-
-
-
-export { validateGuestCount, validateBookingDates, canTransitionStatus, checkListingAvailability }

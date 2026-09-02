@@ -24,4 +24,4 @@ router.put('/:id', requireHost, validateObjectId('id'), requireOwnership(Listing
 router.delete('/:id', requireHost, validateObjectId('id'), requireOwnership(Listing, 'host'), deleteListing);
 
 
-module.exports = router;
+export default router;

@@ -12,5 +12,5 @@ router.post('/create', createPayment);
 router.post('/:paymentId/verify', verifyPayment);
 router.get('/:paymentId', getPaymentStatus);
 
-module.exports = router;
+export default router;
 

@@ -7,4 +7,4 @@ import { getMyPayouts } from '../controllers/payoutController';
 router.use(authenticate);
 router.get('/', getMyPayouts);
 
-module.exports = router;
+export default router;

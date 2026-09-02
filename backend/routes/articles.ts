@@ -12,4 +12,4 @@ router.post('/', requireAdmin, createArticle);
 router.put('/:id', requireAdmin, updateArticle);
 router.delete('/:id', requireAdmin, deleteArticle);
 
-module.exports = router;
+export default router;

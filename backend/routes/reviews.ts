@@ -21,4 +21,4 @@ router.post('/:id/flag', requireTraveler, validateObjectId('id'), flagReview);
 // Host routes
 router.post('/:id/respond', requireHost, validateObjectId('id'), respondToReview);
 
-module.exports = router;
+export default router;

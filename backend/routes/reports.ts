@@ -7,4 +7,4 @@ import { createReport } from '../controllers/reportController';
 router.use(authenticate);
 router.post('/', createReport);
 
-module.exports = router;
+export default router;

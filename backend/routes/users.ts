@@ -81,4 +81,4 @@ router.put('/:id', validateObjectId('id'), requireOwnershipOrAdmin('user'), asyn
   }
 });
 
-module.exports = router;
+export default router;

@@ -8,4 +8,4 @@ router.use(authenticate);
 router.get('/', getNotifications);
 router.patch('/:id/read', markNotificationRead);
 
-module.exports = router;
+export default router;

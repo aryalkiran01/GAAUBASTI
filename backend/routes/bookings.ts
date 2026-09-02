@@ -20,4 +20,4 @@ router.patch('/:id/cancel', requireTraveler, validateObjectId('id'), cancelBooki
 router.get('/host/bookings', requireHost, getHostBookings);
 router.patch('/:id/status', requireHost, validateObjectId('id'), updateBookingStatus);
 
-module.exports = router;
+export default router;
