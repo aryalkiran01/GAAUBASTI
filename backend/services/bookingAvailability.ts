@@ -111,7 +111,7 @@ const canTransitionStatus = (currentStatus, nextStatus) => {
   return getAllowedStatusTransitions(currentStatus).includes(nextStatus);
 };
 
-const findConflictingBooking = async ({ listingId, startDate, endDate, excludeBookingId = null }: any) => {
+const findConflictingBooking = async ({ listingId, startDate, endDate, excludeBookingId = null }: any, bookingModel = Booking) => {
   const query: any = {
     listing: listingId,
     status: { $in: BLOCKING_BOOKING_STATUSES },
@@ -123,7 +123,7 @@ const findConflictingBooking = async ({ listingId, startDate, endDate, excludeBo
     query._id = { $ne: excludeBookingId };
   }
 
-  let bookingQuery = Booking.findOne(query);
+  let bookingQuery = bookingModel.findOne(query);
   if (typeof bookingQuery.sort === 'function') {
     bookingQuery = bookingQuery.sort({ startDate: 1 });
   }
@@ -132,7 +132,7 @@ const findConflictingBooking = async ({ listingId, startDate, endDate, excludeBo
   return result && typeof result.toObject === 'function' ? result.toObject() : result;
 };
 
-const checkListingAvailability = async ({ listingId, startDate, endDate, excludeBookingId = null }) => {
+const checkListingAvailability = async ({ listingId, startDate, endDate, excludeBookingId = null }, listingModel = Listing, bookingModel = Booking) => {
   const dateValidation = validateBookingDates(startDate, endDate);
 
   if (!dateValidation.valid) {
@@ -144,7 +144,7 @@ const checkListingAvailability = async ({ listingId, startDate, endDate, exclude
     };
   }
 
-  const listingDoc = await Listing.findById(listingId);
+  const listingDoc = await listingModel.findById(listingId);
   const listing = listingDoc ? (typeof listingDoc.toObject === 'function' ? listingDoc.toObject() : listingDoc) : null;
 
   if (!listing) {
@@ -186,7 +186,7 @@ const checkListingAvailability = async ({ listingId, startDate, endDate, exclude
     startDate: requestStart,
     endDate: requestEnd,
     excludeBookingId
-  });
+  }, bookingModel);
 
   if (conflictingBooking) {
     return {
@@ -213,5 +213,6 @@ export {
   overlappingDateWindow,
   getAllowedStatusTransitions,
   canTransitionStatus,
+  findConflictingBooking,
   checkListingAvailability
 };

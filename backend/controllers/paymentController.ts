@@ -29,8 +29,8 @@ const getConfiguredPaymentProvider = () => {
   return provider;
 };
 
-const ensureBookingIsPayable = async ({ bookingId, userId, amount, listingId }) => {
-  const booking = await Booking.findById(bookingId).populate('listing');
+const ensureBookingIsPayable = async ({ bookingId, userId, amount, listingId }, bookingModel = Booking) => {
+  const booking = await bookingModel.findById(bookingId).populate('listing');
 
   if (!booking) {
     return { status: 404, error: 'Booking not found' };
@@ -60,8 +60,8 @@ const ensureBookingIsPayable = async ({ bookingId, userId, amount, listingId }) 
   return { booking };
 };
 
-const verifyPaymentOwnership = async ({ paymentId, userId, userRole, providerPaymentId, amount }) => {
-  const payment = await Payment.findById(paymentId).populate('booking');
+const verifyPaymentOwnership = async ({ paymentId, userId, userRole, providerPaymentId, amount }, paymentModel = Payment) => {
+  const payment = await paymentModel.findById(paymentId).populate('booking');
 
   if (!payment) {
     return { status: 404, error: 'Payment not found' };
