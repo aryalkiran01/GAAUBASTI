@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export {};
   import mongoose from 'mongoose';
 import Booking from '../models/Booking';
