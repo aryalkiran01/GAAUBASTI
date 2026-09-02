@@ -345,6 +345,58 @@ const verifyEmail = async (req: any, res: any) => {
   }
 };
 
+const resendVerification = async (req: any, res: any) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already verified'
+      });
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedVerificationToken = crypto
+      .createHash('sha256')
+      .update(verificationToken)
+      .digest('hex');
+
+    (user as any).verificationToken = hashedVerificationToken;
+    (user as any).verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
+    await user.save();
+
+    const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/verify-email/${verificationToken}`;
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Verify your Gaubasti account',
+        text: `Hi ${user.name},\n\nPlease verify your account by visiting: ${verifyUrl}\n\nThis link expires in 24 hours.`
+      });
+    } catch {
+      // Email sending is optional in development
+    }
+
+    res.json({
+      success: true,
+      message: 'Verification email sent'
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to resend verification email',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 const refreshToken = async (req: any, res: any) => {
   try {
     const user = await User.findById(req.user._id);
@@ -377,6 +429,7 @@ export {
   updateProfile,
   changePassword,
   verifyEmail,
+  resendVerification,
   refreshToken,
   forgotPassword,
   resetPassword

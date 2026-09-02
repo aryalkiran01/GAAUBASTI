@@ -217,6 +217,20 @@ export const authAPI = {
       body: JSON.stringify({ currentPassword, newPassword }),
     });
   },
+
+  verifyEmail: async (token: string) => {
+    return await apiRequest(
+      `/auth/verify-email/${token}`,
+      {},
+      false
+    );
+  },
+
+  resendVerification: async () => {
+    return await apiRequest("/auth/resend-verification", {
+      method: "POST",
+    });
+  },
 };
 
 // Listings API calls

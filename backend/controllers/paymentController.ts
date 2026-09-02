@@ -1,6 +1,7 @@
 export {};
   import Booking from '../models/Booking';
 import Payment from '../models/Payment';
+import { createSystemMessage } from '../services/systemMessages';
 
 const normalizeAmount = (value) => {
   if (typeof value === 'string') {
@@ -354,6 +355,9 @@ const verifyPayment = async (req, res) => {
       await booking.save();
     }
 
+    createSystemMessage(booking._id.toString(), 'payment_successful', req.user._id.toString());
+    createSystemMessage(booking._id.toString(), 'booking_confirmed', req.user._id.toString());
+
     return res.status(200).json({
       success: true,
       message: 'Payment verified successfully',
@@ -448,6 +452,7 @@ const handleStripeWebhook = async (req, res) => {
             booking.paymentStatus = 'refunded';
             booking.status = 'refunded';
             await booking.save();
+            createSystemMessage(booking._id.toString(), 'refund_completed');
           }
         }
       }

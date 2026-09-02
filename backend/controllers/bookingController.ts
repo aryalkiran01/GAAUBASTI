@@ -4,6 +4,7 @@ import Booking from '../models/Booking';
 import Listing from '../models/Listing';
 import User from '../models/User';
 import { validateGuestCount, validateBookingDates, canTransitionStatus, checkListingAvailability } from '../services/bookingAvailability';
+import { createSystemMessage } from '../services/systemMessages';
 
 // Create new booking
 const createBooking = async (req, res) => {
@@ -153,6 +154,10 @@ const createBooking = async (req, res) => {
       { path: 'guest', select: 'name email' },
       { path: 'host', select: 'name email' }
     ]);
+
+    if (populatedBooking) {
+      createSystemMessage(populatedBooking._id.toString(), 'booking_created', req.user._id.toString());
+    }
 
     res.status(201).json({
       success: true,
@@ -387,6 +392,13 @@ const updateBookingStatus = async (req, res) => {
       { path: 'guest', select: 'name email' }
     ]);
 
+    if (status === 'confirmed' && previousStatus !== 'confirmed') {
+      createSystemMessage(booking._id.toString(), 'booking_confirmed', req.user._id.toString());
+    }
+    if (status === 'cancelled') {
+      createSystemMessage(booking._id.toString(), 'booking_cancelled_host', req.user._id.toString());
+    }
+
     res.json({
       success: true,
       message: `Booking ${status} successfully`,
@@ -455,6 +467,8 @@ const cancelBooking = async (req, res) => {
       });
       await listingForDates.save();
     }
+
+    createSystemMessage(booking._id.toString(), 'booking_cancelled_guest', req.user._id.toString());
 
     res.json({
       success: true,

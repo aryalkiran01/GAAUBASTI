@@ -1,7 +1,7 @@
 export {};
   import express from 'express';
 const router = express.Router();
-import { register, login, getProfile, updateProfile, changePassword, verifyEmail, refreshToken, forgotPassword, resetPassword } from '../controllers/authController';
+import { register, login, getProfile, updateProfile, changePassword, verifyEmail, resendVerification, refreshToken, forgotPassword, resetPassword } from '../controllers/authController';
 import { authenticate } from '../middlewares/auth';
 import { validateUserRegistration, validateUserLogin } from '../middlewares/validation';
 import { loginLimiter, passwordLimiter } from '../middlewares/rateLimiters';
@@ -19,6 +19,7 @@ router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
 router.post('/change-password', changePassword);
 router.post('/refresh-token', refreshToken);
+router.post('/resend-verification', resendVerification);
 
 export default router;
 
