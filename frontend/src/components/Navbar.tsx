@@ -11,8 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, Menu, Bell } from "lucide-react";
-import { useEffect, useState } from "react";
+import { LogOut, User, Menu, Bell, CheckCheck } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { notificationsAPI } from "@/lib/api";
 
 export default function Navbar() {
@@ -20,29 +20,45 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      if (!user) {
-        setNotifications([]);
-        setUnreadCount(0);
-        return;
-      }
-
-      const response = await notificationsAPI.list();
-      if (response.success && response.data?.notifications) {
-        setNotifications(response.data.notifications);
-        setUnreadCount(response.data.unreadCount || 0);
-      }
-    };
-
-    fetchNotifications();
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+    const response = await notificationsAPI.getUnreadCount();
+    if (response.success && response.data) {
+      setUnreadCount(response.data.unreadCount || 0);
+    }
   }, [user]);
 
+  const fetchNotifications = useCallback(async () => {
+    if (!user) {
+      setNotifications([]);
+      return;
+    }
+    const response = await notificationsAPI.list();
+    if (response.success && response.data?.notifications) {
+      setNotifications(response.data.notifications);
+      setUnreadCount(response.data.unreadCount || 0);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications, fetchUnreadCount]);
+
   const handleNotificationClick = async (notification: any) => {
-    if (notification?._id) {
+    if (notification?._id && !notification.read) {
       await notificationsAPI.markRead(notification._id);
+      setUnreadCount((c) => Math.max(0, c - 1));
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === notification._id ? { ...n, read: true } : n))
+      );
     }
 
     const payload = notification?.content || {};
@@ -50,8 +66,17 @@ export default function Navbar() {
       navigate(`/messages?conversationId=${payload.conversationId}`);
       return;
     }
-
+    if (payload.bookingId) {
+      navigate(`/account`);
+      return;
+    }
     navigate("/account");
+  };
+
+  const handleMarkAllRead = async () => {
+    await notificationsAPI.markAllRead();
+    setUnreadCount(0);
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
   return (
@@ -86,7 +111,7 @@ export default function Navbar() {
           
           {user ? (
             <div className="flex items-center gap-3">
-              <DropdownMenu>
+              <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-4 w-4" />
@@ -98,7 +123,19 @@ export default function Navbar() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-80" align="end" forceMount>
-                  <div className="px-2 py-1 text-sm font-medium">Notifications</div>
+                  <div className="flex items-center justify-between px-2 py-1">
+                    <span className="text-sm font-medium">Notifications</span>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="flex items-center gap-1 text-xs text-gaun-green hover:underline"
+                      >
+                        <CheckCheck className="h-3 w-3" />
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <DropdownMenuSeparator />
                   {notifications.length === 0 ? (
                     <div className="px-3 py-4 text-sm text-muted-foreground">No notifications yet.</div>
                   ) : (
@@ -106,7 +143,7 @@ export default function Navbar() {
                       <DropdownMenuItem
                         key={notification._id || notification.id}
                         onClick={() => handleNotificationClick(notification)}
-                        className="flex flex-col items-start gap-1 whitespace-normal"
+                        className={`flex flex-col items-start gap-1 whitespace-normal ${!notification.read ? "bg-muted/50" : ""}`}
                       >
                         <span className="font-medium">{notification.type || "Update"}</span>
                         <span className="text-xs text-muted-foreground">
@@ -227,6 +264,14 @@ export default function Navbar() {
                 >
                   <User className="mr-2 h-4 w-4" />
                   Account
+                </Link>
+                <Link
+                  to="/messages"
+                  className="flex items-center text-sm font-medium hover:text-gaun-green"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Bell className="mr-2 h-4 w-4" />
+                  Messages {unreadCount > 0 && `(${unreadCount})`}
                 </Link>
                 {user.role === "admin" && (
                   <Link 

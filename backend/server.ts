@@ -175,6 +175,8 @@ const initializeSocketIO = (httpServer) => {
   });
 
   io.on('connection', (socket) => {
+    socket.join(`user:${socket.user._id}`);
+
     socket.on('joinConversation', (conversationId) => {
       if (conversationId) {
         socket.join(String(conversationId));

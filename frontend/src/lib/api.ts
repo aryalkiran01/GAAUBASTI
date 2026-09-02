@@ -314,8 +314,18 @@ export const notificationsAPI = {
     return await apiRequest("/notifications");
   },
 
+  getUnreadCount: async () => {
+    return await apiRequest("/notifications/unread-count");
+  },
+
   markRead: async (notificationId: string) => {
     return await apiRequest(`/notifications/${notificationId}/read`, {
+      method: "PATCH",
+    });
+  },
+
+  markAllRead: async () => {
+    return await apiRequest("/notifications/read-all", {
       method: "PATCH",
     });
   },

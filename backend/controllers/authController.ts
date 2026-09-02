@@ -65,11 +65,13 @@ const register = async (req, res) => {
     await user.save();
 
     const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/verify-email/${verificationToken}`;
-    await sendEmail({
+    const verifyTemplate = emailTemplates.email_verification({ name: user.name, verifyUrl });
+    sendEmail({
       to: user.email,
-      subject: 'Verify your Gaubasti account',
-      text: `Hi ${user.name},\n\nPlease verify your account by visiting: ${verifyUrl}\n\nThis link expires in 24 hours.`
-    });
+      subject: verifyTemplate.subject,
+      text: verifyTemplate.text,
+      html: verifyTemplate.html
+    }).catch(() => {});
 
     const token = generateToken(user._id);
 
@@ -237,6 +239,8 @@ const changePassword = async (req, res) => {
 };
 
 const sendEmail = require('../utils/sendemail');
+const emailTemplates = require('../utils/emailTemplates');
+const { sendOTPSMS } = require('../utils/sendSMS');
 
 
 // --- Forgot Password: send OTP ---
@@ -265,6 +269,18 @@ const forgotPassword = async (req, res) => {
 
     if (process.env.NODE_ENV === 'development') {
       console.info('OTP generation requested for a user');
+    }
+
+    const otpTemplate = emailTemplates.otp({ otp });
+    sendEmail({
+      to: user.email,
+      subject: otpTemplate.subject,
+      text: otpTemplate.text,
+      html: otpTemplate.html
+    }).catch(() => {});
+
+    if (user.phone) {
+      sendOTPSMS(user.phone, otp).catch(() => {});
     }
 
     res.json({ success: true, message: 'OTP sent to your email' });

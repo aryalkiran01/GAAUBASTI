@@ -9,6 +9,7 @@ const {
   canTransitionStatus,
   checkListingAvailability
 } = require('../services/bookingAvailability');
+const { notifyBookingCreated, notifyBookingCancelled, notifyPaymentConfirmed } = require('../utils/notifications');
 
 // Create new booking
 const createBooking = async (req, res) => {
@@ -158,6 +159,12 @@ const createBooking = async (req, res) => {
       { path: 'guest', select: 'name email' },
       { path: 'host', select: 'name email' }
     ]);
+
+    notifyBookingCreated({
+      booking: populatedBooking,
+      guest: populatedBooking.guest,
+      host: populatedBooking.host
+    }).catch(() => {});
 
     res.status(201).json({
       success: true,
@@ -460,6 +467,19 @@ const cancelBooking = async (req, res) => {
       });
       await listingForDates.save();
     }
+
+    const populatedForNotif = await Booking.findById(booking._id).populate([
+      { path: 'listing', select: 'title' },
+      { path: 'guest', select: 'name email phone' },
+      { path: 'host', select: 'name email' }
+    ]);
+
+    notifyBookingCancelled({
+      booking: populatedForNotif,
+      guest: populatedForNotif.guest,
+      host: populatedForNotif.host,
+      refundAmount
+    }).catch(() => {});
 
     res.json({
       success: true,
