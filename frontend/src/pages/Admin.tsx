@@ -3,9 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { adminAPI, reportsAPI } from "@/lib/api";
-import { Badge } from "@/components/ui/badge";
-import { Flag, FileText, ShieldAlert } from "lucide-react";
+import { adminAPI } from "@/lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -47,14 +45,6 @@ const Admin = () => {
   
   // Filter state for listings
   const [listingFilter, setListingFilter] = useState<'all' | 'pending' | 'verified'>('all');
-
-  // Reports and audit logs state
-  const [reports, setReports] = useState<any[]>([]);
-  const [reportsLoading, setReportsLoading] = useState(false);
-  const [flaggedReviews, setFlaggedReviews] = useState<any[]>([]);
-  const [flaggedLoading, setFlaggedLoading] = useState(false);
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
-  const [auditLoading, setAuditLoading] = useState(false);
 
   // Filtered listings based on selection
   const filteredListings = listings.filter(listing => {
@@ -116,66 +106,6 @@ const Admin = () => {
       fetchAdminData();
     }
   }, [user, toast]);
-
-  const fetchReports = async () => {
-    setReportsLoading(true);
-    try {
-      const response = await adminAPI.getReports();
-      if (response.success) setReports(response.data.reports || []);
-    } catch {
-      setReports([]);
-    } finally {
-      setReportsLoading(false);
-    }
-  };
-
-  const fetchFlaggedReviews = async () => {
-    setFlaggedLoading(true);
-    try {
-      const response = await adminAPI.getFlaggedReviews();
-      if (response.success) setFlaggedReviews(response.data.reviews || []);
-    } catch {
-      setFlaggedReviews([]);
-    } finally {
-      setFlaggedLoading(false);
-    }
-  };
-
-  const fetchAuditLogs = async () => {
-    setAuditLoading(true);
-    try {
-      const response = await adminAPI.getAuditLogs({ limit: 50 });
-      if (response.success) setAuditLogs(response.data.logs || []);
-    } catch {
-      setAuditLogs([]);
-    } finally {
-      setAuditLoading(false);
-    }
-  };
-
-  const handleReportStatus = async (reportId: string, status: string) => {
-    try {
-      const response = await adminAPI.updateReportStatus(reportId, status);
-      if (response.success) {
-        setReports(reports.map(r => r._id === reportId || r.id === reportId ? { ...r, status } : r));
-        toast({ title: "Report updated", description: `Status set to ${status}` });
-      }
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Update failed", description: error.message });
-    }
-  };
-
-  const handleModerateReview = async (reviewId: string, action: "approve" | "remove") => {
-    try {
-      const response = await adminAPI.moderateReview(reviewId, action);
-      if (response.success) {
-        setFlaggedReviews(flaggedReviews.filter(r => r._id !== reviewId && r.id !== reviewId));
-        toast({ title: action === "approve" ? "Review approved" : "Review removed" });
-      }
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Action failed", description: error.message });
-    }
-  };
   
   // Redirect if not admin
   useEffect(() => {
@@ -348,9 +278,6 @@ const Admin = () => {
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="listings">Listings</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="reports" onClick={fetchReports}>Reports</TabsTrigger>
-            <TabsTrigger value="flagged" onClick={fetchFlaggedReviews}>Flagged Reviews</TabsTrigger>
-            <TabsTrigger value="audit" onClick={fetchAuditLogs}>Audit Logs</TabsTrigger>
           </TabsList>
           
           <TabsContent value="users" className="mt-6">
@@ -615,159 +542,6 @@ const Admin = () => {
                   })}
                 </TableBody>
               </Table>
-            </div>
-          </TabsContent>
-          <TabsContent value="reports" className="mt-6">
-            <div className="bg-white rounded-md border">
-              {reportsLoading ? (
-                <div className="p-6 space-y-4">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : reports.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Entity ID</TableHead>
-                      <TableHead>Reason</TableHead>
-                      <TableHead>Reporter</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reports.map((report) => (
-                      <TableRow key={report._id || report.id}>
-                        <TableCell className="capitalize">{report.reportedEntityType}</TableCell>
-                        <TableCell className="font-mono text-xs">{(report.reportedEntityId || "").slice(0, 8)}...</TableCell>
-                        <TableCell>{report.reason}</TableCell>
-                        <TableCell>{report.reporter?.name || "Unknown"}</TableCell>
-                        <TableCell>{format(new Date(report.createdAt), "MMM d, yyyy")}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            report.status === "pending" ? "bg-yellow-100 text-yellow-800" :
-                            report.status === "resolved" ? "bg-green-100 text-green-800" :
-                            "bg-gray-100 text-gray-800"
-                          }`}>
-                            {report.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => handleReportStatus(report._id || report.id, "resolved")}>
-                              Resolve
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleReportStatus(report._id || report.id, "dismissed")}>
-                              Dismiss
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="p-12 text-center text-muted-foreground">
-                  <ShieldAlert className="mx-auto h-10 w-10 mb-3 text-muted-foreground/50" />
-                  No reports submitted.
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="flagged" className="mt-6">
-            <div className="bg-white rounded-md border">
-              {flaggedLoading ? (
-                <div className="p-6 space-y-4">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : flaggedReviews.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Guest</TableHead>
-                      <TableHead>Rating</TableHead>
-                      <TableHead>Comment</TableHead>
-                      <TableHead>Flags</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {flaggedReviews.map((review) => (
-                      <TableRow key={review._id || review.id}>
-                        <TableCell>{review.guest?.name || "Unknown"}</TableCell>
-                        <TableCell>{review.rating}/5</TableCell>
-                        <TableCell className="max-w-xs truncate">{review.comment}</TableCell>
-                        <TableCell>
-                          <Badge variant="destructive">{review.flagCount || 1}</Badge>
-                        </TableCell>
-                        <TableCell>{format(new Date(review.createdAt), "MMM d, yyyy")}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="bg-green-100 text-green-800 hover:bg-green-200" onClick={() => handleModerateReview(review._id || review.id, "approve")}>
-                              Approve
-                            </Button>
-                            <Button variant="outline" size="sm" className="bg-red-100 text-red-800 hover:bg-red-200" onClick={() => handleModerateReview(review._id || review.id, "remove")}>
-                              Remove
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="p-12 text-center text-muted-foreground">
-                  <Flag className="mx-auto h-10 w-10 mb-3 text-muted-foreground/50" />
-                  No flagged reviews.
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="audit" className="mt-6">
-            <div className="bg-white rounded-md border">
-              {auditLoading ? (
-                <div className="p-6 space-y-4">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : auditLogs.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Action</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Resource</TableHead>
-                      <TableHead>IP</TableHead>
-                      <TableHead>Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {auditLogs.map((log) => (
-                      <TableRow key={log._id || log.id}>
-                        <TableCell className="font-medium">{log.action}</TableCell>
-                        <TableCell>{log.user?.name || log.user?.email || "System"}</TableCell>
-                        <TableCell className="text-muted-foreground">{log.resource || "-"}</TableCell>
-                        <TableCell className="font-mono text-xs">{log.ip || "-"}</TableCell>
-                        <TableCell>{format(new Date(log.createdAt || log.timestamp), "MMM d, yyyy HH:mm")}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="p-12 text-center text-muted-foreground">
-                  <FileText className="mx-auto h-10 w-10 mb-3 text-muted-foreground/50" />
-                  No audit logs recorded.
-                </div>
-              )}
             </div>
           </TabsContent>
         </Tabs>

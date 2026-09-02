@@ -1,10 +1,14 @@
 export {};
-  import mongoose from 'mongoose';
-import Booking from '../models/Booking';
-import Listing from '../models/Listing';
-import User from '../models/User';
-import { validateGuestCount, validateBookingDates, canTransitionStatus, checkListingAvailability } from '../services/bookingAvailability';
-import { createSystemMessage } from '../services/systemMessages';
+const mongoose = require('mongoose');
+const Booking = require('../models/Booking');
+const Listing = require('../models/Listing');
+const User = require('../models/User');
+const {
+  validateGuestCount,
+  validateBookingDates,
+  canTransitionStatus,
+  checkListingAvailability
+} = require('../services/bookingAvailability');
 
 // Create new booking
 const createBooking = async (req, res) => {
@@ -154,10 +158,6 @@ const createBooking = async (req, res) => {
       { path: 'guest', select: 'name email' },
       { path: 'host', select: 'name email' }
     ]);
-
-    if (populatedBooking) {
-      createSystemMessage(populatedBooking._id.toString(), 'booking_created', req.user._id.toString());
-    }
 
     res.status(201).json({
       success: true,
@@ -368,7 +368,7 @@ const updateBookingStatus = async (req, res) => {
         });
 
         if (!matches) {
-          await (listingForDates as any).addUnavailableDates(booking.startDate, booking.endDate, 'Booked');
+          await listingForDates.addUnavailableDates(booking.startDate, booking.endDate, 'Booked');
         }
       }
     }
@@ -391,13 +391,6 @@ const updateBookingStatus = async (req, res) => {
       { path: 'listing', select: 'title location' },
       { path: 'guest', select: 'name email' }
     ]);
-
-    if (status === 'confirmed' && previousStatus !== 'confirmed') {
-      createSystemMessage(booking._id.toString(), 'booking_confirmed', req.user._id.toString());
-    }
-    if (status === 'cancelled') {
-      createSystemMessage(booking._id.toString(), 'booking_cancelled_host', req.user._id.toString());
-    }
 
     res.json({
       success: true,
@@ -440,14 +433,14 @@ const cancelBooking = async (req, res) => {
       });
     }
 
-    if (!(booking as any).canBeCancelled()) {
+    if (!booking.canBeCancelled()) {
       return res.status(400).json({
         success: false,
         message: 'Booking cannot be cancelled at this time'
       });
     }
 
-    const refundAmount = (booking as any).calculateRefund((booking.listing as any)?.cancellationPolicy);
+    const refundAmount = booking.calculateRefund(booking.listing.cancellationPolicy);
 
     booking.status = 'cancelled';
     booking.cancellationReason = cancellationReason;
@@ -468,8 +461,6 @@ const cancelBooking = async (req, res) => {
       await listingForDates.save();
     }
 
-    createSystemMessage(booking._id.toString(), 'booking_cancelled_guest', req.user._id.toString());
-
     res.json({
       success: true,
       message: 'Booking cancelled successfully',
@@ -487,7 +478,7 @@ const cancelBooking = async (req, res) => {
   }
 };
 
-export {
+module.exports = {
   createBooking,
   getUserBookings,
   getHostBookings,

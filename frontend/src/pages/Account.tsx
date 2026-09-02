@@ -1,50 +1,17 @@
 
 import { useAuth } from "@/context/AuthContext";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUserBookings } from "@/hooks/useBookings";
 import { format } from "date-fns";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { listingsAPI } from "@/lib/api";
-import { Heart, Trash2 } from "lucide-react";
 
 const Account = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { bookings, loading: bookingsLoading, error: bookingsError } = useUserBookings();
-  const [wishlist, setWishlist] = useState<any[]>([]);
-  const [wishlistLoading, setWishlistLoading] = useState(true);
-
-  useEffect(() => {
-    if (!user) return;
-    const fetchWishlist = async () => {
-      try {
-        const response = await listingsAPI.getWishlist();
-        if (response.success && response.data?.items) {
-          setWishlist(response.data.items);
-        }
-      } catch {
-        setWishlist([]);
-      } finally {
-        setWishlistLoading(false);
-      }
-    };
-    fetchWishlist();
-  }, [user]);
-
-  const handleRemoveFavorite = async (listingId: string) => {
-    try {
-      await listingsAPI.removeWishlistItem(listingId);
-      setWishlist(wishlist.filter((item) => {
-        const id = item.listing?._id || item.listing?.id || item._id || item.id;
-        return id !== listingId;
-      }));
-    } catch {
-      // ignore
-    }
-  };
   
   // Redirect if not logged in
   useEffect(() => {
@@ -221,54 +188,14 @@ const Account = () => {
                 )}
               </TabsContent>
               
-              <TabsContent value="favorites" className="mt-6">
-                {wishlistLoading ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <Skeleton key={i} className="h-32 rounded-lg" />
-                    ))}
-                  </div>
-                ) : wishlist.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {wishlist.map((item) => {
-                      const listing = item.listing || item;
-                      const listingId = listing._id || listing.id;
-                      const img = typeof listing.images?.[0] === "string" ? listing.images[0] : listing.images?.[0]?.url;
-                      const loc = typeof listing.location === "string" ? listing.location : listing.location ? `${listing.location.city}, ${listing.location.country}` : "";
-                      return (
-                        <div key={listingId} className="flex bg-white border rounded-lg overflow-hidden">
-                          <Link to={`/listing/${listingId}`} className="w-1/3">
-                            <img src={img || "https://images.unsplash.com/photo-1587061949409-02df41d5e562"} alt={listing.title} className="h-full w-full object-cover" />
-                          </Link>
-                          <div className="p-4 flex-1 flex flex-col justify-between">
-                            <div>
-                              <Link to={`/listing/${listingId}`}>
-                                <h3 className="font-medium text-sm hover:text-primary transition-colors">{listing.title}</h3>
-                              </Link>
-                              <p className="text-xs text-muted-foreground mt-1">{loc}</p>
-                              <p className="text-sm font-medium mt-1">${listing.price}<span className="text-muted-foreground font-normal">/night</span></p>
-                            </div>
-                            <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/5 w-fit" onClick={() => handleRemoveFavorite(listingId)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Remove
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-12 border rounded-lg">
-                    <Heart className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium mb-1">No favorites yet</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Save homestays you love by clicking the heart icon
-                    </p>
-                    <Link to="/listings">
-                      <Button className="bg-gaun-green hover:bg-gaun-light-green">Browse homestays</Button>
-                    </Link>
-                  </div>
-                )}
+              <TabsContent value="favorites">
+                <div className="text-center py-12 border rounded-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto h-12 w-12 text-muted-foreground mb-4"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>
+                  <h3 className="text-lg font-medium mb-1">No favorites yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Save homestays you love by clicking the heart icon
+                  </p>
+                </div>
               </TabsContent>
               
               {user.role === "host" && (

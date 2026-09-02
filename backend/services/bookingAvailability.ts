@@ -1,6 +1,6 @@
 export {};
-  import Booking from '../models/Booking';
-import Listing from '../models/Listing';
+const Booking = require('../models/Booking');
+const Listing = require('../models/Listing');
 
 const BLOCKING_BOOKING_STATUSES = ['pending', 'confirmed'];
 
@@ -111,7 +111,7 @@ const canTransitionStatus = (currentStatus, nextStatus) => {
   return getAllowedStatusTransitions(currentStatus).includes(nextStatus);
 };
 
-const findConflictingBooking = async ({ listingId, startDate, endDate, excludeBookingId = null }: any, bookingModel = Booking) => {
+const findConflictingBooking = async ({ listingId, startDate, endDate, excludeBookingId = null }: any) => {
   const query: any = {
     listing: listingId,
     status: { $in: BLOCKING_BOOKING_STATUSES },
@@ -123,7 +123,7 @@ const findConflictingBooking = async ({ listingId, startDate, endDate, excludeBo
     query._id = { $ne: excludeBookingId };
   }
 
-  let bookingQuery = bookingModel.findOne(query);
+  let bookingQuery = Booking.findOne(query);
   if (typeof bookingQuery.sort === 'function') {
     bookingQuery = bookingQuery.sort({ startDate: 1 });
   }
@@ -132,7 +132,7 @@ const findConflictingBooking = async ({ listingId, startDate, endDate, excludeBo
   return result && typeof result.toObject === 'function' ? result.toObject() : result;
 };
 
-const checkListingAvailability = async ({ listingId, startDate, endDate, excludeBookingId = null }, listingModel = Listing, bookingModel = Booking) => {
+const checkListingAvailability = async ({ listingId, startDate, endDate, excludeBookingId = null }) => {
   const dateValidation = validateBookingDates(startDate, endDate);
 
   if (!dateValidation.valid) {
@@ -144,8 +144,8 @@ const checkListingAvailability = async ({ listingId, startDate, endDate, exclude
     };
   }
 
-  const listingDoc = await listingModel.findById(listingId);
-  const listing = listingDoc ? (typeof listingDoc.toObject === 'function' ? listingDoc.toObject() : listingDoc) : null;
+  let listing = await Listing.findById(listingId);
+  listing = listing && typeof listing.toObject === 'function' ? listing.toObject() : listing;
 
   if (!listing) {
     return {
@@ -186,7 +186,7 @@ const checkListingAvailability = async ({ listingId, startDate, endDate, exclude
     startDate: requestStart,
     endDate: requestEnd,
     excludeBookingId
-  }, bookingModel);
+  });
 
   if (conflictingBooking) {
     return {
@@ -205,7 +205,7 @@ const checkListingAvailability = async ({ listingId, startDate, endDate, exclude
   };
 };
 
-export {
+module.exports = {
   BLOCKING_BOOKING_STATUSES,
   parseDate,
   validateBookingDates,
@@ -213,6 +213,6 @@ export {
   overlappingDateWindow,
   getAllowedStatusTransitions,
   canTransitionStatus,
-  findConflictingBooking,
   checkListingAvailability
 };
+

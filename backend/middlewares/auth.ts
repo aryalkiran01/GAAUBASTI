@@ -1,6 +1,6 @@
 export {};
-  import jwt from 'jsonwebtoken';
-import User from '../models/User';
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
 const toUserId = (value) => {
   if (!value) return null;
@@ -32,7 +32,7 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, getJwtSecret()) as any;
+    const decoded = jwt.verify(token, getJwtSecret());
     const user = await User.findById(decoded.userId).select('-password');
 
     if (!user) {
@@ -128,7 +128,7 @@ const requireOwnershipOrAdmin = (resourceField = 'user') => {
   };
 };
 
-export {
+module.exports = {
   authenticate,
   authorize,
   requireAdmin,

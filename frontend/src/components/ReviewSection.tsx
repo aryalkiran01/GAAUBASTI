@@ -5,17 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { Star, Flag } from "lucide-react";
+import { Star } from "lucide-react";
 import { format } from "date-fns";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Review {
   id: string;
@@ -59,9 +50,6 @@ export default function ReviewSection({ listingId, canReview = false, bookingId 
     }
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [flaggingReviewId, setFlaggingReviewId] = useState<string | null>(null);
-  const [flagReason, setFlagReason] = useState("");
-  const [flagSubmitting, setFlagSubmitting] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -248,16 +236,6 @@ export default function ReviewSection({ listingId, canReview = false, bookingId 
                       {format(new Date(review.createdAt), "MMMM yyyy")}
                     </p>
                     <p className="text-sm">{review.comment}</p>
-                    {user && (
-                      <button
-                        type="button"
-                        onClick={() => setFlaggingReviewId(review.id)}
-                        className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
-                      >
-                        <Flag className="h-3 w-3" />
-                        Report
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>
@@ -269,63 +247,6 @@ export default function ReviewSection({ listingId, canReview = false, bookingId 
           </div>
         )}
       </div>
-
-      <Dialog open={!!flaggingReviewId} onOpenChange={(open) => { if (!open) { setFlaggingReviewId(null); setFlagReason(""); } }}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Flag className="h-4 w-4 text-destructive" />
-              Report Review
-            </DialogTitle>
-            <DialogDescription>
-              Help us keep the community safe by reporting inappropriate content.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <Select value={flagReason} onValueChange={setFlagReason}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a reason" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Inappropriate content">Inappropriate content</SelectItem>
-                <SelectItem value="Spam or misleading">Spam or misleading</SelectItem>
-                <SelectItem value="Harassment">Harassment</SelectItem>
-                <SelectItem value="Fake review">Fake review</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setFlaggingReviewId(null); setFlagReason(""); }}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={flagSubmitting || !flagReason}
-              onClick={async () => {
-                if (!flaggingReviewId) return;
-                setFlagSubmitting(true);
-                try {
-                  const response = await reviewsAPI.flagReview(flaggingReviewId, flagReason);
-                  if (response.success) {
-                    toast({ title: "Review reported", description: "Thank you. Our team will review it." });
-                    setFlaggingReviewId(null);
-                    setFlagReason("");
-                  } else {
-                    throw new Error(response.message || "Failed to flag review");
-                  }
-                } catch (error: any) {
-                  toast({ variant: "destructive", title: "Failed", description: error.message });
-                } finally {
-                  setFlagSubmitting(false);
-                }
-              }}
-            >
-              {flagSubmitting ? "Submitting..." : "Submit"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -80,6 +80,8 @@ export default function SearchForm() {
           <div className="flex items-center gap-1">
             <button
               type="button"
+              size="icon"
+              variant="outline"
               className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-40 transition-colors"
               onClick={() => setGuests(Math.max(1, guests - 1))}
               disabled={guests <= 1}

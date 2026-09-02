@@ -1,7 +1,6 @@
 export {};
-  import Booking from '../models/Booking';
-import Payment from '../models/Payment';
-import { createSystemMessage } from '../services/systemMessages';
+const Booking = require('../models/Booking');
+const Payment = require('../models/Payment');
 
 const normalizeAmount = (value) => {
   if (typeof value === 'string') {
@@ -30,8 +29,8 @@ const getConfiguredPaymentProvider = () => {
   return provider;
 };
 
-const ensureBookingIsPayable = async ({ bookingId, userId, amount, listingId }, bookingModel = Booking) => {
-  const booking = await bookingModel.findById(bookingId).populate('listing');
+const ensureBookingIsPayable = async ({ bookingId, userId, amount, listingId }) => {
+  const booking = await Booking.findById(bookingId).populate('listing');
 
   if (!booking) {
     return { status: 404, error: 'Booking not found' };
@@ -61,8 +60,8 @@ const ensureBookingIsPayable = async ({ bookingId, userId, amount, listingId }, 
   return { booking };
 };
 
-const verifyPaymentOwnership = async ({ paymentId, userId, userRole, providerPaymentId, amount }, paymentModel = Payment) => {
-  const payment = await paymentModel.findById(paymentId).populate('booking');
+const verifyPaymentOwnership = async ({ paymentId, userId, userRole, providerPaymentId, amount }) => {
+  const payment = await Payment.findById(paymentId).populate('booking');
 
   if (!payment) {
     return { status: 404, error: 'Payment not found' };
@@ -74,7 +73,7 @@ const verifyPaymentOwnership = async ({ paymentId, userId, userRole, providerPay
     return { status: 403, error: 'You do not own this payment' };
   }
 
-  if (!isAdmin && payment.booking && (payment.booking as any).guest && (payment.booking as any).guest.toString() !== userId.toString()) {
+  if (!isAdmin && payment.booking && payment.booking.guest && payment.booking.guest.toString() !== userId.toString()) {
     return { status: 403, error: 'You cannot verify this booking payment' };
   }
 
@@ -180,7 +179,7 @@ const createPayment = async (req, res) => {
           amount: existingIdempotentPayment.amount,
           currency: existingIdempotentPayment.currency,
           providerPaymentId: existingIdempotentPayment.providerPaymentId,
-          clientSecret: existingIdempotentPayment.provider === 'stripe' ? (existingIdempotentPayment.metadata as any)?.clientSecret || undefined : undefined
+          clientSecret: existingIdempotentPayment.provider === 'stripe' ? existingIdempotentPayment.metadata?.clientSecret || undefined : undefined
         }
       });
     }
@@ -240,7 +239,7 @@ const createPayment = async (req, res) => {
         providerPaymentId: paymentIntent.id,
         status: 'processing',
         metadata: {
-          ...((newPayment.metadata as any)?.toObject ? (newPayment.metadata as any).toObject() : (newPayment.metadata || {})),
+          ...newPayment.metadata?.toObject ? newPayment.metadata.toObject() : (newPayment.metadata || {}),
           clientSecret: paymentIntent.client_secret
         }
       });
@@ -347,16 +346,13 @@ const verifyPayment = async (req, res) => {
     payment.providerPaymentId = providerPaymentId || payment.providerPaymentId;
     await payment.save();
 
-    const booking = payment.booking as any;
+    const booking = payment.booking;
     if (booking && booking.status !== 'confirmed') {
       booking.status = 'confirmed';
       booking.paymentStatus = 'paid';
       booking.paymentId = payment._id.toString();
       await booking.save();
     }
-
-    createSystemMessage(booking._id.toString(), 'payment_successful', req.user._id.toString());
-    createSystemMessage(booking._id.toString(), 'booking_confirmed', req.user._id.toString());
 
     return res.status(200).json({
       success: true,
@@ -452,7 +448,6 @@ const handleStripeWebhook = async (req, res) => {
             booking.paymentStatus = 'refunded';
             booking.status = 'refunded';
             await booking.save();
-            createSystemMessage(booking._id.toString(), 'refund_completed');
           }
         }
       }
@@ -480,7 +475,7 @@ const getPaymentStatus = async (req, res) => {
     }
 
     const isOwner = payment.payer && payment.payer.toString() === req.user._id.toString();
-    const isBookingGuest = payment.booking && (payment.booking as any).guest && (payment.booking as any).guest.toString() === req.user._id.toString();
+    const isBookingGuest = payment.booking && payment.booking.guest && payment.booking.guest.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
 
     if (!isOwner && !isBookingGuest && !isAdmin) {
@@ -509,7 +504,7 @@ const getPaymentStatus = async (req, res) => {
   }
 };
 
-export {
+module.exports = {
   createPayment,
   verifyPayment,
   handleStripeWebhook,

@@ -1,6 +1,6 @@
 export {};
-  import Payout from '../models/Payout';
-import User from '../models/User';
+const Payout = require('../models/Payout');
+const User = require('../models/User');
 
 const getMyPayouts = async (req, res) => {
   try {
@@ -43,7 +43,7 @@ const createPayout = async (req, res) => {
   }
 };
 
-export {
+module.exports = {
   getMyPayouts,
   createPayout
 };

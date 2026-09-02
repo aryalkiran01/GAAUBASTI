@@ -1,5 +1,5 @@
 export {};
-  import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const auditLogSchema = new mongoose.Schema({
   actor: {
@@ -35,4 +35,4 @@ const auditLogSchema = new mongoose.Schema({
   timestamps: true
 });
 
-export default mongoose.model('AuditLog', auditLogSchema);
+module.exports = mongoose.model('AuditLog', auditLogSchema);

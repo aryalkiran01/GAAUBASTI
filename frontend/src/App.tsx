@@ -22,12 +22,7 @@ import Payment from "./pages/Payment";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import ForgotPasswordPage  from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-import VerifyEmail from "./pages/VerifyEmail";
 import Messages from "./pages/Messages";
-import HelpCenter from "./pages/HelpCenter";
-import HelpArticle from "./pages/HelpArticle";
-import SafetyInfo from "./pages/SafetyInfo";
-import CancellationPolicy from "./pages/CancellationPolicy";
 
 // Components
 import Navbar from "./components/Navbar";
@@ -62,11 +57,6 @@ const App = () => (
                <Route path="*" element={<NotFound />} />
                <Route path="/forgot-password" element={<ForgotPasswordPage  />} />
                <Route path="/reset-password" element={<ResetPassword />} />
-               <Route path="/verify-email/:token" element={<VerifyEmail />} />
-               <Route path="/help" element={<HelpCenter />} />
-               <Route path="/help/:slug" element={<HelpArticle />} />
-               <Route path="/safety" element={<SafetyInfo />} />
-               <Route path="/cancellation-policy" element={<CancellationPolicy />} />
               </Routes>
             </main>
             <Footer />

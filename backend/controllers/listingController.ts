@@ -1,8 +1,8 @@
 export {};
-  import Listing from '../models/Listing';
-import User from '../models/User';
-import Booking from '../models/Booking';
-import { checkListingAvailability, validateBookingDates } from '../services/bookingAvailability';
+const Listing = require('../models/Listing');
+const User = require('../models/User');
+const Booking = require('../models/Booking');
+const { checkListingAvailability, validateBookingDates } = require('../services/bookingAvailability');
 
 const LISTING_ALLOWED_CREATE_FIELDS = [
   'title', 'description', 'location', 'price', 'images', 'amenities', 'maxGuests',
@@ -119,7 +119,7 @@ const getListings = async (req, res) => {
     }
 
     // Build sort object
-    const sort: any = {};
+    const sort: Record<string, number> = {};
     sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     // Execute query with pagination
@@ -483,7 +483,7 @@ const getFeaturedListings = async (req, res) => {
   }
 };
 
-export {
+module.exports = {
   getListings,
   getListing,
   createListing,

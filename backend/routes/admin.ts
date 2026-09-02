@@ -1,11 +1,26 @@
 export {};
-  import express from 'express';
+const express = require('express');
 const router = express.Router();
-import { getDashboardStats, getAllBookings, getAllUsers, updateUser, getAllListings, verifyListing, deleteListing, deactivateUser, reactivateUser, getFlaggedReviews, moderateReview, getAnalytics, getAuditLogs, getReportsForAdmin } from '../controllers/adminController';
-import { updateReportStatus } from '../controllers/reportController';
-import { authenticate } from '../middlewares/auth';
-import { requireAdmin } from '../middlewares/roleAuth';
-import { validateObjectId } from '../middlewares/validation';
+const {
+  getDashboardStats,
+  getAllBookings,
+  getAllUsers,
+  updateUser,
+  getAllListings,
+  verifyListing,
+  deleteListing,
+  deactivateUser,
+  reactivateUser,
+  getFlaggedReviews,
+  moderateReview,
+  getAnalytics,
+  getAuditLogs,
+  getReportsForAdmin
+} = require('../controllers/adminController');
+const { updateReportStatus } = require('../controllers/reportController');
+const { authenticate } = require('../middlewares/auth');
+const { requireAdmin } = require('../middlewares/roleAuth');
+const { validateObjectId } = require('../middlewares/validation');
 
 // All admin routes require authentication and admin role
 router.use(authenticate);
@@ -34,4 +49,4 @@ router.patch('/reviews/:id/moderate', validateObjectId('id'), moderateReview);
 router.get('/reports', getReportsForAdmin);
 router.patch('/reports/:id/status', validateObjectId('id'), updateReportStatus);
 
-export default router;
+module.exports = router;

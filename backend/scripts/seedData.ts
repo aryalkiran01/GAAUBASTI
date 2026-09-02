@@ -1,20 +1,21 @@
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
-import dotenv from 'dotenv';
+export {};
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+require('dotenv').config();
 
-import User from '../models/User';
-import Listing from '../models/Listing';
-import Booking from '../models/Booking';
-import Review from '../models/Review';
+const User = require('../models/User');
+const Listing = require('../models/Listing');
+const Booking = require('../models/Booking');
+const Review = require('../models/Review');
 
-dotenv.config();
-
+// Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/gaunbasti')
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((err: Error) => console.error('MongoDB connection error:', err));
+  .then(() => console.log(' Connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
 const seedData = async () => {
   try {
+    // Clear existing data
     await Promise.all([
       User.deleteMany({}),
       Listing.deleteMany({}),
@@ -22,51 +23,54 @@ const seedData = async () => {
       Review.deleteMany({})
     ]);
 
-    console.log('Cleared existing data');
+    console.log(' Cleared existing data');
 
+    // Create users
     const hashedPassword = await bcrypt.hash('password', 12);
+    
+const users = await User.create([
+  {
+    name: 'Guest User',
+    username: 'guestuser',       // must be unique
+    email: 'guest@example.com',
+    password: hashedPassword,
+    role: 'guest',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?...',
+    isVerified: true
+  },
+  {
+    name: 'Host User',
+    username: 'hostuser',        // must be unique
+    email: 'host@example.com',
+    password: hashedPassword,
+    role: 'host',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?...',
+    isVerified: true,
+    hostProfile: {
+      bio: 'Passionate about sharing Nepali culture with travelers',
+      languages: ['English', 'Nepali', 'Hindi'],
+      responseRate: 95,
+      responseTime: 'within an hour'
+    }
+  },
+  {
+    name: 'Admin User',
+    username: 'adminuser',       // must be unique
+    email: 'admin@example.com',
+    password: hashedPassword,
+    role: 'admin',
+    avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?...',
+    isVerified: true
+  }
+]);
+User.schema.indexes();
 
-    const users = await User.create([
-      {
-        name: 'Guest User',
-        username: 'guestuser',
-        email: 'guest@example.com',
-        password: hashedPassword,
-        role: 'guest',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80',
-        isVerified: true
-      },
-      {
-        name: 'Host User',
-        username: 'hostuser',
-        email: 'host@example.com',
-        password: hashedPassword,
-        role: 'host',
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80',
-        isVerified: true,
-        hostProfile: {
-          bio: 'Passionate about sharing Nepali culture with travelers',
-          languages: ['English', 'Nepali', 'Hindi'],
-          responseRate: 95,
-          responseTime: 'within an hour'
-        }
-      },
-      {
-        name: 'Admin User',
-        username: 'adminuser',
-        email: 'admin@example.com',
-        password: hashedPassword,
-        role: 'admin',
-        avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80',
-        isVerified: true
-      }
-    ]);
 
-    console.log('Created users');
+    console.log('ðŸ‘¥ Created users');
 
-    const hostUser = users.find((u: any) => u.role === 'host');
-    if (!hostUser) throw new Error('Host user not found after creation');
-
+    // Create listings
+    const hostUser = users.find(u => u.role === 'host');
+    
     const listings = await Listing.create([
       {
         title: 'Riverside Cottage',
@@ -76,12 +80,21 @@ const seedData = async () => {
           city: 'Pokhara',
           state: 'Gandaki',
           country: 'Nepal',
-          coordinates: { latitude: 28.2096, longitude: 83.9856 }
+          coordinates: {
+            latitude: 28.2096,
+            longitude: 83.9856
+          }
         },
         price: 85,
         images: [
-          { url: 'https://images.unsplash.com/photo-1587061949409-02df41d5e562?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', caption: 'Riverside view' },
-          { url: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', caption: 'Interior view' }
+          {
+            url: 'https://images.unsplash.com/photo-1587061949409-02df41d5e562?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
+            caption: 'Riverside view'
+          },
+          {
+            url: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
+            caption: 'Interior view'
+          }
         ],
         amenities: ['Wi-Fi', 'Kitchen', 'Mountain view', 'Private entrance', 'Breakfast'],
         maxGuests: 2,
@@ -102,12 +115,21 @@ const seedData = async () => {
           city: 'Nagarkot',
           state: 'Bagmati',
           country: 'Nepal',
-          coordinates: { latitude: 27.7172, longitude: 85.5240 }
+          coordinates: {
+            latitude: 27.7172,
+            longitude: 85.5240
+          }
         },
         price: 150,
         images: [
-          { url: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', caption: 'Villa exterior' },
-          { url: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', caption: 'Living area' }
+          {
+            url: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
+            caption: 'Villa exterior'
+          },
+          {
+            url: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
+            caption: 'Living area'
+          }
         ],
         amenities: ['Wi-Fi', 'Kitchen', 'Mountain view', 'Hot tub', 'Breakfast', 'Fireplace'],
         maxGuests: 6,
@@ -128,12 +150,21 @@ const seedData = async () => {
           city: 'Bandipur',
           state: 'Gandaki',
           country: 'Nepal',
-          coordinates: { latitude: 27.9317, longitude: 84.4204 }
+          coordinates: {
+            latitude: 27.9317,
+            longitude: 84.4204
+          }
         },
         price: 45,
         images: [
-          { url: 'https://images.unsplash.com/photo-1590725140246-20acddc1ec6b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', caption: 'Traditional architecture' },
-          { url: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', caption: 'Interior design' }
+          {
+            url: 'https://images.unsplash.com/photo-1590725140246-20acddc1ec6b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
+            caption: 'Traditional architecture'
+          },
+          {
+            url: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
+            caption: 'Interior design'
+          }
         ],
         amenities: ['Local cuisine', 'Cultural experience', 'Garden', 'Valley view'],
         maxGuests: 4,
@@ -150,40 +181,50 @@ const seedData = async () => {
 
     console.log('Created listings');
 
-    const guestUser = users.find((u: any) => u.role === 'guest');
-    if (!guestUser) throw new Error('Guest user not found after creation');
+    // Create bookings
+    const guestUser = users.find(u => u.role === 'guest');
+  const today = new Date();
 
-    const today = new Date();
-
-    const bookings = await Booking.create([
-      {
-        listing: listings[0]._id,
-        guest: guestUser._id,
-        host: hostUser._id,
-        startDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7),
-        endDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 12),
-        guests: { adults: 2, children: 0 },
-        totalPrice: 425,
-        priceBreakdown: { basePrice: 425, cleaningFee: 25, serviceFee: 42, taxes: 21 },
-        status: 'confirmed',
-        paymentStatus: 'paid'
-      },
-      {
-        listing: listings[2]._id,
-        guest: guestUser._id,
-        host: hostUser._id,
-        startDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 14),
-        endDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 19),
-        guests: { adults: 2, children: 1 },
-        totalPrice: 225,
-        priceBreakdown: { basePrice: 225, cleaningFee: 25, serviceFee: 22, taxes: 11 },
-        status: 'pending',
-        paymentStatus: 'pending'
-      }
-    ]);
+const bookings = await Booking.create([
+  {
+    listing: listings[0]._id,
+    guest: guestUser._id,
+    host: hostUser._id,
+    startDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7),
+    endDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 12),
+    guests: { adults: 2, children: 0 },
+    totalPrice: 425,
+    priceBreakdown: {
+      basePrice: 425,
+      cleaningFee: 25,
+      serviceFee: 42,
+      taxes: 21
+    },
+    status: 'confirmed',
+    paymentStatus: 'paid'
+  },
+  {
+    listing: listings[2]._id,
+    guest: guestUser._id,
+    host: hostUser._id,
+    startDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 14),
+    endDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 19),
+    guests: { adults: 2, children: 1 },
+    totalPrice: 225,
+    priceBreakdown: {
+      basePrice: 225,
+      cleaningFee: 25,
+      serviceFee: 22,
+      taxes: 11
+    },
+    status: 'pending',
+    paymentStatus: 'pending'
+  }
+]);
 
     console.log('Created bookings');
 
+    // Create reviews
     await Review.create([
       {
         listing: listings[0]._id,
@@ -191,18 +232,26 @@ const seedData = async () => {
         booking: bookings[0]._id,
         rating: 5,
         comment: 'Amazing stay! The hosts were incredibly welcoming and the location was perfect. The traditional breakfast was a highlight of our trip.',
-        ratings: { cleanliness: 5, communication: 5, checkIn: 5, accuracy: 5, location: 5, value: 5 },
+        ratings: {
+          cleanliness: 5,
+          communication: 5,
+          checkIn: 5,
+          accuracy: 5,
+          location: 5,
+          value: 5
+        },
         isVerified: true
       }
     ]);
 
-    console.log('Created reviews');
-    console.log('Seed data created successfully!');
-    console.log('\nDemo accounts:');
+    console.log(' Created reviews');
+
+    console.log(' Seed data created successfully!');
+    console.log('\n Demo accounts:');
     console.log('Guest: guest@example.com / password');
     console.log('Host: host@example.com / password');
     console.log('Admin: admin@example.com / password');
-
+    
     process.exit(0);
   } catch (error: any) {
     console.error('Error seeding data:', error);

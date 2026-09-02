@@ -1,10 +1,10 @@
-import crypto from 'crypto';
-import jwt from 'jsonwebtoken';
-import User from '../models/User';
-import OTP from '../models/Otp';
-import sendEmail from '../utils/sendemail';
+export {};
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const OTP = require('../models/Otp'); 
 
-const getJwtSecret = (): string => {
+const getJwtSecret = () => {
   if (process.env.JWT_SECRET) {
     return process.env.JWT_SECRET;
   }
@@ -16,11 +16,15 @@ const getJwtSecret = (): string => {
   return 'development-secret-key';
 };
 
-const generateToken = (userId: string): string => {
-  return jwt.sign({ userId }, getJwtSecret(), { expiresIn: '7d' });
+// Generate JWT token
+const generateToken = (userId) => {
+  return jwt.sign({ userId }, getJwtSecret(), {
+    expiresIn: '7d'
+  });
 };
 
-const register = async (req: any, res: any) => {
+// Register new user
+const register = async (req, res) => {
   try {
     const { name, email, password, role = 'guest', username } = req.body;
 
@@ -31,6 +35,7 @@ const register = async (req: any, res: any) => {
       });
     }
 
+    // Check if user already exists by email or username
     const existingUser = await User.findOne({
       $or: [{ email }, { username }]
     });
@@ -60,17 +65,13 @@ const register = async (req: any, res: any) => {
     await user.save();
 
     const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/verify-email/${verificationToken}`;
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: 'Verify your Gaubasti account',
-        text: `Hi ${user.name},\n\nPlease verify your account by visiting: ${verifyUrl}\n\nThis link expires in 24 hours.`
-      });
-    } catch {
-      // Email sending is optional in development
-    }
+    await sendEmail({
+      to: user.email,
+      subject: 'Verify your Gaubasti account',
+      text: `Hi ${user.name},\n\nPlease verify your account by visiting: ${verifyUrl}\n\nThis link expires in 24 hours.`
+    });
 
-    const token = generateToken(user._id.toString());
+    const token = generateToken(user._id);
 
     user.lastLogin = new Date();
     await user.save();
@@ -89,12 +90,15 @@ const register = async (req: any, res: any) => {
   }
 };
 
-const login = async (req: any, res: any) => {
+
+// Login user
+const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Find user and include password for comparison
     const user = await User.findOne({ email }).select('+password');
-
+    
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -109,7 +113,8 @@ const login = async (req: any, res: any) => {
       });
     }
 
-    const isPasswordValid = await (user as any).comparePassword(password);
+    // Check password
+    const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -117,17 +122,23 @@ const login = async (req: any, res: any) => {
       });
     }
 
-    const token = generateToken(user._id.toString());
+    // Generate token
+    const token = generateToken(user._id);
 
+    // Update last login
     user.lastLogin = new Date();
     await user.save();
 
+    // Remove password from response
     user.password = undefined;
 
     res.json({
       success: true,
       message: 'Login successful',
-      data: { user, token }
+      data: {
+        user,
+        token
+      }
     });
   } catch (error: any) {
     res.status(500).json({
@@ -138,7 +149,8 @@ const login = async (req: any, res: any) => {
   }
 };
 
-const getProfile = async (req: any, res: any) => {
+// Get current user profile
+const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
       .populate('listings', 'title location price averageRating')
@@ -157,12 +169,14 @@ const getProfile = async (req: any, res: any) => {
   }
 };
 
-const updateProfile = async (req: any, res: any) => {
+// Update user profile
+const updateProfile = async (req, res) => {
   try {
     const allowedUpdates = ['name', 'phone', 'address', 'avatar', 'hostProfile'];
-    const updates: Record<string, any> = {};
+    const updates = {};
 
-    Object.keys(req.body).forEach((key: string) => {
+    // Filter allowed updates
+    Object.keys(req.body).forEach(key => {
       if (allowedUpdates.includes(key)) {
         updates[key] = req.body[key];
       }
@@ -188,20 +202,16 @@ const updateProfile = async (req: any, res: any) => {
   }
 };
 
-const changePassword = async (req: any, res: any) => {
+// Change password
+const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
+    // Get user with password
     const user = await User.findById(req.user._id).select('+password');
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    const isCurrentPasswordValid = await (user as any).comparePassword(currentPassword);
+    // Verify current password
+    const isCurrentPasswordValid = await user.comparePassword(currentPassword);
     if (!isCurrentPasswordValid) {
       return res.status(400).json({
         success: false,
@@ -209,6 +219,7 @@ const changePassword = async (req: any, res: any) => {
       });
     }
 
+    // Update password
     user.password = newPassword;
     await user.save();
 
@@ -225,7 +236,11 @@ const changePassword = async (req: any, res: any) => {
   }
 };
 
-const forgotPassword = async (req: any, res: any) => {
+const sendEmail = require('../utils/sendemail');
+
+
+// --- Forgot Password: send OTP ---
+const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) {
@@ -237,9 +252,11 @@ const forgotPassword = async (req: any, res: any) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
+    // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = new Date(Date.now() + 10 * 60 * 1000);
+    const expires = Date.now() + 10 * 60 * 1000;
 
+    // Save OTP to separate collection
     await OTP.findOneAndUpdate(
       { email },
       { otp, expires },
@@ -263,20 +280,23 @@ const forgotPassword = async (req: any, res: any) => {
   }
 };
 
-const resetPassword = async (req: any, res: any) => {
+// --- Reset Password: verify OTP ---
+const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
 
+    // Check OTP from separate collection
     const otpRecord = await OTP.findOne({ email, otp });
 
     if (!otpRecord) {
       return res.status(400).json({ success: false, message: 'Invalid OTP' });
     }
 
-    if (new Date(otpRecord.expires).getTime() < Date.now()) {
+    if (otpRecord.expires < Date.now()) {
       return res.status(400).json({ success: false, message: 'OTP expired' });
     }
 
+    // Find user and update password
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -285,6 +305,7 @@ const resetPassword = async (req: any, res: any) => {
     user.password = newPassword;
     await user.save();
 
+    // Delete used OTP
     await OTP.deleteOne({ email });
 
     if (process.env.NODE_ENV === 'development') {
@@ -304,7 +325,9 @@ const resetPassword = async (req: any, res: any) => {
   }
 };
 
-const verifyEmail = async (req: any, res: any) => {
+
+// Refresh token
+const verifyEmail = async (req, res) => {
   try {
     const { token } = req.params;
     if (!token) {
@@ -328,8 +351,8 @@ const verifyEmail = async (req: any, res: any) => {
     }
 
     user.isVerified = true;
-    (user as any).verificationToken = undefined;
-    (user as any).verificationTokenExpires = undefined;
+    user.verificationToken = null;
+    user.verificationTokenExpires = null;
     await user.save();
 
     res.json({
@@ -345,69 +368,10 @@ const verifyEmail = async (req: any, res: any) => {
   }
 };
 
-const resendVerification = async (req: any, res: any) => {
+const refreshToken = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    if (user.isVerified) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email is already verified'
-      });
-    }
-
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const hashedVerificationToken = crypto
-      .createHash('sha256')
-      .update(verificationToken)
-      .digest('hex');
-
-    (user as any).verificationToken = hashedVerificationToken;
-    (user as any).verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
-    await user.save();
-
-    const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/verify-email/${verificationToken}`;
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: 'Verify your Gaubasti account',
-        text: `Hi ${user.name},\n\nPlease verify your account by visiting: ${verifyUrl}\n\nThis link expires in 24 hours.`
-      });
-    } catch {
-      // Email sending is optional in development
-    }
-
-    res.json({
-      success: true,
-      message: 'Verification email sent'
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to resend verification email',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-};
-
-const refreshToken = async (req: any, res: any) => {
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    const token = generateToken(user._id.toString());
+    const token = generateToken(user._id);
 
     res.json({
       success: true,
@@ -422,14 +386,13 @@ const refreshToken = async (req: any, res: any) => {
   }
 };
 
-export {
+module.exports = {
   register,
   login,
   getProfile,
   updateProfile,
   changePassword,
   verifyEmail,
-  resendVerification,
   refreshToken,
   forgotPassword,
   resetPassword

@@ -1,11 +1,11 @@
 export {};
-    import express from 'express';
+const express = require('express');
 const router = express.Router();
-import { authenticate } from '../middlewares/auth';
-import { getNotifications, markNotificationRead } from '../controllers/notificationController';
+const { authenticate } = require('../middlewares/auth');
+const { getNotifications, markNotificationRead } = require('../controllers/notificationController');
 
 router.use(authenticate);
 router.get('/', getNotifications);
 router.patch('/:id/read', markNotificationRead);
 
-export default router;
+module.exports = router;

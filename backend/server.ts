@@ -1,34 +1,35 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import cors from 'cors';
-import helmet from 'helmet';
-import compression from 'compression';
-import { Server } from 'socket.io';
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
-import { globalLimiter } from './middlewares/rateLimiters';
+export {};
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
+const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
+const { globalLimiter } = require('./middlewares/rateLimiters');
 
-import authRoutes from './routes/auth';
-import userRoutes from './routes/users';
-import listingRoutes from './routes/listings';
-import bookingRoutes from './routes/bookings';
-import reviewRoutes from './routes/reviews';
-import adminRoutes from './routes/admin';
-import paymentRoutes from './routes/payments';
-import conversationRoutes from './routes/conversations';
-import notificationRoutes from './routes/notifications';
-import articleRoutes from './routes/articles';
-import reportRoutes from './routes/reports';
-import wishlistRoutes from './routes/wishlist';
-import payoutRoutes from './routes/payouts';
-import errorHandler from './middlewares/errorHandler';
-
-dotenv.config();
+// Import routes and middleware
+const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/users');
+const listingRoutes = require('./routes/listings');
+const bookingRoutes = require('./routes/bookings');
+const reviewRoutes = require('./routes/reviews');
+const adminRoutes = require('./routes/admin');
+const paymentRoutes = require('./routes/payments');
+const conversationRoutes = require('./routes/conversations');
+const notificationRoutes = require('./routes/notifications');
+const articleRoutes = require('./routes/articles');
+const reportRoutes = require('./routes/reports');
+const wishlistRoutes = require('./routes/wishlist');
+const payoutRoutes = require('./routes/payouts');
+const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 
-const getRequiredEnvVars = (): string[] => {
-  const required: string[] = ['JWT_SECRET'];
+const getRequiredEnvVars = () => {
+  const required = ['JWT_SECRET'];
   const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
   if (!mongoUri) {
     required.push('MONGODB_URI');
@@ -45,7 +46,7 @@ const getRequiredEnvVars = (): string[] => {
   return required;
 };
 
-const getJwtSecret = (): string => {
+const getJwtSecret = () => {
   if (process.env.JWT_SECRET) {
     return process.env.JWT_SECRET;
   }
@@ -73,15 +74,16 @@ if (!process.env.JWT_SECRET && process.env.NODE_ENV !== 'production') {
   console.warn('JWT_SECRET not set. Using a temporary development secret for local testing.');
 }
 
+// Configure CORS
 const allowedOrigins = [
   'http://localhost:8080',
   'https://gaaubasti-19rzg9sr5-aryalkiran01s-projects.vercel.app',
   'https://gaaubasti.vercel.app',
   process.env.FRONTEND_URL
-].filter(Boolean) as string[];
+].filter(Boolean);
 
 const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+  origin: function (origin, callback) {
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.indexOf(origin) === -1) {
@@ -95,6 +97,7 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
 
+// Apply middleware in correct order
 app.use(cors(corsOptions));
 app.use(helmet());
 app.use(compression());
@@ -103,9 +106,11 @@ app.use('/api/', globalLimiter);
 
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
+// Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/listings', listingRoutes);
@@ -120,7 +125,8 @@ app.use('/api/articles', articleRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/payouts', payoutRoutes);
 
-app.get('/api/health', (_req, res) => {
+// Health check endpoint
+app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     message: 'Gaunbasti API is running',
@@ -128,19 +134,21 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-app.use('*', (_req, res) => {
+// 404 handler
+app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
     message: 'API endpoint not found'
   });
 });
 
+// Error handling middleware (must be last)
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
-let server: any;
+let server;
 
-const initializeSocketIO = (httpServer: any) => {
+const initializeSocketIO = (httpServer) => {
   const io = new Server(httpServer, {
     cors: {
       origin: allowedOrigins,
@@ -148,9 +156,9 @@ const initializeSocketIO = (httpServer: any) => {
     }
   });
 
-  (global as any).io = io;
+  global.io = io;
 
-  io.use((socket: any, next: any) => {
+  io.use((socket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {
@@ -158,22 +166,22 @@ const initializeSocketIO = (httpServer: any) => {
     }
 
     try {
-      const decoded = jwt.verify(token, jwtSecret) as any;
+      const decoded = jwt.verify(token, jwtSecret);
       socket.user = { _id: decoded.userId };
       return next();
-    } catch {
+    } catch (error) {
       return next(new Error('Invalid token'));
     }
   });
 
-  io.on('connection', (socket: any) => {
-    socket.on('joinConversation', (conversationId: string) => {
+  io.on('connection', (socket) => {
+    socket.on('joinConversation', (conversationId) => {
       if (conversationId) {
         socket.join(String(conversationId));
       }
     });
 
-    socket.on('typing:start', (payload: any) => {
+    socket.on('typing:start', (payload) => {
       if (payload?.conversationId) {
         socket.to(payload.conversationId).emit('typing:start', {
           userId: socket.user?._id,
@@ -182,7 +190,7 @@ const initializeSocketIO = (httpServer: any) => {
       }
     });
 
-    socket.on('typing:stop', (payload: any) => {
+    socket.on('typing:stop', (payload) => {
       if (payload?.conversationId) {
         socket.to(payload.conversationId).emit('typing:stop', {
           userId: socket.user?._id,
@@ -206,7 +214,7 @@ const startServer = async () => {
     });
 
     initializeSocketIO(server);
-  } catch {
+  } catch (error) {
     console.error('Failed to start server');
     process.exitCode = 1;
   }
@@ -240,7 +248,7 @@ process.on('SIGTERM', async () => {
   }
 });
 
-process.on('uncaughtException', (error: Error) => {
+process.on('uncaughtException', (error) => {
   console.error('Unhandled exception');
   if (process.env.NODE_ENV === 'development') {
     console.error(error.message);
@@ -248,7 +256,7 @@ process.on('uncaughtException', (error: Error) => {
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason: unknown) => {
+process.on('unhandledRejection', (reason) => {
   console.error('Unhandled promise rejection');
   if (process.env.NODE_ENV === 'development' && reason instanceof Error) {
     console.error(reason.message);
@@ -256,4 +264,5 @@ process.on('unhandledRejection', (reason: unknown) => {
   process.exit(1);
 });
 
-export default app;
+module.exports = app;
+

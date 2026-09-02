@@ -1,4 +1,4 @@
-import Notification from '../models/Notification';
+const Notification = require('../models/Notification');
 
 const createNotification = async ({ userId, type, content }) => {
   if (!userId) return null;
@@ -25,7 +25,7 @@ const notifyUsers = async (userIds: Array<string | { toString(): string }> = [],
   })));
 };
 
-export {
+module.exports = {
   createNotification,
   notifyUsers
 };

@@ -4,14 +4,7 @@ import { useFeaturedListings } from "@/hooks/useListings";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-  Star,
-  MapPin,
-  Compass,
-  CalendarCheck,
-  Heart,
-  ArrowRight,
-} from "lucide-react";
+import { Star, MapPin, Compass, CalendarCheck, Heart, ArrowRight } from "lucide-react";
 
 const Index = () => {
   const { listings: featuredListings, loading } = useFeaturedListings();
@@ -20,7 +13,7 @@ const Index = () => {
     <div className="min-h-screen flex flex-col">
       {/* Hero Section */}
       <section
-        className="relative min-h-[90vh] flex items-end pb-32 md:pb-40"
+        className="relative min-h-[90vh] flex items-end pb-12 md:pb-20"
         style={{
           backgroundImage:
             "linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.5) 100%), url('https://images.pexels.com/photos/32225790/pexels-photo-32225790.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1280')",
@@ -29,7 +22,7 @@ const Index = () => {
         }}
       >
         <div className="container">
-          <div className="max-w-3xl space-y-5 animate-fade-in-up">
+          <div className="max-w-3xl space-y-6 animate-fade-in-up">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-display font-semibold text-white leading-[1.05] tracking-tight text-balance">
               Stay somewhere
               <br />
@@ -118,9 +111,7 @@ const Index = () => {
                   <div className="flex items-center gap-1 mb-1">
                     <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
                     <span className="font-semibold text-sm">4.9</span>
-                    <span className="text-xs text-muted-foreground">
-                      avg rating
-                    </span>
+                    <span className="text-xs text-muted-foreground">avg rating</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     from 2,000+ happy travelers
@@ -134,38 +125,22 @@ const Index = () => {
               </h2>
               <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
                 From traditional mud houses in Bandipur to treehouses in Chitwan
-                and lakeside cabins in Pokhara — every stay is a gateway to real
-                Nepali village life.
+                and lakeside cabins in Pokhara — every stay is a gateway to
+                real Nepali village life.
               </p>
               <div className="space-y-4 pt-2">
                 {[
-                  {
-                    icon: Compass,
-                    title: "Authentic destinations",
-                    desc: "Stay in real villages, not tourist traps",
-                  },
-                  {
-                    icon: Heart,
-                    title: "Local hosts, real stories",
-                    desc: "Every booking supports a local family",
-                  },
-                  {
-                    icon: MapPin,
-                    title: "Curated by location",
-                    desc: "Mountains, lakes, jungles, and heritage towns",
-                  },
+                  { icon: Compass, title: "Authentic destinations", desc: "Stay in real villages, not tourist traps" },
+                  { icon: Heart, title: "Local hosts, real stories", desc: "Every booking supports a local family" },
+                  { icon: MapPin, title: "Curated by location", desc: "Mountains, lakes, jungles, and heritage towns" },
                 ].map((item) => (
                   <div key={item.title} className="flex items-start gap-4">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                       <item.icon className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-medium text-sm md:text-base">
-                        {item.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {item.desc}
-                      </p>
+                      <h3 className="font-medium text-sm md:text-base">{item.title}</h3>
+                      <p className="text-sm text-muted-foreground">{item.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -188,24 +163,9 @@ const Index = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
             {[
-              {
-                step: "01",
-                icon: Compass,
-                title: "Browse",
-                desc: "Explore curated homestays across Nepal's most beautiful regions.",
-              },
-              {
-                step: "02",
-                icon: CalendarCheck,
-                title: "Reserve",
-                desc: "Check availability and book your dates in just a few clicks.",
-              },
-              {
-                step: "03",
-                icon: Heart,
-                title: "Experience",
-                desc: "Arrive, settle in, and live like a local with your host family.",
-              },
+              { step: "01", icon: Compass, title: "Browse", desc: "Explore curated homestays across Nepal's most beautiful regions." },
+              { step: "02", icon: CalendarCheck, title: "Reserve", desc: "Check availability and book your dates in just a few clicks." },
+              { step: "03", icon: Heart, title: "Experience", desc: "Arrive, settle in, and live like a local with your host family." },
             ].map((item) => (
               <div key={item.step} className="text-center md:text-left">
                 <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
@@ -216,9 +176,7 @@ const Index = () => {
                     <item.icon className="h-5 w-5 text-primary" />
                   </div>
                 </div>
-                <h3 className="font-display text-xl font-semibold mb-2">
-                  {item.title}
-                </h3>
+                <h3 className="font-display text-xl font-semibold mb-2">{item.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {item.desc}
                 </p>
@@ -242,37 +200,28 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
-                quote:
-                  "Our stay at the Riverside Cottage was magical. The hosts were incredibly welcoming and the home-cooked meals were a highlight of our trip!",
+                quote: "Our stay at the Riverside Cottage was magical. The hosts were incredibly welcoming and the home-cooked meals were a highlight of our trip!",
                 name: "Kushal Thapa",
                 location: "from Arghakhanchi",
                 avatar: "/IMG-20250128-WA0003.jpg",
               },
               {
-                quote:
-                  "The mountain view from our villa was breathtaking! We enjoyed the cultural activities and learned so much about local traditions.",
+                quote: "The mountain view from our villa was breathtaking! We enjoyed the cultural activities and learned so much about local traditions.",
                 name: "Michael Jackson",
                 location: "from Kantipur",
                 avatar: "/IMG-20250128-WA0005.jpg",
               },
               {
-                quote:
-                  "Staying in the traditional mud house was the highlight of our Nepal trip. The authentic experience and warm hospitality made it unforgettable.",
+                quote: "Staying in the traditional mud house was the highlight of our Nepal trip. The authentic experience and warm hospitality made it unforgettable.",
                 name: "Juduwa Bhai",
                 location: "from Australia",
                 avatar: "/IMG-20250128-WA0006.jpg",
               },
             ].map((testimonial, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-2xl p-6 md:p-8 shadow-sm"
-              >
+              <div key={i} className="bg-white rounded-2xl p-6 md:p-8 shadow-sm">
                 <div className="flex items-center gap-1 mb-4">
                   {Array.from({ length: 5 }).map((_, idx) => (
-                    <Star
-                      key={idx}
-                      className="h-4 w-4 text-amber-500 fill-amber-500"
-                    />
+                    <Star key={idx} className="h-4 w-4 text-amber-500 fill-amber-500" />
                   ))}
                 </div>
                 <p className="text-sm md:text-base text-foreground/80 leading-relaxed mb-6">
@@ -288,9 +237,7 @@ const Index = () => {
                   </div>
                   <div>
                     <h4 className="font-medium text-sm">{testimonial.name}</h4>
-                    <p className="text-xs text-muted-foreground">
-                      {testimonial.location}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{testimonial.location}</p>
                   </div>
                 </div>
               </div>
@@ -312,11 +259,7 @@ const Index = () => {
               </p>
             </div>
             <Link to="/listings">
-              <Button
-                size="lg"
-                variant="secondary"
-                className="bg-white text-primary hover:bg-white/90"
-              >
+              <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-white/90">
                 Browse homestays
                 <ArrowRight className="h-4 w-4" />
               </Button>

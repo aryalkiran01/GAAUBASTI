@@ -1,31 +1,36 @@
-import { v2 as cloudinary } from 'cloudinary';
-import multer from 'multer';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
+export {};
+const cloudinary = require('cloudinary').v2;
+const multer = require('multer');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
+// Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// Configure multer storage for Cloudinary
 const storage = new CloudinaryStorage({
-  cloudinary: cloudinary as any,
+  cloudinary: cloudinary,
   params: {
     folder: 'gaunbasti',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
     transformation: [
       { width: 1200, height: 800, crop: 'limit', quality: 'auto' }
     ]
-  } as any
+  }
 });
 
+// Multer configuration
 const upload = multer({
-  storage: storage as any,
+  storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024,
-    files: 10
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+    files: 10 // Maximum 10 files
   },
-  fileFilter: (_req, file, cb) => {
+  fileFilter: (req, file, cb) => {
+    // Check file type
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
@@ -34,7 +39,8 @@ const upload = multer({
   }
 });
 
-const deleteImage = async (publicId: string) => {
+// Helper function to delete image from Cloudinary
+const deleteImage = async (publicId) => {
   try {
     const result = await cloudinary.uploader.destroy(publicId);
     return result;
@@ -46,7 +52,8 @@ const deleteImage = async (publicId: string) => {
   }
 };
 
-const uploadImage = async (filePath: string, folder = 'gaunbasti') => {
+// Helper function to upload image to Cloudinary
+const uploadImage = async (filePath, folder = 'gaunbasti') => {
   try {
     const result = await cloudinary.uploader.upload(filePath, {
       folder: folder,
@@ -63,7 +70,7 @@ const uploadImage = async (filePath: string, folder = 'gaunbasti') => {
   }
 };
 
-export {
+module.exports = {
   cloudinary,
   upload,
   deleteImage,
