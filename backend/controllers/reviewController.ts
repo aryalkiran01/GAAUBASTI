@@ -1,7 +1,7 @@
 export {};
-  import Review from '../models/Review';
-import Booking from '../models/Booking';
-import Listing from '../models/Listing';
+const Review = require('../models/Review');
+const Booking = require('../models/Booking');
+const Listing = require('../models/Listing');
 
 // Create new review
 const createReview = async (req, res) => {
@@ -163,7 +163,7 @@ const updateReview = async (req, res) => {
     }
 
     // Check if user can edit this review
-    if (!(review as any).canBeEdited(req.user._id)) {
+    if (!review.canBeEdited(req.user._id)) {
       return res.status(403).json({
         success: false,
         message: 'You can only edit your own reviews within 30 days of creation'
@@ -250,7 +250,7 @@ const respondToReview = async (req, res) => {
     }
 
     // Check if user is the host of the listing
-    if ((review.listing as any).host.toString() !== req.user._id.toString()) {
+    if (review.listing.host.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Only the host can respond to reviews'
@@ -258,7 +258,7 @@ const respondToReview = async (req, res) => {
     }
 
     // Check if host has already responded
-    if (review.hostResponse?.comment) {
+    if (review.hostResponse.comment) {
       return res.status(400).json({
         success: false,
         message: 'Host has already responded to this review'
@@ -329,7 +329,7 @@ const flagReview = async (req, res) => {
   }
 };
 
-export {
+module.exports = {
   createReview,
   getListingReviews,
   getUserReviews,

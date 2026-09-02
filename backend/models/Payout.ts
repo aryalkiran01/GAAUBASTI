@@ -1,5 +1,5 @@
 export {};
-  import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const payoutSchema = new mongoose.Schema({
   host: {
@@ -20,7 +20,7 @@ const payoutSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'paid'],
+    enum: ['pending', 'approved', 'paid'],
     default: 'pending'
   },
   payoutMethod: {
@@ -30,9 +30,22 @@ const payoutSchema = new mongoose.Schema({
   reference: {
     type: String,
     trim: true
+  },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  approvedAt: {
+    type: Date
+  },
+  paidAt: {
+    type: Date
   }
 }, {
   timestamps: true
 });
 
-export default mongoose.model('Payout', payoutSchema);
+payoutSchema.index({ host: 1, createdAt: -1 });
+payoutSchema.index({ status: 1, createdAt: -1 });
+
+module.exports = mongoose.model('Payout', payoutSchema);

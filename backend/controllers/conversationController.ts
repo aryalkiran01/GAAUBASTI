@@ -1,8 +1,8 @@
 export {};
-  import Conversation from '../models/Conversation';
-import Message from '../models/Message';
-import Listing from '../models/Listing';
-import { notifyUsers } from '../utils/notifications';
+const Conversation = require('../models/Conversation');
+const Message = require('../models/Message');
+const Listing = require('../models/Listing');
+const { notifyUsers, notifyNewMessage } = require('../utils/notifications');
 
 const normalizeParticipants = (participants = [], currentUserId) => {
   const ids = participants
@@ -120,6 +120,19 @@ const sendMessage = async (req, res) => {
       preview: message.body || 'Sent a file'
     });
 
+    const User = require('../models/User');
+    const senderUser = await User.findById(req.user._id).select('name');
+    for (const recipientId of recipientIds) {
+      const recipient = await User.findById(recipientId).select('name email');
+      if (recipient && senderUser) {
+        notifyNewMessage({
+          conversation,
+          sender: senderUser,
+          recipient
+        }).catch(() => {});
+      }
+    }
+
     if (global.io) {
       global.io.to(conversation._id.toString()).emit('message:new', {
         conversationId: conversation._id,
@@ -133,7 +146,7 @@ const sendMessage = async (req, res) => {
   }
 };
 
-export {
+module.exports = {
   getConversations,
   getOrCreateConversation,
   getMessages,

@@ -1,23 +1,26 @@
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
-import errorHandler from '../middlewares/errorHandler.ts';
-import { getConfiguredPaymentProvider } from '../controllers/paymentController.ts';
-import { createReport } from '../controllers/reportController.ts';
+export {};
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const errorHandler = require('../middlewares/errorHandler');
+const { getConfiguredPaymentProvider } = require('../controllers/paymentController');
+const { createReport } = require('../controllers/reportController');
 
-const createRes = () => {
-  let statusCode: number | null = null;
-  let payload: any = null;
-  return {
-    get statusCode() { return statusCode; },
-    get payload() { return payload; },
-    status(code: number) { statusCode = code; return this; },
-    json(p: any) { payload = p; return this; }
-  };
-};
+const createRes = () => ({
+  statusCode: null as number | null,
+  payload: null as any,
+  status(code: number) {
+    this.statusCode = code;
+    return this;
+  },
+  json(payload: any) {
+    this.payload = payload;
+    return this;
+  }
+});
 
 test('error handler maps invalid ObjectId to a 400 safe response', () => {
   const res = createRes();
-  errorHandler({ name: 'CastError', message: 'Cast to ObjectId failed' }, {} as any, res as any, () => {});
+  errorHandler({ name: 'CastError', message: 'Cast to ObjectId failed' }, {}, res, () => {});
 
   assert.equal(res.statusCode, 400);
   assert.equal(res.payload.success, false);
@@ -27,7 +30,7 @@ test('error handler maps invalid ObjectId to a 400 safe response', () => {
 
 test('error handler maps duplicate key errors to a 409 response', () => {
   const res = createRes();
-  errorHandler({ code: 11000, keyValue: { email: 'a@example.com' } }, {} as any, res as any, () => {});
+  errorHandler({ code: 11000, keyValue: { email: 'a@example.com' } }, {}, res, () => {});
 
   assert.equal(res.statusCode, 409);
   assert.equal(res.payload.message, 'Email already exists');
@@ -41,7 +44,7 @@ test('error handler sanitizes validation failures to a 422 response', () => {
       price: { message: 'Price must be positive' },
       maxGuests: { message: 'Guests must be at least 1' }
     }
-  }, {} as any, res as any, () => {});
+  }, {}, res, () => {});
 
   assert.equal(res.statusCode, 422);
   assert.equal(res.payload.success, false);
@@ -72,7 +75,7 @@ test('report creation rejects incomplete payloads before writing to the database
   await createReport({
     user: { _id: '507f1f77bcf86cd799439011' },
     body: { reportedEntityType: 'listing' }
-  } as any, res as any);
+  }, res);
 
   assert.equal(res.statusCode, 400);
   assert.equal(res.payload.success, false);

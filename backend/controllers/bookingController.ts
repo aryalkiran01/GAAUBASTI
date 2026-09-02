@@ -1,15 +1,19 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export {};
-import mongoose from "mongoose";
-import Booking from "../models/Booking";
-import Listing from "../models/Listing";
-import User from "../models/User";
-import {
+const mongoose = require("mongoose");
+const Booking = require("../models/Booking");
+const Listing = require("../models/Listing");
+const User = require("../models/User");
+const {
   validateGuestCount,
   validateBookingDates,
   canTransitionStatus,
   checkListingAvailability,
-} from "../services/bookingAvailability";
+} = require("../services/bookingAvailability");
+const {
+  notifyBookingCreated,
+  notifyBookingCancelled,
+  notifyPaymentConfirmed,
+} = require("../utils/notifications");
 
 // Create new booking
 const createBooking = async (req, res) => {
@@ -182,6 +186,12 @@ const createBooking = async (req, res) => {
       { path: "guest", select: "name email" },
       { path: "host", select: "name email" },
     ]);
+
+    notifyBookingCreated({
+      booking: populatedBooking,
+      guest: populatedBooking.guest,
+      host: populatedBooking.host,
+    }).catch(() => {});
 
     res.status(201).json({
       success: true,
@@ -404,7 +414,7 @@ const updateBookingStatus = async (req, res) => {
         });
 
         if (!matches) {
-          await (listingForDates as any).addUnavailableDates(
+          await listingForDates.addUnavailableDates(
             booking.startDate,
             booking.endDate,
             "Booked",
@@ -474,15 +484,15 @@ const cancelBooking = async (req, res) => {
       });
     }
 
-    if (!(booking as any).canBeCancelled()) {
+    if (!booking.canBeCancelled()) {
       return res.status(400).json({
         success: false,
         message: "Booking cannot be cancelled at this time",
       });
     }
 
-    const refundAmount = (booking as any).calculateRefund(
-      (booking.listing as any)?.cancellationPolicy,
+    const refundAmount = booking.calculateRefund(
+      booking.listing.cancellationPolicy,
     );
 
     booking.status = "cancelled";
@@ -505,6 +515,19 @@ const cancelBooking = async (req, res) => {
       await listingForDates.save();
     }
 
+    const populatedForNotif = await Booking.findById(booking._id).populate([
+      { path: "listing", select: "title" },
+      { path: "guest", select: "name email phone" },
+      { path: "host", select: "name email" },
+    ]);
+
+    notifyBookingCancelled({
+      booking: populatedForNotif,
+      guest: populatedForNotif.guest,
+      host: populatedForNotif.host,
+      refundAmount,
+    }).catch(() => {});
+
     res.json({
       success: true,
       message: "Booking cancelled successfully",
@@ -522,7 +545,7 @@ const cancelBooking = async (req, res) => {
   }
 };
 
-export {
+module.exports = {
   createBooking,
   getUserBookings,
   getHostBookings,

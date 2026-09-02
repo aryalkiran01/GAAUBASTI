@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import User from "../models/User";
-import Listing from "../models/Listing";
-import Booking from "../models/Booking";
-import Review from "../models/Review";
-import AuditLog from "../models/AuditLog";
-import Report from "../models/Report";
+export {};
+const User = require("../models/User");
+const Listing = require("../models/Listing");
+const Booking = require("../models/Booking");
+const Review = require("../models/Review");
+const AuditLog = require("../models/AuditLog");
+const Report = require("../models/Report");
 
 // Get dashboard statistics
 const getDashboardStats = async (req, res) => {
@@ -20,18 +20,35 @@ const getDashboardStats = async (req, res) => {
       recentBookings,
     ] = await Promise.all([
       User.countDocuments({ isActive: true }),
+
       Listing.countDocuments({ isActive: true }),
+
       Booking.countDocuments(),
+
       Booking.aggregate([
         { $match: { status: "completed" } },
-        { $group: { _id: null, total: { $sum: "$totalPrice" } } },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$totalPrice" },
+          },
+        },
       ]),
-      Listing.countDocuments({ isVerified: false, isActive: true }),
-      Review.countDocuments({ isFlagged: true }),
+
+      Listing.countDocuments({
+        isVerified: false,
+        isActive: true,
+      }),
+
+      Review.countDocuments({
+        isFlagged: true,
+      }),
+
       User.find({ isActive: true })
         .sort({ createdAt: -1 })
         .limit(5)
         .select("name email role createdAt"),
+
       Booking.find()
         .populate("listing", "title")
         .populate("guest", "name")
@@ -209,7 +226,7 @@ const verifyListing = async (req, res) => {
     }
 
     listing.isVerified = isVerified;
-    listing.verifiedAt = isVerified ? new Date() : undefined;
+    listing.verifiedAt = isVerified ? new Date() : null;
     listing.verifiedBy = isVerified ? req.user._id : null;
     if (notes) listing.adminNotes = notes;
 
@@ -691,7 +708,7 @@ const getReportsForAdmin = async (req, res) => {
   }
 };
 
-export {
+module.exports = {
   getDashboardStats,
   getAllBookings,
   getAllUsers,
