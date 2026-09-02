@@ -1,10 +1,10 @@
-export {};
-  import crypto from 'crypto';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
-import OTP from '../models/Otp'; 
+import OTP from '../models/Otp';
+import sendEmail from '../utils/sendemail';
 
-const getJwtSecret = () => {
+const getJwtSecret = (): string => {
   if (process.env.JWT_SECRET) {
     return process.env.JWT_SECRET;
   }
@@ -16,15 +16,11 @@ const getJwtSecret = () => {
   return 'development-secret-key';
 };
 
-// Generate JWT token
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, getJwtSecret(), {
-    expiresIn: '7d'
-  });
+const generateToken = (userId: string): string => {
+  return jwt.sign({ userId }, getJwtSecret(), { expiresIn: '7d' });
 };
 
-// Register new user
-const register = async (req, res) => {
+const register = async (req: any, res: any) => {
   try {
     const { name, email, password, role = 'guest', username } = req.body;
 
@@ -35,7 +31,6 @@ const register = async (req, res) => {
       });
     }
 
-    // Check if user already exists by email or username
     const existingUser = await User.findOne({
       $or: [{ email }, { username }]
     });
@@ -65,13 +60,17 @@ const register = async (req, res) => {
     await user.save();
 
     const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/verify-email/${verificationToken}`;
-    await sendEmail({
-      to: user.email,
-      subject: 'Verify your Gaubasti account',
-      text: `Hi ${user.name},\n\nPlease verify your account by visiting: ${verifyUrl}\n\nThis link expires in 24 hours.`
-    });
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Verify your Gaubasti account',
+        text: `Hi ${user.name},\n\nPlease verify your account by visiting: ${verifyUrl}\n\nThis link expires in 24 hours.`
+      });
+    } catch {
+      // Email sending is optional in development
+    }
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id.toString());
 
     user.lastLogin = new Date();
     await user.save();
@@ -90,15 +89,12 @@ const register = async (req, res) => {
   }
 };
 
-
-// Login user
-const login = async (req, res) => {
+const login = async (req: any, res: any) => {
   try {
     const { email, password } = req.body;
 
-    // Find user and include password for comparison
     const user = await User.findOne({ email }).select('+password');
-    
+
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -113,7 +109,6 @@ const login = async (req, res) => {
       });
     }
 
-    // Check password
     const isPasswordValid = await (user as any).comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -122,23 +117,17 @@ const login = async (req, res) => {
       });
     }
 
-    // Generate token
-    const token = generateToken(user._id);
+    const token = generateToken(user._id.toString());
 
-    // Update last login
     user.lastLogin = new Date();
     await user.save();
 
-    // Remove password from response
     user.password = undefined;
 
     res.json({
       success: true,
       message: 'Login successful',
-      data: {
-        user,
-        token
-      }
+      data: { user, token }
     });
   } catch (error: any) {
     res.status(500).json({
@@ -149,8 +138,7 @@ const login = async (req, res) => {
   }
 };
 
-// Get current user profile
-const getProfile = async (req, res) => {
+const getProfile = async (req: any, res: any) => {
   try {
     const user = await User.findById(req.user._id)
       .populate('listings', 'title location price averageRating')
@@ -169,14 +157,12 @@ const getProfile = async (req, res) => {
   }
 };
 
-// Update user profile
-const updateProfile = async (req, res) => {
+const updateProfile = async (req: any, res: any) => {
   try {
     const allowedUpdates = ['name', 'phone', 'address', 'avatar', 'hostProfile'];
-    const updates = {};
+    const updates: Record<string, any> = {};
 
-    // Filter allowed updates
-    Object.keys(req.body).forEach(key => {
+    Object.keys(req.body).forEach((key: string) => {
       if (allowedUpdates.includes(key)) {
         updates[key] = req.body[key];
       }
@@ -202,15 +188,19 @@ const updateProfile = async (req, res) => {
   }
 };
 
-// Change password
-const changePassword = async (req, res) => {
+const changePassword = async (req: any, res: any) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    // Get user with password
     const user = await User.findById(req.user._id).select('+password');
 
-    // Verify current password
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
     const isCurrentPasswordValid = await (user as any).comparePassword(currentPassword);
     if (!isCurrentPasswordValid) {
       return res.status(400).json({
@@ -219,7 +209,6 @@ const changePassword = async (req, res) => {
       });
     }
 
-    // Update password
     user.password = newPassword;
     await user.save();
 
@@ -236,11 +225,7 @@ const changePassword = async (req, res) => {
   }
 };
 
-import sendEmail from '../utils/sendemail';
-
-
-// --- Forgot Password: send OTP ---
-const forgotPassword = async (req, res) => {
+const forgotPassword = async (req: any, res: any) => {
   try {
     const { email } = req.body;
     if (!email) {
@@ -252,11 +237,9 @@ const forgotPassword = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = Date.now() + 10 * 60 * 1000;
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
 
-    // Save OTP to separate collection
     await OTP.findOneAndUpdate(
       { email },
       { otp, expires },
@@ -280,12 +263,10 @@ const forgotPassword = async (req, res) => {
   }
 };
 
-// --- Reset Password: verify OTP ---
-const resetPassword = async (req, res) => {
+const resetPassword = async (req: any, res: any) => {
   try {
     const { email, otp, newPassword } = req.body;
 
-    // Check OTP from separate collection
     const otpRecord = await OTP.findOne({ email, otp });
 
     if (!otpRecord) {
@@ -296,7 +277,6 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ success: false, message: 'OTP expired' });
     }
 
-    // Find user and update password
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -305,7 +285,6 @@ const resetPassword = async (req, res) => {
     user.password = newPassword;
     await user.save();
 
-    // Delete used OTP
     await OTP.deleteOne({ email });
 
     if (process.env.NODE_ENV === 'development') {
@@ -325,9 +304,7 @@ const resetPassword = async (req, res) => {
   }
 };
 
-
-// Refresh token
-const verifyEmail = async (req, res) => {
+const verifyEmail = async (req: any, res: any) => {
   try {
     const { token } = req.params;
     if (!token) {
@@ -351,8 +328,8 @@ const verifyEmail = async (req, res) => {
     }
 
     user.isVerified = true;
-    (user as any).verificationToken = null;
-    (user as any).verificationTokenExpires = null;
+    (user as any).verificationToken = undefined;
+    (user as any).verificationTokenExpires = undefined;
     await user.save();
 
     res.json({
@@ -368,10 +345,17 @@ const verifyEmail = async (req, res) => {
   }
 };
 
-const refreshToken = async (req, res) => {
+const refreshToken = async (req: any, res: any) => {
   try {
     const user = await User.findById(req.user._id);
-    const token = generateToken(user._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const token = generateToken(user._id.toString());
 
     res.json({
       success: true,

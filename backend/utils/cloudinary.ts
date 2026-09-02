@@ -1,36 +1,31 @@
-export {};
 import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
-// Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Configure multer storage for Cloudinary
 const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
+  cloudinary: cloudinary as any,
   params: {
     folder: 'gaunbasti',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
     transformation: [
       { width: 1200, height: 800, crop: 'limit', quality: 'auto' }
     ]
-  }
+  } as any
 });
 
-// Multer configuration
 const upload = multer({
-  storage: storage,
+  storage: storage as any,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-    files: 10 // Maximum 10 files
+    fileSize: 5 * 1024 * 1024,
+    files: 10
   },
-  fileFilter: (req, file, cb) => {
-    // Check file type
+  fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
@@ -39,8 +34,7 @@ const upload = multer({
   }
 });
 
-// Helper function to delete image from Cloudinary
-const deleteImage = async (publicId) => {
+const deleteImage = async (publicId: string) => {
   try {
     const result = await cloudinary.uploader.destroy(publicId);
     return result;
@@ -52,8 +46,7 @@ const deleteImage = async (publicId) => {
   }
 };
 
-// Helper function to upload image to Cloudinary
-const uploadImage = async (filePath, folder = 'gaunbasti') => {
+const uploadImage = async (filePath: string, folder = 'gaunbasti') => {
   try {
     const result = await cloudinary.uploader.upload(filePath, {
       folder: folder,
