@@ -285,6 +285,12 @@ export const listingsAPI = {
     });
   },
 
+  removeWishlistItem: async (listingId: string) => {
+    return await apiRequest(`/wishlist/${listingId}`, {
+      method: "DELETE",
+    });
+  },
+
   deleteListing: async (id: string) => {
     return await apiRequest(`/listings/${id}`, {
       method: "DELETE",
@@ -528,6 +534,53 @@ export const adminAPI = {
       method: "PATCH",
       body: JSON.stringify({ action, reason }),
     });
+  },
+
+  getAuditLogs: async (params: any = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return await apiRequest(
+      `/admin/audit-logs${queryString ? `?${queryString}` : ""}`
+    );
+  },
+
+  getReports: async (params: any = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return await apiRequest(
+      `/admin/reports${queryString ? `?${queryString}` : ""}`
+    );
+  },
+
+  updateReportStatus: async (id: string, status: string) => {
+    return await apiRequest(`/admin/reports/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  },
+};
+
+// Reports API calls
+export const reportsAPI = {
+  createReport: async (reportData: any) => {
+    return await apiRequest("/reports", {
+      method: "POST",
+      body: JSON.stringify(reportData),
+    });
+  },
+};
+
+// Articles API calls (Help Center / FAQ)
+export const articlesAPI = {
+  getArticles: async (params: any = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return await apiRequest(
+      `/articles${queryString ? `?${queryString}` : ""}`,
+      {},
+      false
+    );
+  },
+
+  getArticleBySlug: async (slug: string) => {
+    return await apiRequest(`/articles/${slug}`, {}, false);
   },
 };
 
