@@ -24,6 +24,7 @@ const articleRoutes = require('./routes/articles');
 const reportRoutes = require('./routes/reports');
 const wishlistRoutes = require('./routes/wishlist');
 const payoutRoutes = require('./routes/payouts');
+const aiRoutes = require('./routes/ai');
 const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
@@ -124,6 +125,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/payouts', payoutRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
