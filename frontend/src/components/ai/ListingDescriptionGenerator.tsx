@@ -47,8 +47,8 @@ const ListingDescriptionGenerator = ({ initialData, onApply }: ListingDescriptio
       } else {
         setError(response.message || "Failed to generate description");
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }

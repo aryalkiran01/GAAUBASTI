@@ -116,6 +116,13 @@ const login = async (req, res) => {
       });
     }
 
+    if (!user.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: 'Please verify your email before logging in. Check your inbox for the verification link.'
+      });
+    }
+
     // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
@@ -403,6 +410,51 @@ const refreshToken = async (req, res) => {
   }
 };
 
+const resendVerification = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(200).json({ success: true, message: 'If an account with that email exists, a verification link has been sent.' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, message: 'Email is already verified' });
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedVerificationToken = crypto
+      .createHash('sha256')
+      .update(verificationToken)
+      .digest('hex');
+
+    user.verificationToken = hashedVerificationToken;
+    user.verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
+    await user.save();
+
+    const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/verify-email/${verificationToken}`;
+    const verifyTemplate = emailTemplates.email_verification({ name: user.name, verifyUrl });
+    sendEmail({
+      to: user.email,
+      subject: verifyTemplate.subject,
+      text: verifyTemplate.text,
+      html: verifyTemplate.html
+    }).catch(() => {});
+
+    res.json({ success: true, message: 'If an account with that email exists, a verification link has been sent.' });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to resend verification email',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -412,5 +464,6 @@ module.exports = {
   verifyEmail,
   refreshToken,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  resendVerification
 };

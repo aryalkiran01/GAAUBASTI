@@ -11,12 +11,19 @@ interface PricingRecommendationProps {
   currentPrice: number;
 }
 
+interface PricingResult {
+  recommendedPrice: number;
+  confidence: string;
+  comparableCount?: number;
+  reasoning: string;
+}
+
 const PricingRecommendation = ({ listingId, currentPrice }: PricingRecommendationProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<PricingResult | null>(null);
 
   if (!user || (user.role !== "host" && user.role !== "admin")) return null;
 
@@ -27,12 +34,12 @@ const PricingRecommendation = ({ listingId, currentPrice }: PricingRecommendatio
     try {
       const response = await aiAPI.pricingRecommendation(listingId);
       if (response.success) {
-        setResult(response.data);
+        setResult(response.data as PricingResult);
       } else {
         setError(response.message || "Failed to get recommendation");
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }

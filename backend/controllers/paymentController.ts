@@ -590,7 +590,19 @@ const processRefund = async (req, res) => {
     }
 
     const Transaction = require('../models/Transaction');
-    const idempotencyKey = `refund:${payment._id}:${refundAmount}`;
+    const priorRefunds = await Transaction.aggregate([
+      { $match: { type: 'refund', payment: payment._id, status: 'completed' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+    const alreadyRefunded = priorRefunds.length > 0 ? priorRefunds[0].total : 0;
+    if (alreadyRefunded + refundAmount > payment.amount) {
+      return res.status(400).json({
+        success: false,
+        message: `Refund exceeds total paid. Already refunded: ${alreadyRefunded.toFixed(2)}, requested: ${refundAmount.toFixed(2)}, total paid: ${payment.amount.toFixed(2)}`
+      });
+    }
+
+    const idempotencyKey = `refund:${payment._id}:${refundAmount}:${Date.now()}`;
     const existingRefund = await Transaction.findOne({ type: 'refund', payment: payment._id, reference: idempotencyKey });
     if (existingRefund) {
       return res.status(409).json({ success: false, message: 'Refund already processed for this payment' });
@@ -621,11 +633,11 @@ const processRefund = async (req, res) => {
       idempotencyKey
     });
 
-    payment.status = 'refunded';
+    payment.status = alreadyRefunded + refundAmount >= payment.amount ? 'refunded' : 'paid';
     await payment.save();
 
     const booking = payment.booking;
-    if (booking && booking.status !== 'refunded') {
+    if (booking && alreadyRefunded + refundAmount >= payment.amount && booking.status !== 'refunded') {
       booking.paymentStatus = 'refunded';
       booking.status = 'refunded';
       await booking.save();

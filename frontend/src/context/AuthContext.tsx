@@ -100,14 +100,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Login failed",
         description: response.message || "Invalid email or password",
       });
-    } catch (error: any) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: unknown) {
       removeAuthToken();
       setUser(null);
       toast({
         variant: "destructive",
         title: "Login failed",
-        description: error.message || "An error occurred during login",
+        description: error instanceof Error ? error.message : "An error occurred during login",
       });
     } finally {
       setIsLoading(false);
@@ -130,12 +129,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           description: "Your password was updated successfully.",
         });
       }
-    } catch (error: any) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Change Password Failed",
-        description: error.message || "An error occurred",
+        description: error instanceof Error ? error.message : "An error occurred",
       });
     } finally {
       setIsLoading(false);
@@ -153,12 +151,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
       return response;
-    } catch (error: any) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to send OTP",
+        description: error instanceof Error ? error.message : "Failed to send OTP",
       });
       throw error;
     } finally {
@@ -181,12 +178,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
       return response;
-    } catch (error: any) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to reset password",
+        description: error instanceof Error ? error.message : "Failed to reset password",
       });
       throw error;
     } finally {
@@ -242,14 +238,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description:
           response.message || "An error occurred during registration",
       });
-    } catch (error: any) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: unknown) {
       removeAuthToken();
       setUser(null);
       toast({
         variant: "destructive",
         title: "Registration failed",
-        description: error.message || "An error occurred during registration",
+        description: error instanceof Error ? error.message : "An error occurred during registration",
       });
     } finally {
       setIsLoading(false);

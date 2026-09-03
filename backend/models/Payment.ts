@@ -29,7 +29,7 @@ const paymentSchema = new mongoose.Schema({
   },
   provider: {
     type: String,
-    enum: ['mock', 'stripe'],
+    enum: ['mock', 'stripe', 'esewa'],
     default: 'mock'
   },
   providerPaymentId: {
