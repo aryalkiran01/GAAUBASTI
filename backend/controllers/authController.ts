@@ -26,7 +26,8 @@ const generateToken = (userId) => {
 // Register new user
 const register = async (req, res) => {
   try {
-    const { name, email, password, role = 'guest', username } = req.body;
+    const { name, email, password, username } = req.body;
+    const role = req.body.role === 'host' ? 'host' : 'guest';
 
     if (!username) {
       return res.status(400).json({
@@ -253,7 +254,7 @@ const forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      return res.status(200).json({ success: true, message: 'If an account with that email exists, an OTP has been sent.' });
     }
 
     // Generate 6-digit OTP
@@ -283,7 +284,7 @@ const forgotPassword = async (req, res) => {
       sendOTPSMS(user.phone, otp).catch(() => {});
     }
 
-    res.json({ success: true, message: 'OTP sent to your email' });
+    res.json({ success: true, message: 'If an account with that email exists, an OTP has been sent.' });
   } catch (error: any) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Forgot password error');

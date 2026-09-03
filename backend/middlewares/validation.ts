@@ -39,8 +39,8 @@ const validateUserRegistration = [
 
   body('role')
     .optional()
-    .isIn(['guest', 'host', 'admin'])
-    .withMessage('Role must be either guest, host, or admin'),
+    .isIn(['guest', 'host'])
+    .withMessage('Role must be either guest or host'),
 
   handleValidationErrors
 ];
