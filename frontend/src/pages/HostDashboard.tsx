@@ -35,6 +35,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/EmptyState";
 import { Home, CalendarCheck, DollarSign, Plus, Pencil, Trash2, MessageSquare } from "lucide-react";
+import ListingDescriptionGenerator from "@/components/ai/ListingDescriptionGenerator";
+import PricingRecommendation from "@/components/ai/PricingRecommendation";
 
 const HostDashboard = () => {
   const { user } = useAuth();
@@ -211,6 +213,18 @@ const HostDashboard = () => {
                   <Label htmlFor="description">Description</Label>
                   <Textarea id="description" value={newListing.description} onChange={(e) => setNewListing({ ...newListing, description: e.target.value })} required rows={3} className="mt-1.5" />
                 </div>
+                <ListingDescriptionGenerator
+                  initialData={{
+                    title: newListing.title,
+                    category: newListing.category,
+                    location: newListing.location.city,
+                    amenities: newListing.amenities,
+                    bedrooms: newListing.bedrooms,
+                    bathrooms: newListing.bathrooms,
+                    maxGuests: newListing.maxGuests,
+                  }}
+                  onApply={(data) => setNewListing((prev) => ({ ...prev, title: data.title, description: data.description }))}
+                />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="city">City</Label>
@@ -489,8 +503,13 @@ const HostDashboard = () => {
 
           {/* Reviews Tab */}
           <TabsContent value="reviews" className="mt-6">
-            <div className="bg-white rounded-2xl border border-border">
-              <EmptyState icon={MessageSquare} title="Reviews coming soon" description="Guest reviews for your listings will appear here" />
+            <div className="space-y-6">
+              {listings.length > 0 && (
+                <PricingRecommendation listingId={listings[0].id} currentPrice={listings[0].price} />
+              )}
+              <div className="bg-white rounded-2xl border border-border">
+                <EmptyState icon={MessageSquare} title="Reviews coming soon" description="Guest reviews for your listings will appear here" />
+              </div>
             </div>
           </TabsContent>
         </Tabs>

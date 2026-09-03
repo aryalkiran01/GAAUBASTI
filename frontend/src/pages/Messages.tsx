@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { conversationsAPI } from "@/lib/api";
+import MessageReplySuggestions from "@/components/ai/MessageReplySuggestions";
 
 const getUserId = (user: any) => user?._id || user?.id;
 
@@ -220,6 +221,10 @@ const Messages = () => {
                   Send
                 </Button>
               </div>
+              <MessageReplySuggestions
+                conversationId={selectedConversationId || ""}
+                onReplySelect={(text) => setDraft(text)}
+              />
             </>
           ) : (
             <div className="flex flex-1 items-center justify-center text-muted-foreground">

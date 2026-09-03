@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Slider } from "@/components/ui/slider";
 import { EmptyState } from "@/components/EmptyState";
 import { SearchX, SlidersHorizontal, X } from "lucide-react";
+import SemanticSearch from "@/components/ai/SemanticSearch";
 
 const Listings = () => {
   const [urlSearchParams] = useSearchParams();
@@ -58,6 +59,9 @@ const Listings = () => {
             Find your perfect stay
           </h1>
           <SearchForm />
+          <div className="mt-6">
+            <SemanticSearch />
+          </div>
         </div>
       </section>
 

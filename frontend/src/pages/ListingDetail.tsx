@@ -13,6 +13,7 @@ import { PaymentDetails } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import AvailabilityChecker from "@/components/AvailabilityChecker";
 import ReviewSection from "@/components/ReviewSection";
+import ReviewSummary from "@/components/ai/ReviewSummary";
 
 const ListingDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -331,6 +332,7 @@ const ListingDetail = () => {
             
             {/* Reviews Section */}
             <div className="border-t pt-6">
+              <ReviewSummary listingId={listing.id} />
               <ReviewSection 
                 listingId={listing.id}
                 canReview={user?.role === 'guest'}
