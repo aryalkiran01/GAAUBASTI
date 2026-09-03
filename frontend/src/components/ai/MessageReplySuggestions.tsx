@@ -28,8 +28,8 @@ const MessageReplySuggestions = ({ conversationId, onReplySelect }: MessageReply
       } else {
         setError(response.message || "Failed to get suggestions");
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
