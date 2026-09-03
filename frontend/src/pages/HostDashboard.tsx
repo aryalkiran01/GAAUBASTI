@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useAuth } from "@/context/AuthContext";
+import SEO from "@/components/SEO";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/EmptyState";
 import { Home, CalendarCheck, DollarSign, Plus, Pencil, Trash2, MessageSquare } from "lucide-react";
+import ListingDescriptionGenerator from "@/components/ai/ListingDescriptionGenerator";
+import PricingRecommendation from "@/components/ai/PricingRecommendation";
 
 const HostDashboard = () => {
   const { user } = useAuth();
@@ -179,6 +182,7 @@ const HostDashboard = () => {
 
   return (
     <div className="min-h-screen py-10 md:py-14">
+      <SEO title="Host Dashboard" description="Manage your listings, bookings, and reviews." canonicalPath="/host" noindex />
       <div className="container">
         <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
           <h1 className="text-3xl font-display font-semibold tracking-tight">Host dashboard</h1>
@@ -209,6 +213,18 @@ const HostDashboard = () => {
                   <Label htmlFor="description">Description</Label>
                   <Textarea id="description" value={newListing.description} onChange={(e) => setNewListing({ ...newListing, description: e.target.value })} required rows={3} className="mt-1.5" />
                 </div>
+                <ListingDescriptionGenerator
+                  initialData={{
+                    title: newListing.title,
+                    category: newListing.category,
+                    location: newListing.location.city,
+                    amenities: newListing.amenities,
+                    bedrooms: newListing.bedrooms,
+                    bathrooms: newListing.bathrooms,
+                    maxGuests: newListing.maxGuests,
+                  }}
+                  onApply={(data) => setNewListing((prev) => ({ ...prev, title: data.title, description: data.description }))}
+                />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="city">City</Label>
@@ -300,6 +316,7 @@ const HostDashboard = () => {
                             <img
                               src={Array.isArray(listing.images) ? (typeof listing.images[0] === "string" ? listing.images[0] : listing.images[0]?.url) : "https://images.unsplash.com/photo-1587061949409-02df41d5e562"}
                               alt={listing.title}
+                              loading="lazy"
                               className="h-12 w-12 rounded-xl object-cover"
                             />
                             <div>
@@ -486,8 +503,13 @@ const HostDashboard = () => {
 
           {/* Reviews Tab */}
           <TabsContent value="reviews" className="mt-6">
-            <div className="bg-white rounded-2xl border border-border">
-              <EmptyState icon={MessageSquare} title="Reviews coming soon" description="Guest reviews for your listings will appear here" />
+            <div className="space-y-6">
+              {listings.length > 0 && (
+                <PricingRecommendation listingId={listings[0].id} currentPrice={listings[0].price} />
+              )}
+              <div className="bg-white rounded-2xl border border-border">
+                <EmptyState icon={MessageSquare} title="Reviews coming soon" description="Guest reviews for your listings will appear here" />
+              </div>
             </div>
           </TabsContent>
         </Tabs>

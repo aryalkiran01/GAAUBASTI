@@ -540,6 +540,77 @@ export const usersAPI = {
   },
 };
 
+// AI API calls
+export const aiAPI = {
+  getHealth: async () => {
+    return await apiRequest("/ai/health", {}, false);
+  },
+
+  getConfig: async () => {
+    return await apiRequest("/ai/config");
+  },
+
+  testProvider: async () => {
+    return await apiRequest("/ai/test", { method: "POST" });
+  },
+
+  generateListingDescription: async (data: any) => {
+    return await apiRequest("/ai/listing-description", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  helpAssistant: async (question: string) => {
+    return await apiRequest("/ai/help-assistant", {
+      method: "POST",
+      body: JSON.stringify({ question }),
+    });
+  },
+
+  pricingRecommendation: async (listingId: string) => {
+    return await apiRequest("/ai/pricing-recommendation", {
+      method: "POST",
+      body: JSON.stringify({ listingId }),
+    });
+  },
+
+  suggestMessageReplies: async (conversationId: string) => {
+    return await apiRequest("/ai/message-replies", {
+      method: "POST",
+      body: JSON.stringify({ conversationId }),
+    });
+  },
+
+  moderateContent: async (contentType: string, content: string) => {
+    return await apiRequest("/ai/moderate", {
+      method: "POST",
+      body: JSON.stringify({ contentType, content }),
+    });
+  },
+
+  reviewSummary: async (listingId: string) => {
+    return await apiRequest("/ai/review-summary", {
+      method: "POST",
+      body: JSON.stringify({ listingId }),
+    });
+  },
+
+  semanticSearch: async (query: string) => {
+    return await apiRequest("/ai/semantic-search", {
+      method: "POST",
+      body: JSON.stringify({ query }),
+    });
+  },
+
+  translate: async (text: string, from: string, to: string) => {
+    return await apiRequest("/ai/translate", {
+      method: "POST",
+      body: JSON.stringify({ text, from, to }),
+    });
+  },
+};
+
 // Health check
 export const healthCheck = async () => {
   return await apiRequest("/health", {}, false);

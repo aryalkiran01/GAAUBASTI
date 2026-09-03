@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gaun-cream/30 py-12 px-4 sm:px-6 lg:px-8">
+      <SEO title="Log in" description="Log in to your Gau Basti account to manage bookings and favorites." canonicalPath="/login" noindex />
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-sm">
         <div className="text-center">
           <h1 className="text-3xl font-serif font-bold text-gaun-green">Welcome back</h1>

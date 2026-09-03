@@ -40,9 +40,25 @@ const bookingCreateLimiter = rateLimit({
   message: 'Too many booking creation requests. Please try again later.'
 });
 
+const aiLimiter = rateLimit({
+  windowMs: parseInt(process.env.AI_RATE_LIMIT_WINDOW_MS || '60000', 10) || 60000,
+  max: parseInt(process.env.AI_RATE_LIMIT_MAX || '10', 10) || 10,
+  keyGenerator: (req) => {
+    const authHeader = req.headers.authorization || '';
+    if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      return authHeader.replace('Bearer ', '');
+    }
+    return req.ip || 'anonymous';
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many AI requests. Please try again later.'
+});
+
 module.exports = {
   globalLimiter,
   loginLimiter,
   passwordLimiter,
-  bookingCreateLimiter
+  bookingCreateLimiter,
+  aiLimiter
 };

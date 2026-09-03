@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import UserEditDialog from "@/components/admin/UserEditDialog";
 import ListingEditDialog from "@/components/admin/ListingEditDialog";
 import BookingEditDialog from "@/components/admin/BookingEditDialog";
+import AIModeration from "@/components/ai/AIModeration";
 
 const Admin = () => {
   const { user } = useAuth();
@@ -278,6 +279,7 @@ const Admin = () => {
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="listings">Listings</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
+            <TabsTrigger value="moderation">Moderation</TabsTrigger>
           </TabsList>
           
           <TabsContent value="users" className="mt-6">
@@ -542,6 +544,16 @@ const Admin = () => {
                   })}
                 </TableBody>
               </Table>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="moderation" className="mt-6">
+            <div className="bg-white rounded-md border p-6">
+              <h3 className="text-lg font-medium mb-4">AI Content Moderation</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Paste any content (message, listing description, or review) to check it for safety issues. The AI will flag content for human review but will never take automatic action.
+              </p>
+              <AIModeration contentType="listing" content="" />
             </div>
           </TabsContent>
         </Tabs>

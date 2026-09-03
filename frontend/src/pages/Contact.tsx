@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Phone, Mail, MapPin, Send } from "lucide-react";
+import HelpAssistant from "@/components/ai/HelpAssistant";
+import Translation from "@/components/ai/Translation";
 
 const Contact = () => {
   const [name, setName] = useState("");
@@ -129,6 +131,16 @@ const Contact = () => {
               allowFullScreen
               loading="lazy"
             />
+          </div>
+        </div>
+      </section>
+
+      {/* AI Tools Section */}
+      <section className="pb-16 md:pb-20">
+        <div className="container">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <HelpAssistant />
+            <Translation />
           </div>
         </div>
       </section>
