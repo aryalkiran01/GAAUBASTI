@@ -55,10 +55,26 @@ const aiLimiter = rateLimit({
   message: 'Too many AI requests. Please try again later.'
 });
 
+const resendVerificationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  keyGenerator: (req) => {
+    const authHeader = req.headers.authorization || '';
+    if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      return authHeader.replace('Bearer ', '');
+    }
+    return req.ip || 'anonymous';
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many verification emails requested. Please try again later.'
+});
+
 module.exports = {
   globalLimiter,
   loginLimiter,
   passwordLimiter,
   bookingCreateLimiter,
-  aiLimiter
+  aiLimiter,
+  resendVerificationLimiter
 };

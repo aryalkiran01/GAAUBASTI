@@ -11,21 +11,23 @@ const {
   refreshToken,
 
   forgotPassword,
-  resetPassword
+  resetPassword,
+  resendVerification
 } = require('../controllers/authController');
 const { authenticate } = require('../middlewares/auth');
 const {
   validateUserRegistration,
   validateUserLogin
 } = require('../middlewares/validation');
-const { loginLimiter, passwordLimiter } = require('../middlewares/rateLimiters');
+const { loginLimiter, passwordLimiter, resendVerificationLimiter } = require('../middlewares/rateLimiters');
 
 // Public routes
 router.post('/register', validateUserRegistration, register);
 router.get('/verify-email/:token', verifyEmail);
 router.post('/login', loginLimiter, validateUserLogin, login);
 router.post('/forgot-password', passwordLimiter, forgotPassword); 
-router.post('/reset-password', passwordLimiter, resetPassword);   
+router.post('/reset-password', passwordLimiter, resetPassword);
+router.post('/resend-verification', resendVerificationLimiter, resendVerification);   
 
 // Protected routes
 router.use(authenticate); 
