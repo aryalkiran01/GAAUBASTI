@@ -1,5 +1,6 @@
 
 import { useAuth } from "@/context/AuthContext";
+import SEO from "@/components/SEO";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,6 +27,7 @@ const Account = () => {
   
   return (
     <div className="min-h-screen py-12">
+      <SEO title="My Account" description="View your bookings, favorites, and listings." canonicalPath="/account" noindex />
       <div className="container">
         <div className="flex flex-col md:flex-row items-start gap-8">
           <div className="w-full md:w-1/4">
@@ -36,6 +38,7 @@ const Account = () => {
                     <img
                       src={user.avatar}
                       alt={user.name}
+                      loading="lazy"
                       className="h-full w-full object-cover"
                     />
                   ) : (
@@ -119,6 +122,7 @@ const Account = () => {
                                   : listingData?.images?.[0]?.url || "https://images.unsplash.com/photo-1587061949409-02df41d5e562"
                               }
                               alt={listingData?.title || "Homestay"}
+                              loading="lazy"
                               className="h-48 md:h-full w-full object-cover"
                             />
                           </div>

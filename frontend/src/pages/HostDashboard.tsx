@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useAuth } from "@/context/AuthContext";
+import SEO from "@/components/SEO";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -179,6 +180,7 @@ const HostDashboard = () => {
 
   return (
     <div className="min-h-screen py-10 md:py-14">
+      <SEO title="Host Dashboard" description="Manage your listings, bookings, and reviews." canonicalPath="/host" noindex />
       <div className="container">
         <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
           <h1 className="text-3xl font-display font-semibold tracking-tight">Host dashboard</h1>
@@ -300,6 +302,7 @@ const HostDashboard = () => {
                             <img
                               src={Array.isArray(listing.images) ? (typeof listing.images[0] === "string" ? listing.images[0] : listing.images[0]?.url) : "https://images.unsplash.com/photo-1587061949409-02df41d5e562"}
                               alt={listing.title}
+                              loading="lazy"
                               className="h-12 w-12 rounded-xl object-cover"
                             />
                             <div>

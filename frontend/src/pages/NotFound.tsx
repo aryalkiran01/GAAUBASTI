@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Hop as Home, Search } from "lucide-react";
 
 const NotFound = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <SEO title="Page not found" description="The page you're looking for doesn't exist." noindex />
       <div className="text-center max-w-md">
         <h1 className="text-7xl md:text-8xl font-display font-semibold tracking-tight text-primary/20 mb-2">
           404

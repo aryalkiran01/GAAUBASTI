@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,11 +20,13 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
+      <SEO title="Sign up" description="Create a Gau Basti account to discover and book authentic Nepali homestays." canonicalPath="/signup" noindex />
       {/* Left: Image */}
       <div className="hidden md:block relative">
         <img
           src="https://images.pexels.com/photos/8220089/pexels-photo-8220089.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600"
           alt="Nepal rice terraces"
+          loading="lazy"
           className="h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent flex items-end p-12">
