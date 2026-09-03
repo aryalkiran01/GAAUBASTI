@@ -53,7 +53,7 @@ const parseJsonSafely = async (response: Response) => {
 const apiRequest = async (
   endpoint: string,
   options: RequestInit = {},
-  includeAuth: boolean = true
+  includeAuth: boolean = true,
 ): Promise<any> => {
   const url = `${API_BASE_URL}${endpoint}`;
   const headers = createHeaders(includeAuth);
@@ -72,9 +72,7 @@ const apiRequest = async (
     if (!response.ok) {
       const status = response.status;
       const message =
-        data?.message ||
-        data?.error ||
-        "The request could not be completed.";
+        data?.message || data?.error || "The request could not be completed.";
 
       if (status === 401 || status === 403) {
         return {
@@ -128,7 +126,7 @@ export const authAPI = {
         method: "POST",
         body: JSON.stringify({ email, password }),
       },
-      false
+      false,
     );
 
     if (data.success && data.data.token) {
@@ -139,18 +137,19 @@ export const authAPI = {
   },
 
   register: async (
+    username: string,
     name: string,
     email: string,
     password: string,
-    role: string = "guest"
+    role: string = "guest",
   ) => {
     const data = await apiRequest(
       "/auth/register",
       {
         method: "POST",
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({ username, name, email, password, role }),
       },
-      false
+      false,
     );
 
     if (data.success && data.data.token) {
@@ -188,7 +187,7 @@ export const authAPI = {
         method: "POST",
         body: JSON.stringify({ email }),
       },
-      false
+      false,
     );
   },
 
@@ -200,7 +199,7 @@ export const authAPI = {
         method: "POST",
         body: JSON.stringify({ email, otp, newPassword }),
       },
-      false
+      false,
     );
   },
 
@@ -226,7 +225,7 @@ export const listingsAPI = {
     return await apiRequest(
       `/listings${queryString ? `?${queryString}` : ""}`,
       {},
-      false
+      false,
     );
   },
 
@@ -242,7 +241,7 @@ export const listingsAPI = {
     return await apiRequest(
       `/listings/${id}/availability?startDate=${startDate}&endDate=${endDate}`,
       {},
-      false
+      false,
     );
   },
 
@@ -280,7 +279,7 @@ export const listingsAPI = {
   getHostListings: async (params: any = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return await apiRequest(
-      `/listings/host/my-listings${queryString ? `?${queryString}` : ""}`
+      `/listings/host/my-listings${queryString ? `?${queryString}` : ""}`,
     );
   },
 };
@@ -357,14 +356,14 @@ export const bookingsAPI = {
   getUserBookings: async (params: any = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return await apiRequest(
-      `/bookings/my-bookings${queryString ? `?${queryString}` : ""}`
+      `/bookings/my-bookings${queryString ? `?${queryString}` : ""}`,
     );
   },
 
   getHostBookings: async (params: any = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return await apiRequest(
-      `/bookings/host/bookings${queryString ? `?${queryString}` : ""}`
+      `/bookings/host/bookings${queryString ? `?${queryString}` : ""}`,
     );
   },
 
@@ -375,7 +374,7 @@ export const bookingsAPI = {
   updateBookingStatus: async (
     id: string,
     status: string,
-    hostNotes?: string
+    hostNotes?: string,
   ) => {
     return await apiRequest(`/bookings/${id}/status`, {
       method: "PATCH",
@@ -398,7 +397,7 @@ export const reviewsAPI = {
     return await apiRequest(
       `/reviews/listing/${listingId}${queryString ? `?${queryString}` : ""}`,
       {},
-      false
+      false,
     );
   },
 
@@ -412,7 +411,7 @@ export const reviewsAPI = {
   getUserReviews: async (params: any = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return await apiRequest(
-      `/reviews/my-reviews${queryString ? `?${queryString}` : ""}`
+      `/reviews/my-reviews${queryString ? `?${queryString}` : ""}`,
     );
   },
 
@@ -457,14 +456,14 @@ export const adminAPI = {
   getAllUsers: async (params: any = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return await apiRequest(
-      `/admin/users${queryString ? `?${queryString}` : ""}`
+      `/admin/users${queryString ? `?${queryString}` : ""}`,
     );
   },
 
   getAllBookings: async (params: any = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return await apiRequest(
-      `/admin/bookings${queryString ? `?${queryString}` : ""}`
+      `/admin/bookings${queryString ? `?${queryString}` : ""}`,
     );
   },
 
@@ -491,7 +490,7 @@ export const adminAPI = {
   getAllListings: async (params: any = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return await apiRequest(
-      `/admin/listings${queryString ? `?${queryString}` : ""}`
+      `/admin/listings${queryString ? `?${queryString}` : ""}`,
     );
   },
 
@@ -511,14 +510,14 @@ export const adminAPI = {
   getFlaggedReviews: async (params: any = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return await apiRequest(
-      `/admin/reviews/flagged${queryString ? `?${queryString}` : ""}`
+      `/admin/reviews/flagged${queryString ? `?${queryString}` : ""}`,
     );
   },
 
   moderateReview: async (
     id: string,
     action: "approve" | "remove",
-    reason?: string
+    reason?: string,
   ) => {
     return await apiRequest(`/admin/reviews/${id}/moderate`, {
       method: "PATCH",

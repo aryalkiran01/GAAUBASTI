@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Mountain } from "lucide-react";
 
 const Signup = () => {
+  const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,7 +15,8 @@ const Signup = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    register(name, email, password);
+    // Pass username as the first argument (or adjust to match AuthContext)
+    register(username, name, email, password);
   };
 
   return (
@@ -50,6 +52,25 @@ const Signup = () => {
 
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div className="space-y-4">
+              {/* NEW: Username field */}
+              <div>
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="kiran_dai"
+                  required
+                  pattern="[A-Za-z0-9]+" // enforce alphanumeric
+                  title="Alphanumeric characters only"
+                  className="mt-1.5"
+                />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Alphanumeric only (letters and numbers)
+                </p>
+              </div>
+
               <div>
                 <Label htmlFor="name">Full name</Label>
                 <Input
@@ -91,13 +112,21 @@ const Signup = () => {
               </div>
             </div>
 
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              disabled={isLoading}
+            >
               {isLoading ? "Creating account..." : "Sign up"}
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">
               Already have an account?{" "}
-              <Link to="/login" className="text-primary font-medium hover:underline">
+              <Link
+                to="/login"
+                className="text-primary font-medium hover:underline"
+              >
                 Log in
               </Link>
             </p>

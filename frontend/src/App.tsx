@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,7 +19,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Payment from "./pages/Payment";
 import PaymentSuccess from "./pages/PaymentSuccess";
-import ForgotPasswordPage  from "./pages/ForgotPassword";
+import ForgotPasswordPage from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Messages from "./pages/Messages";
 
@@ -32,13 +31,15 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+
           <div className="flex flex-col min-h-screen">
             <Navbar />
+
             <main className="flex-grow">
               <Routes>
                 <Route path="/" element={<Index />} />
@@ -53,18 +54,23 @@ const App = () => (
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/payment" element={<Payment />} />
                 <Route path="/payment-success" element={<PaymentSuccess />} />
-               <Route path="/messages" element={<Messages />} />
-               <Route path="*" element={<NotFound />} />
-               <Route path="/forgot-password" element={<ForgotPasswordPage  />} />
-               <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/messages" element={<Messages />} />
+                <Route
+                  path="/forgot-password"
+                  element={<ForgotPasswordPage />}
+                />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
+
             <Footer />
           </div>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
+        </TooltipProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 
 export default App;
+ 

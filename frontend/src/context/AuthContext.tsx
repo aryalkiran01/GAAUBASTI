@@ -1,4 +1,10 @@
-import { createContext, useState, useContext, ReactNode, useEffect } from "react";
+import {
+  createContext,
+  useState,
+  useContext,
+  ReactNode,
+  useEffect,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { User } from "../types";
 import { authAPI, getAuthToken, removeAuthToken } from "../lib/api";
@@ -9,10 +15,23 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  register: (name: string, email: string, password: string) => Promise<void>;
-  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  // Updated: register now takes username as first parameter
+  register: (
+    username: string,
+    name: string,
+    email: string,
+    password: string,
+  ) => Promise<void>;
+  changePassword: (
+    currentPassword: string,
+    newPassword: string,
+  ) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
-  resetPassword: (email: string, otp: string, newPassword: string) => Promise<void>; 
+  resetPassword: (
+    email: string,
+    otp: string,
+    newPassword: string,
+  ) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,85 +71,94 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-   setIsLoading(true);
-
-   try {
-     const response = await authAPI.login(email, password);
-
-     if (response.success && response.data && response.data.user) {
-       setUser(response.data.user);
-       toast({
-         title: "Login successful",
-         description: `Welcome back, ${response.data.user.name}!`,
-       });
-
-       setTimeout(() => {
-         if (response.data.user.role === 'admin') {
-           navigate('/admin');
-         } else {
-           navigate('/account');
-         }
-       }, 1000);
-       return;
-     }
-
-     removeAuthToken();
-     setUser(null);
-     toast({
-       variant: "destructive",
-       title: "Login failed",
-       description: response.message || "Invalid email or password",
-     });
-   }
-     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   catch (error: any) {
-     removeAuthToken();
-     setUser(null);
-     toast({
-       variant: "destructive",
-       title: "Login failed",
-       description: error.message || "An error occurred during login",
-     });
-   } finally {
-     setIsLoading(false);
-   }
- };
-
-  const changePassword = async (currentPassword: string, newPassword: string) => {
     setIsLoading(true);
+
     try {
-      const response = await authAPI.changePassword(currentPassword, newPassword);
-      if (response.success) {
-        toast({ title: "Password Changed", description: "Your password was updated successfully." });
+      const response = await authAPI.login(email, password);
+
+      if (response.success && response.data && response.data.user) {
+        setUser(response.data.user);
+        toast({
+          title: "Login successful",
+          description: `Welcome back, ${response.data.user.name}!`,
+        });
+
+        setTimeout(() => {
+          if (response.data.user.role === "admin") {
+            navigate("/admin");
+          } else {
+            navigate("/account");
+          }
+        }, 1000);
+        return;
       }
-    } 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-catch (error: any) {
-      toast({ variant: "destructive", title: "Change Password Failed", description: error.message || "An error occurred" });
+
+      removeAuthToken();
+      setUser(null);
+      toast({
+        variant: "destructive",
+        title: "Login failed",
+        description: response.message || "Invalid email or password",
+      });
+    } catch (error: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      removeAuthToken();
+      setUser(null);
+      toast({
+        variant: "destructive",
+        title: "Login failed",
+        description: error.message || "An error occurred during login",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Forgot Password
+  const changePassword = async (
+    currentPassword: string,
+    newPassword: string,
+  ) => {
+    setIsLoading(true);
+    try {
+      const response = await authAPI.changePassword(
+        currentPassword,
+        newPassword,
+      );
+      if (response.success) {
+        toast({
+          title: "Password Changed",
+          description: "Your password was updated successfully.",
+        });
+      }
+    } catch (error: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      toast({
+        variant: "destructive",
+        title: "Change Password Failed",
+        description: error.message || "An error occurred",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const forgotPassword = async (email: string) => {
     setIsLoading(true);
     try {
       const response = await authAPI.forgotPassword(email);
       if (response.success) {
-        toast({ 
-          title: "OTP Sent", 
-          description: "Check your email for the OTP code." 
+        toast({
+          title: "OTP Sent",
+          description: "Check your email for the OTP code.",
         });
       }
       return response;
-    } 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-catch (error: any) {
-      toast({ 
-        variant: "destructive", 
-        title: "Error", 
-        description: error.message || "Failed to send OTP" 
+    } catch (error: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to send OTP",
       });
       throw error;
     } finally {
@@ -138,25 +166,27 @@ catch (error: any) {
     }
   };
 
-  // Reset Password
-  const resetPassword = async (email: string, otp: string, newPassword: string) => {
+  const resetPassword = async (
+    email: string,
+    otp: string,
+    newPassword: string,
+  ) => {
     setIsLoading(true);
     try {
       const response = await authAPI.resetPassword(email, otp, newPassword);
       if (response.success) {
-        toast({ 
-          title: "Success", 
-          description: "Password reset successfully." 
+        toast({
+          title: "Success",
+          description: "Password reset successfully.",
         });
       }
       return response;
-    } 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-catch (error: any) {
-      toast({ 
-        variant: "destructive", 
-        title: "Error", 
-        description: error.message || "Failed to reset password" 
+    } catch (error: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to reset password",
       });
       throw error;
     } finally {
@@ -171,59 +201,74 @@ catch (error: any) {
       // Ignore cleanup errors and continue with local logout.
     }
     setUser(null);
-    navigate('/');
+    navigate("/");
     toast({
       title: "Logged out",
       description: "You have been successfully logged out",
     });
   };
 
-  const register = async (name: string, email: string, password: string) => {
-   setIsLoading(true);
+  // ✅ Updated register function: accepts username as first parameter
+  const register = async (
+    username: string,
+    name: string,
+    email: string,
+    password: string,
+  ) => {
+    setIsLoading(true);
 
-   try {
-     const response = await authAPI.register(name, email, password);
+    try {
+      // ✅ Pass username along with other fields
+      const response = await authAPI.register(username, name, email, password);
 
-     if (response.success && response.data && response.data.user) {
-       setUser(response.data.user);
-       toast({
-         title: "Registration successful",
-         description: `Welcome to Gaun Basti, ${response.data.user.name}!`,
-       });
+      if (response.success && response.data && response.data.user) {
+        setUser(response.data.user);
+        toast({
+          title: "Registration successful",
+          description: `Welcome to Gaun Basti, ${response.data.user.name}!`,
+        });
 
-       setTimeout(() => {
-         navigate('/account');
-       }, 1000);
-       return;
-     }
+        setTimeout(() => {
+          navigate("/account");
+        }, 1000);
+        return;
+      }
 
-     removeAuthToken();
-     setUser(null);
-     toast({
-       variant: "destructive",
-       title: "Registration failed",
-       description: response.message || "An error occurred during registration",
-     });
-   }
-     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   catch (error: any) {
-     removeAuthToken();
-     setUser(null);
-     toast({
-       variant: "destructive",
-       title: "Registration failed",
-       description: error.message || "An error occurred during registration",
-     });
-   } finally {
-     setIsLoading(false);
-   }
- };
+      removeAuthToken();
+      setUser(null);
+      toast({
+        variant: "destructive",
+        title: "Registration failed",
+        description:
+          response.message || "An error occurred during registration",
+      });
+    } catch (error: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      removeAuthToken();
+      setUser(null);
+      toast({
+        variant: "destructive",
+        title: "Registration failed",
+        description: error.message || "An error occurred during registration",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, isLoading, login, logout, register, 
-      changePassword, forgotPassword, resetPassword 
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        login,
+        logout,
+        register,
+        changePassword,
+        forgotPassword,
+        resetPassword,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
