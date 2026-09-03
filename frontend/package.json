@@ -46,6 +46,8 @@
     "@stripe/react-stripe-js": "^6.8.2",
     "@stripe/stripe-js": "^9.15.0",
     "@tanstack/react-query": "^5.56.2",
+    "bun": "^1.4.0",
+    "caniuse-lite": "^1.0.30001810",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
@@ -86,5 +88,8 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^5.4.1"
+  },
+  "overrides": {
+    "baseline-browser-mapping": "latest"
   }
 }
