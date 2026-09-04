@@ -1,7 +1,7 @@
 import express from 'express';
-import { createBooking, getUserBookings, getHostBookings, getBooking, updateBookingStatus, cancelBooking } from '../controllers/bookingController.js';
+import { createBooking, getUserBookings, getHostBookings, getBooking, updateBookingStatus, cancelBooking, markNoShow } from '../controllers/bookingController.js';
 import { authenticate } from '../middlewares/auth.js';
-import { requireHost, requireGuest, requireTraveler } from '../middlewares/roleAuth.js';
+import { requireHost, requireGuest, requireTraveler, requireAdmin } from '../middlewares/roleAuth.js';
 import { validateBooking, validateObjectId } from '../middlewares/validation.js';
 import { bookingCreateLimiter } from '../middlewares/rateLimiters.js';
 
@@ -19,5 +19,9 @@ router.patch('/:id/cancel', requireTraveler, validateObjectId('id'), cancelBooki
 // Host routes
 router.get('/host/bookings', requireHost, getHostBookings);
 router.patch('/:id/status', requireHost, validateObjectId('id'), updateBookingStatus);
+router.patch('/:id/no-show', requireHost, validateObjectId('id'), markNoShow);
+
+// Admin routes
+router.patch('/:id/admin-no-show', requireAdmin, validateObjectId('id'), markNoShow);
 
 export default router;

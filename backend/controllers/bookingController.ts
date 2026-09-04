@@ -473,4 +473,53 @@ const cancelBooking = async (req, res) => {
   }
 };
 
-export { createBooking, getUserBookings, getHostBookings, getBooking, updateBookingStatus, cancelBooking };
+// Mark no-show (host or admin)
+const markNoShow = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    const isHost = booking.host.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+    if (!isHost && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Only the host or admin can mark a no-show' });
+    }
+
+    if (!['confirmed'].includes(booking.status)) {
+      return res.status(400).json({ success: false, message: 'Only confirmed bookings can be marked as no-show' });
+    }
+
+    const now = new Date();
+    if (now < booking.startDate) {
+      return res.status(400).json({ success: false, message: 'Cannot mark no-show before the check-in date' });
+    }
+
+    booking.status = 'completed';
+    booking.hostNotes = `Guest marked as no-show${reason ? `: ${reason}` : ''}`;
+    booking.checkInTime = 'no-show';
+
+    await booking.save();
+    await booking.populate([
+      { path: 'listing', select: 'title location' },
+      { path: 'guest', select: 'name email' },
+    ]);
+
+    return res.json({
+      success: true,
+      message: 'Guest marked as no-show',
+      data: { booking },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to mark no-show',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+export { createBooking, getUserBookings, getHostBookings, getBooking, updateBookingStatus, cancelBooking, markNoShow };

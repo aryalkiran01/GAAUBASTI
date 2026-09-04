@@ -6,6 +6,7 @@ import AuditLog from '../models/AuditLog.js';
 import Report from '../models/Report.js';
 import Transaction from '../models/Transaction.js';
 import { getSuspiciousListings, moderateListing, getPendingHostVerifications, reviewHostVerification } from '../services/suspiciousListingService.js';
+import { logAdminAction } from '../middlewares/auditLogger.js';
 
 
 // Get dashboard statistics
@@ -116,7 +117,9 @@ const getAllUsers = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { name, email, role, isActive, isVerified } = req.body;
-    
+
+    const before = await User.findById(req.params.id).select('name email role isActive isVerified');
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { name, email, role, isActive, isVerified },
@@ -129,6 +132,15 @@ const updateUser = async (req, res) => {
         message: 'User not found'
       });
     }
+
+    await logAdminAction({
+      actor: req.user._id,
+      action: 'user_update',
+      targetType: 'User',
+      targetId: user._id,
+      before: before ? before.toObject() : {},
+      after: { name, email, role, isActive, isVerified }
+    });
 
     res.json({
       success: true,
@@ -210,6 +222,8 @@ const verifyListing = async (req, res) => {
       });
     }
 
+    const before = { isVerified: listing.isVerified, verifiedAt: listing.verifiedAt, verifiedBy: listing.verifiedBy };
+
     listing.isVerified = isVerified;
     listing.verifiedAt = isVerified ? new Date() : null;
     listing.verifiedBy = isVerified ? req.user._id : null;
@@ -217,6 +231,15 @@ const verifyListing = async (req, res) => {
 
     await listing.save();
     await listing.populate('host', 'name email');
+
+    await logAdminAction({
+      actor: req.user._id,
+      action: isVerified ? 'listing_verify' : 'listing_reject',
+      targetType: 'Listing',
+      targetId: listing._id,
+      before,
+      after: { isVerified, verifiedAt: listing.verifiedAt, verifiedBy: listing.verifiedBy }
+    });
 
     res.json({
       success: true,
@@ -339,10 +362,21 @@ const moderateReview = async (req, res) => {
       review.flagReason = reason || null;
     }
 
+    const before = { isFlagged: review.isFlagged, isPublic: review.isPublic, flagReason: review.flagReason };
+
     review.moderatedBy = req.user._id;
     review.moderatedAt = new Date();
 
     await review.save();
+
+    await logAdminAction({
+      actor: req.user._id,
+      action: `review_${action}`,
+      targetType: 'Review',
+      targetId: review._id,
+      before,
+      after: { isFlagged: review.isFlagged, isPublic: review.isPublic, flagReason: review.flagReason }
+    });
 
     res.json({
       success: true,
@@ -539,6 +573,15 @@ const deactivateUser = async (req, res) => {
       );
     }
 
+    await logAdminAction({
+      actor: req.user._id,
+      action: 'user_deactivate',
+      targetType: 'User',
+      targetId: user._id,
+      before: { isActive: true },
+      after: { isActive: false, reason: reason || '' }
+    });
+
     res.json({
       success: true,
       message: 'User account deactivated successfully',
@@ -612,6 +655,15 @@ const deleteListing = async (req, res) => {
     // Soft delete
     listing.isActive = false;
     await listing.save();
+
+    await logAdminAction({
+      actor: req.user._id,
+      action: 'listing_delete',
+      targetType: 'Listing',
+      targetId: listing._id,
+      before: { isActive: true },
+      after: { isActive: false }
+    });
 
     res.json({
       success: true,

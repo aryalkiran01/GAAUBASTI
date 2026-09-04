@@ -6,13 +6,31 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUserBookings } from "@/hooks/useBookings";
 import { format } from "date-fns";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import DisputeDialog from "@/components/DisputeDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { bookingsAPI } from "@/lib/api";
+import { useToast } from "@/components/ui/use-toast";
+import { Loader2 } from "lucide-react";
 
 const Account = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { bookings, loading: bookingsLoading, error: bookingsError } = useUserBookings();
+  const { toast } = useToast();
+  const [cancelBookingId, setCancelBookingId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
   
   // Redirect if not logged in
   useEffect(() => {
@@ -170,9 +188,24 @@ const Account = () => {
                                 <Button variant="outline" size="sm" className="mr-2">
                                   View details
                                 </Button>
-                                <Button variant="outline" size="sm">
-                                  Contact host
-                                </Button>
+                                {["pending", "confirmed"].includes(booking.status) && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mr-2"
+                                    onClick={() => setCancelBookingId(booking.id)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                )}
+                                <DisputeDialog
+                                  bookingId={booking.id}
+                                  trigger={
+                                    <Button variant="outline" size="sm">
+                                      Dispute
+                                    </Button>
+                                  }
+                                />
                               </div>
                             </div>
                           </div>
@@ -218,6 +251,60 @@ const Account = () => {
           </div>
         </div>
       </div>
+
+      {/* Cancel Booking Dialog */}
+      <Dialog open={!!cancelBookingId} onOpenChange={(open) => { if (!open) { setCancelBookingId(null); setCancelReason(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Booking</DialogTitle>
+            <DialogDescription>
+              Please let us know why you're cancelling. Refund eligibility depends on the listing's cancellation policy.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="cancel-reason">Reason (optional)</Label>
+              <Textarea
+                id="cancel-reason"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="e.g. Change of plans, travel dates changed..."
+                rows={3}
+                className="mt-1.5"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelBookingId(null)}>Keep Booking</Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (!cancelBookingId) return;
+                setCancelling(true);
+                try {
+                  const res = await bookingsAPI.cancelBooking(cancelBookingId, cancelReason);
+                  if (res.success) {
+                    toast({ title: "Booking cancelled", description: "Your booking has been cancelled." });
+                    setCancelBookingId(null);
+                    setCancelReason("");
+                    window.location.reload();
+                  } else {
+                    toast({ variant: "destructive", title: "Failed", description: res.message });
+                  }
+                } catch {
+                  toast({ variant: "destructive", title: "Failed", description: "Please try again." });
+                } finally {
+                  setCancelling(false);
+                }
+              }}
+              disabled={cancelling}
+            >
+              {cancelling ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+              Cancel Booking
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

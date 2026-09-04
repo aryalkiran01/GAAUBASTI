@@ -18,6 +18,8 @@ import articleRoutes from './routes/articles.js';
 import reportRoutes from './routes/reports.js';
 import wishlistRoutes from './routes/wishlist.js';
 import payoutRoutes from './routes/payouts.js';
+import supportTicketRoutes from './routes/supportTickets.js';
+import disputeRoutes from './routes/disputes.js';
 import errorHandler from './middlewares/errorHandler.js';
 import { Server } from 'socket.io';
 import { globalLimiter } from './middlewares/rateLimiters.js';
@@ -125,6 +127,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/payouts', payoutRoutes);
+app.use('/api/support-tickets', supportTicketRoutes);
+app.use('/api/disputes', disputeRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

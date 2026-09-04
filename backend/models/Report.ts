@@ -10,7 +10,7 @@ const reportSchema = new mongoose.Schema({
   },
   reportedEntityType: {
     type: String,
-    enum: ['listing', 'user', 'message'],
+    enum: ['listing', 'user', 'message', 'review'],
     required: true,
     trim: true
   },
