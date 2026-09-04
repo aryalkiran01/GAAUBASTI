@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-
+export {};
+const mongoose = require('mongoose');
 
 const wishlistSchema = new mongoose.Schema({
   user: {
@@ -20,4 +20,4 @@ const wishlistSchema = new mongoose.Schema({
 
 wishlistSchema.index({ user: 1, listing: 1 }, { unique: true });
 
-export default mongoose.model('Wishlist', wishlistSchema);
+module.exports = mongoose.model('Wishlist', wishlistSchema);

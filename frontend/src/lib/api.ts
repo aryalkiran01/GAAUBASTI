@@ -270,6 +270,19 @@ export const listingsAPI = {
     });
   },
 
+  removeWishlistItem: async (listingId: string) => {
+    return await apiRequest(`/wishlist/${listingId}`, {
+      method: "DELETE",
+    });
+  },
+
+  checkWishlistStatus: async (listingIds: string[]) => {
+    return await apiRequest("/wishlist/check", {
+      method: "POST",
+      body: JSON.stringify({ listingIds }),
+    });
+  },
+
   deleteListing: async (id: string) => {
     return await apiRequest(`/listings/${id}`, {
       method: "DELETE",
@@ -305,22 +318,6 @@ export const conversationsAPI = {
       method: "POST",
       body: JSON.stringify(payload),
     });
-  },
-
-  markMessagesRead: async (conversationId: string) => {
-    return await apiRequest(`/conversations/${conversationId}/read`, {
-      method: "PATCH",
-    });
-  },
-
-  getUnreadCounts: async () => {
-    return await apiRequest("/conversations/unread-counts");
-  },
-};
-
-export const payoutsAPI = {
-  getMyPayouts: async () => {
-    return await apiRequest("/payouts");
   },
 };
 
@@ -402,20 +399,6 @@ export const bookingsAPI = {
     return await apiRequest(`/bookings/${id}/cancel`, {
       method: "PATCH",
       body: JSON.stringify({ cancellationReason }),
-    });
-  },
-
-  markNoShow: async (id: string, reason?: string) => {
-    return await apiRequest(`/bookings/${id}/no-show`, {
-      method: "PATCH",
-      body: JSON.stringify({ reason }),
-    });
-  },
-
-  adminMarkNoShow: async (id: string, reason?: string) => {
-    return await apiRequest(`/bookings/${id}/admin-no-show`, {
-      method: "PATCH",
-      body: JSON.stringify({ reason }),
     });
   },
 };
@@ -641,182 +624,39 @@ export const aiAPI = {
   },
 };
 
+// Saved Searches API calls
+export const savedSearchesAPI = {
+  getSavedSearches: async () => {
+    return await apiRequest("/saved-searches");
+  },
+
+  createSavedSearch: async (data: any) => {
+    return await apiRequest("/saved-searches", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteSavedSearch: async (id: string) => {
+    return await apiRequest(`/saved-searches/${id}`, {
+      method: "DELETE",
+    });
+  },
+};
+
+// Payments API calls
+export const paymentsAPI = {
+  getPaymentHistory: async (params: any = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return await apiRequest(
+      `/payments/history${queryString ? `?${queryString}` : ""}`,
+    );
+  },
+};
+
 // Health check
 export const healthCheck = async () => {
   return await apiRequest("/health", {}, false);
-};
-
-// Reports API
-export const reportsAPI = {
-  createReport: async (data: {
-    reportedEntityType: string;
-    reportedEntityId: string;
-    reason: string;
-    description?: string;
-  }) => {
-    return await apiRequest("/reports", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  },
-};
-
-// Support Tickets API
-export const supportTicketsAPI = {
-  createTicket: async (data: {
-    subject: string;
-    description: string;
-    category?: string;
-    priority?: string;
-    relatedBooking?: string;
-    relatedListing?: string;
-  }) => {
-    return await apiRequest("/support-tickets", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  },
-
-  getMyTickets: async (params: any = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    return await apiRequest(
-      `/support-tickets/my-tickets${queryString ? `?${queryString}` : ""}`,
-    );
-  },
-
-  getTicket: async (id: string) => {
-    return await apiRequest(`/support-tickets/${id}`);
-  },
-
-  addResponse: async (id: string, body: string) => {
-    return await apiRequest(`/support-tickets/${id}/responses`, {
-      method: "POST",
-      body: JSON.stringify({ body }),
-    });
-  },
-
-  getAllTickets: async (params: any = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    return await apiRequest(
-      `/support-tickets/admin/all${queryString ? `?${queryString}` : ""}`,
-    );
-  },
-
-  updateStatus: async (id: string, status: string, assignTo?: string) => {
-    return await apiRequest(`/support-tickets/admin/${id}/status`, {
-      method: "PATCH",
-      body: JSON.stringify({ status, assignTo }),
-    });
-  },
-};
-
-// Disputes API
-export const disputesAPI = {
-  createDispute: async (data: {
-    booking: string;
-    subject: string;
-    description: string;
-    category?: string;
-  }) => {
-    return await apiRequest("/disputes", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  },
-
-  getMyDisputes: async (params: any = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    return await apiRequest(
-      `/disputes/my-disputes${queryString ? `?${queryString}` : ""}`,
-    );
-  },
-
-  getDispute: async (id: string) => {
-    return await apiRequest(`/disputes/${id}`);
-  },
-
-  addResponse: async (id: string, body: string) => {
-    return await apiRequest(`/disputes/${id}/responses`, {
-      method: "POST",
-      body: JSON.stringify({ body }),
-    });
-  },
-
-  getAllDisputes: async (params: any = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    return await apiRequest(
-      `/disputes/admin/all${queryString ? `?${queryString}` : ""}`,
-    );
-  },
-
-  resolve: async (id: string, status: string, resolution?: string) => {
-    return await apiRequest(`/disputes/admin/${id}/resolve`, {
-      method: "PATCH",
-      body: JSON.stringify({ status, resolution }),
-    });
-  },
-};
-
-// Articles (Help Center) API
-export const articlesAPI = {
-  getArticles: async (params: any = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    return await apiRequest(
-      `/articles${queryString ? `?${queryString}` : ""}`,
-      {},
-      false,
-    );
-  },
-
-  getArticle: async (slug: string) => {
-    return await apiRequest(`/articles/${slug}`, {}, false);
-  },
-};
-
-// Audit Logs API (admin)
-export const auditLogsAPI = {
-  getLogs: async (params: any = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    return await apiRequest(
-      `/admin/audit-logs${queryString ? `?${queryString}` : ""}`,
-    );
-  },
-};
-
-// Host Verification API
-export const hostVerificationAPI = {
-  submitVerification: async (data: {
-    fullName: string;
-    idType: string;
-    idNumber: string;
-    address: string;
-    phoneNumber: string;
-  }) => {
-    return await apiRequest("/users/profile", {
-      method: "PUT",
-      body: JSON.stringify({
-        hostVerification: {
-          ...data,
-          status: "pending",
-          submittedAt: new Date().toISOString(),
-        },
-      }),
-    });
-  },
-
-  getPending: async (params: any = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    return await apiRequest(
-      `/admin/host-verifications/pending${queryString ? `?${queryString}` : ""}`,
-    );
-  },
-
-  review: async (userId: string, decision: string, notes?: string) => {
-    return await apiRequest(`/admin/users/${userId}/host-verification`, {
-      method: "PATCH",
-      body: JSON.stringify({ decision, notes }),
-    });
-  },
 };
 
 export { API_BASE_URL, getAuthToken, setAuthToken, removeAuthToken };

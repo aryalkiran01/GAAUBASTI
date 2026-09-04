@@ -1,47 +1,67 @@
-import mongoose from 'mongoose';
-import Booking from '../models/Booking.js';
-import Listing from '../models/Listing.js';
-import User from '../models/User.js';
-import { validateGuestCount, validateBookingDates, canTransitionStatus, checkListingAvailability } from '../services/bookingAvailability.js';
-
+export {};
+const mongoose = require("mongoose");
+const Booking = require("../models/Booking");
+const Listing = require("../models/Listing");
+const User = require("../models/User");
+const {
+  validateGuestCount,
+  validateBookingDates,
+  canTransitionStatus,
+  checkListingAvailability,
+} = require("../services/bookingAvailability");
+const {
+  notifyBookingCreated,
+  notifyBookingCancelled,
+  notifyPaymentConfirmed,
+} = require("../utils/notifications");
 
 // Create new booking
 const createBooking = async (req, res) => {
   try {
-    const { listing: listingId, startDate, endDate, guests, specialRequests, idempotencyKey } = req.body;
+    const {
+      listing: listingId,
+      startDate,
+      endDate,
+      guests,
+      specialRequests,
+      idempotencyKey,
+    } = req.body;
 
     if (!listingId) {
       return res.status(400).json({
         success: false,
-        message: 'Listing is required'
+        message: "Listing is required",
       });
     }
 
-    const normalizedKey = typeof idempotencyKey === 'string' && idempotencyKey.trim() ? idempotencyKey.trim() : undefined;
+    const normalizedKey =
+      typeof idempotencyKey === "string" && idempotencyKey.trim()
+        ? idempotencyKey.trim()
+        : undefined;
     if (normalizedKey) {
       const existingBooking = await Booking.findOne({
         guest: req.user._id,
-        idempotencyKey: normalizedKey
+        idempotencyKey: normalizedKey,
       }).populate([
-        { path: 'listing', select: 'title location images' },
-        { path: 'guest', select: 'name email' },
-        { path: 'host', select: 'name email' }
+        { path: "listing", select: "title location images" },
+        { path: "guest", select: "name email" },
+        { path: "host", select: "name email" },
       ]);
 
       if (existingBooking) {
         return res.status(200).json({
           success: true,
-          message: 'Booking already exists for this request',
-          data: { booking: existingBooking }
+          message: "Booking already exists for this request",
+          data: { booking: existingBooking },
         });
       }
     }
 
-    const listing = await Listing.findById(listingId).populate('host');
+    const listing = await Listing.findById(listingId).populate("host");
     if (!listing || !listing.isActive) {
       return res.status(404).json({
         success: false,
-        message: 'Listing not found or not available'
+        message: "Listing not found or not available",
       });
     }
 
@@ -49,7 +69,7 @@ const createBooking = async (req, res) => {
     if (!guestValidation.valid) {
       return res.status(400).json({
         success: false,
-        message: guestValidation.message
+        message: guestValidation.message,
       });
     }
 
@@ -57,7 +77,7 @@ const createBooking = async (req, res) => {
     if (!dateValidation.valid) {
       return res.status(400).json({
         success: false,
-        message: dateValidation.message
+        message: dateValidation.message,
       });
     }
 
@@ -66,9 +86,11 @@ const createBooking = async (req, res) => {
 
     try {
       await session.withTransaction(async () => {
-        const activeListing = await Listing.findById(listingId).session(session).populate('host');
+        const activeListing = await Listing.findById(listingId)
+          .session(session)
+          .populate("host");
         if (!activeListing || !activeListing.isActive) {
-          const error: any = new Error('Listing not found or not available');
+          const error: any = new Error("Listing not found or not available");
           error.statusCode = 404;
           throw error;
         }
@@ -77,11 +99,13 @@ const createBooking = async (req, res) => {
           listingId,
           startDate: dateValidation.start,
           endDate: dateValidation.end,
-          excludeBookingId: null
+          excludeBookingId: null,
         });
 
         if (!availability.available) {
-          const error: any = new Error(availability.reason || 'Selected dates are unavailable');
+          const error: any = new Error(
+            availability.reason || "Selected dates are unavailable",
+          );
           error.statusCode = 409;
           throw error;
         }
@@ -89,7 +113,7 @@ const createBooking = async (req, res) => {
         if (normalizedKey) {
           const duplicateBooking = await Booking.findOne({
             guest: req.user._id,
-            idempotencyKey: normalizedKey
+            idempotencyKey: normalizedKey,
           }).session(session);
 
           if (duplicateBooking) {
@@ -100,7 +124,9 @@ const createBooking = async (req, res) => {
 
         const bookingStart = new Date(String(startDate));
         const bookingEnd = new Date(String(endDate));
-        const nights = Math.ceil((Number(bookingEnd) - Number(bookingStart)) / (1000 * 60 * 60 * 24));
+        const nights = Math.ceil(
+          (Number(bookingEnd) - Number(bookingStart)) / (1000 * 60 * 60 * 24),
+        );
         const basePrice = activeListing.price * nights;
         const cleaningFee = 25;
         const serviceFee = Math.round(basePrice * 0.1);
@@ -115,18 +141,18 @@ const createBooking = async (req, res) => {
           endDate: bookingEnd,
           guests: {
             adults: guestValidation.adults,
-            children: guestValidation.children
+            children: guestValidation.children,
           },
           totalPrice,
           priceBreakdown: {
             basePrice,
             cleaningFee,
             serviceFee,
-            taxes
+            taxes,
           },
           specialRequests,
           idempotencyKey: normalizedKey,
-          status: 'pending'
+          status: "pending",
         });
 
         await booking.save({ session });
@@ -139,35 +165,53 @@ const createBooking = async (req, res) => {
     if (!createdBooking) {
       return res.status(200).json({
         success: true,
-        message: 'Booking already exists for this request',
-        data: { booking: await Booking.findOne({ guest: req.user._id, idempotencyKey: normalizedKey }).populate([
-          { path: 'listing', select: 'title location images' },
-          { path: 'guest', select: 'name email' },
-          { path: 'host', select: 'name email' }
-        ]) }
+        message: "Booking already exists for this request",
+        data: {
+          booking: await Booking.findOne({
+            guest: req.user._id,
+            idempotencyKey: normalizedKey,
+          }).populate([
+            { path: "listing", select: "title location images" },
+            { path: "guest", select: "name email" },
+            { path: "host", select: "name email" },
+          ]),
+        },
       });
     }
 
-    const populatedBooking = await Booking.findById(createdBooking._id).populate([
-      { path: 'listing', select: 'title location images' },
-      { path: 'guest', select: 'name email' },
-      { path: 'host', select: 'name email' }
+    const populatedBooking = await Booking.findById(
+      createdBooking._id,
+    ).populate([
+      { path: "listing", select: "title location images" },
+      { path: "guest", select: "name email" },
+      { path: "host", select: "name email" },
     ]);
+
+    notifyBookingCreated({
+      booking: populatedBooking,
+      guest: populatedBooking.guest,
+      host: populatedBooking.host,
+    }).catch(() => {});
 
     res.status(201).json({
       success: true,
-      message: 'Booking created successfully',
-      data: { booking: populatedBooking }
+      message: "Booking created successfully",
+      data: { booking: populatedBooking },
     });
   } catch (error: any) {
     const isDuplicateKey = error && error.code === 11000;
     const statusCode = error.statusCode || (isDuplicateKey ? 409 : 500);
-    const safeErrorMessage = error && error.message ? error.message : 'Failed to create booking';
-    const message = statusCode === 409 ? (safeErrorMessage || 'Selected dates are unavailable') : 'Failed to create booking';
+    const safeErrorMessage =
+      error && error.message ? error.message : "Failed to create booking";
+    const message =
+      statusCode === 409
+        ? safeErrorMessage || "Selected dates are unavailable"
+        : "Failed to create booking";
     res.status(statusCode).json({
       success: false,
       message,
-      error: process.env.NODE_ENV === 'development' ? safeErrorMessage : undefined
+      error:
+        process.env.NODE_ENV === "development" ? safeErrorMessage : undefined,
     });
   }
 };
@@ -185,12 +229,12 @@ const getUserBookings = async (req, res) => {
 
     const [bookings, total] = await Promise.all([
       Booking.find(filter)
-        .populate('listing', 'title location images price')
-        .populate('host', 'name avatar')
+        .populate("listing", "title location images price")
+        .populate("host", "name avatar")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
-      Booking.countDocuments(filter)
+      Booking.countDocuments(filter),
     ]);
 
     res.json({
@@ -200,15 +244,15 @@ const getUserBookings = async (req, res) => {
         pagination: {
           currentPage: parseInt(page),
           totalPages: Math.ceil(total / parseInt(limit)),
-          totalBookings: total
-        }
-      }
+          totalBookings: total,
+        },
+      },
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch bookings',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: "Failed to fetch bookings",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -226,12 +270,12 @@ const getHostBookings = async (req, res) => {
 
     const [bookings, total] = await Promise.all([
       Booking.find(filter)
-        .populate('listing', 'title location images')
-        .populate('guest', 'name avatar email phone')
+        .populate("listing", "title location images")
+        .populate("guest", "name avatar email phone")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
-      Booking.countDocuments(filter)
+      Booking.countDocuments(filter),
     ]);
 
     res.json({
@@ -241,15 +285,15 @@ const getHostBookings = async (req, res) => {
         pagination: {
           currentPage: parseInt(page),
           totalPages: Math.ceil(total / parseInt(limit)),
-          totalBookings: total
-        }
-      }
+          totalBookings: total,
+        },
+      },
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch host bookings',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: "Failed to fetch host bookings",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -258,38 +302,38 @@ const getHostBookings = async (req, res) => {
 const getBooking = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
-      .populate('listing', 'title location images price host')
-      .populate('guest', 'name email phone')
-      .populate('host', 'name email phone');
+      .populate("listing", "title location images price host")
+      .populate("guest", "name email phone")
+      .populate("host", "name email phone");
 
     if (!booking) {
       return res.status(404).json({
         success: false,
-        message: 'Booking not found'
+        message: "Booking not found",
       });
     }
 
     // Check access permissions
     const isGuest = booking.guest._id.toString() === req.user._id.toString();
     const isHost = booking.host._id.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === "admin";
 
     if (!isGuest && !isHost && !isAdmin) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied'
+        message: "Access denied",
       });
     }
 
     res.json({
       success: true,
-      data: { booking }
+      data: { booking },
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch booking',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: "Failed to fetch booking",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -303,40 +347,44 @@ const updateBookingStatus = async (req, res) => {
     if (!booking) {
       return res.status(404).json({
         success: false,
-        message: 'Booking not found'
+        message: "Booking not found",
       });
     }
 
     const listing = await Listing.findById(booking.listing);
-    const isHost = req.user.role === 'host' && listing && listing.host.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isHost =
+      req.user.role === "host" &&
+      listing &&
+      listing.host.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === "admin";
 
     if (!isHost && !isAdmin) {
       return res.status(403).json({
         success: false,
-        message: 'Only the listing host or admin can update booking status'
+        message: "Only the listing host or admin can update booking status",
       });
     }
 
     if (!canTransitionStatus(booking.status, status)) {
       return res.status(400).json({
         success: false,
-        message: `Cannot change status from ${booking.status} to ${status}`
+        message: `Cannot change status from ${booking.status} to ${status}`,
       });
     }
 
-    if (status === 'confirmed') {
+    if (status === "confirmed") {
       const availability = await checkListingAvailability({
         listingId: booking.listing,
         startDate: booking.startDate,
         endDate: booking.endDate,
-        excludeBookingId: booking._id
+        excludeBookingId: booking._id,
       });
 
       if (!availability.available) {
         return res.status(409).json({
           success: false,
-          message: 'Cannot confirm this booking because the requested dates are unavailable.'
+          message:
+            "Cannot confirm this booking because the requested dates are unavailable.",
         });
       }
     }
@@ -346,57 +394,65 @@ const updateBookingStatus = async (req, res) => {
     booking.status = status;
     if (hostNotes) booking.hostNotes = hostNotes;
 
-    if (status === 'cancelled') {
+    if (status === "cancelled") {
       booking.cancelledAt = new Date();
       booking.cancelledBy = req.user._id;
     }
 
     await booking.save();
 
-    if (status === 'confirmed' && previousStatus !== 'confirmed') {
+    if (status === "confirmed" && previousStatus !== "confirmed") {
       const listingForDates = await Listing.findById(booking.listing);
       if (listingForDates) {
         const matches = listingForDates.unavailableDates.some((unavailable) => {
           const start = new Date(unavailable.startDate);
           const end = new Date(unavailable.endDate);
-          return start.getTime() === new Date(booking.startDate).getTime() && end.getTime() === new Date(booking.endDate).getTime();
+          return (
+            start.getTime() === new Date(booking.startDate).getTime() &&
+            end.getTime() === new Date(booking.endDate).getTime()
+          );
         });
 
         if (!matches) {
-          await listingForDates.addUnavailableDates(booking.startDate, booking.endDate, 'Booked');
+          await listingForDates.addUnavailableDates(
+            booking.startDate,
+            booking.endDate,
+            "Booked",
+          );
         }
       }
     }
 
-    if (status === 'cancelled' && previousStatus === 'confirmed') {
+    if (status === "cancelled" && previousStatus === "confirmed") {
       const listingForDates = await Listing.findById(booking.listing);
       if (listingForDates) {
-        listingForDates.unavailableDates = listingForDates.unavailableDates.filter((unavailable) => {
-          const blockStart = new Date(unavailable.startDate);
-          const blockEnd = new Date(unavailable.endDate);
-          const bookingStart = new Date(booking.startDate);
-          const bookingEnd = new Date(booking.endDate);
-          return !(blockStart <= bookingEnd && blockEnd >= bookingStart);
-        });
+        listingForDates.unavailableDates =
+          listingForDates.unavailableDates.filter((unavailable) => {
+            const blockStart = new Date(unavailable.startDate);
+            const blockEnd = new Date(unavailable.endDate);
+            const bookingStart = new Date(booking.startDate);
+            const bookingEnd = new Date(booking.endDate);
+            return !(blockStart <= bookingEnd && blockEnd >= bookingStart);
+          });
         await listingForDates.save();
       }
     }
 
     await booking.populate([
-      { path: 'listing', select: 'title location' },
-      { path: 'guest', select: 'name email' }
+      { path: "listing", select: "title location" },
+      { path: "guest", select: "name email" },
     ]);
 
     res.json({
       success: true,
       message: `Booking ${status} successfully`,
-      data: { booking }
+      data: { booking },
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: 'Failed to update booking status',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: "Failed to update booking status",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -405,39 +461,41 @@ const updateBookingStatus = async (req, res) => {
 const cancelBooking = async (req, res) => {
   try {
     const { cancellationReason } = req.body;
-    const booking = await Booking.findById(req.params.id).populate('listing');
+    const booking = await Booking.findById(req.params.id).populate("listing");
 
     if (!booking) {
       return res.status(404).json({
         success: false,
-        message: 'Booking not found'
+        message: "Booking not found",
       });
     }
 
     if (booking.guest.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message: 'You can only cancel your own bookings'
+        message: "You can only cancel your own bookings",
       });
     }
 
-    if (!['pending', 'confirmed'].includes(booking.status)) {
+    if (!["pending", "confirmed"].includes(booking.status)) {
       return res.status(400).json({
         success: false,
-        message: `Booking status ${booking.status} cannot be cancelled`
+        message: `Booking status ${booking.status} cannot be cancelled`,
       });
     }
 
     if (!booking.canBeCancelled()) {
       return res.status(400).json({
         success: false,
-        message: 'Booking cannot be cancelled at this time'
+        message: "Booking cannot be cancelled at this time",
       });
     }
 
-    const refundAmount = booking.calculateRefund(booking.listing.cancellationPolicy);
+    const refundAmount = booking.calculateRefund(
+      booking.listing.cancellationPolicy,
+    );
 
-    booking.status = 'cancelled';
+    booking.status = "cancelled";
     booking.cancellationReason = cancellationReason;
     booking.cancelledAt = new Date();
     booking.cancelledBy = req.user._id;
@@ -446,80 +504,52 @@ const cancelBooking = async (req, res) => {
 
     const listingForDates = await Listing.findById(booking.listing);
     if (listingForDates) {
-      listingForDates.unavailableDates = listingForDates.unavailableDates.filter((unavailable) => {
-        const blockStart = new Date(unavailable.startDate);
-        const blockEnd = new Date(unavailable.endDate);
-        const bookingStart = new Date(booking.startDate);
-        const bookingEnd = new Date(booking.endDate);
-        return !(blockStart <= bookingEnd && blockEnd >= bookingStart);
-      });
+      listingForDates.unavailableDates =
+        listingForDates.unavailableDates.filter((unavailable) => {
+          const blockStart = new Date(unavailable.startDate);
+          const blockEnd = new Date(unavailable.endDate);
+          const bookingStart = new Date(booking.startDate);
+          const bookingEnd = new Date(booking.endDate);
+          return !(blockStart <= bookingEnd && blockEnd >= bookingStart);
+        });
       await listingForDates.save();
     }
 
+    const populatedForNotif = await Booking.findById(booking._id).populate([
+      { path: "listing", select: "title" },
+      { path: "guest", select: "name email phone" },
+      { path: "host", select: "name email" },
+    ]);
+
+    notifyBookingCancelled({
+      booking: populatedForNotif,
+      guest: populatedForNotif.guest,
+      host: populatedForNotif.host,
+      refundAmount,
+    }).catch(() => {});
+
     res.json({
       success: true,
-      message: 'Booking cancelled successfully',
+      message: "Booking cancelled successfully",
       data: {
         booking,
-        refundAmount
-      }
+        refundAmount,
+      },
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: 'Failed to cancel booking',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: "Failed to cancel booking",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
 
-// Mark no-show (host or admin)
-const markNoShow = async (req, res) => {
-  try {
-    const { reason } = req.body;
-    const booking = await Booking.findById(req.params.id);
-
-    if (!booking) {
-      return res.status(404).json({ success: false, message: 'Booking not found' });
-    }
-
-    const isHost = booking.host.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'admin';
-    if (!isHost && !isAdmin) {
-      return res.status(403).json({ success: false, message: 'Only the host or admin can mark a no-show' });
-    }
-
-    if (!['confirmed'].includes(booking.status)) {
-      return res.status(400).json({ success: false, message: 'Only confirmed bookings can be marked as no-show' });
-    }
-
-    const now = new Date();
-    if (now < booking.startDate) {
-      return res.status(400).json({ success: false, message: 'Cannot mark no-show before the check-in date' });
-    }
-
-    booking.status = 'completed';
-    booking.hostNotes = `Guest marked as no-show${reason ? `: ${reason}` : ''}`;
-    booking.checkInTime = 'no-show';
-
-    await booking.save();
-    await booking.populate([
-      { path: 'listing', select: 'title location' },
-      { path: 'guest', select: 'name email' },
-    ]);
-
-    return res.json({
-      success: true,
-      message: 'Guest marked as no-show',
-      data: { booking },
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to mark no-show',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
-  }
+module.exports = {
+  createBooking,
+  getUserBookings,
+  getHostBookings,
+  getBooking,
+  updateBookingStatus,
+  cancelBooking,
 };
-
-export { createBooking, getUserBookings, getHostBookings, getBooking, updateBookingStatus, cancelBooking, markNoShow };

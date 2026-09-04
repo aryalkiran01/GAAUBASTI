@@ -6,24 +6,17 @@ import { Loader2, Sparkles, ShieldCheck, AlertTriangle } from "lucide-react";
 import { aiAPI } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
-interface ModerationResult {
-  flagged: boolean;
-  severity: string;
-  categories: string[];
-  reason: string;
-}
-
 interface AIModerationProps {
   contentType: "message" | "listing" | "review";
   content: string;
-  onFlagged?: (result: ModerationResult) => void;
+  onFlagged?: (result: any) => void;
 }
 
 const AIModeration = ({ contentType, content, onFlagged }: AIModerationProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<ModerationResult | null>(null);
+  const [result, setResult] = useState<any>(null);
 
   if (!user || (user.role !== "host" && user.role !== "admin")) return null;
 
@@ -34,13 +27,13 @@ const AIModeration = ({ contentType, content, onFlagged }: AIModerationProps) =>
     try {
       const response = await aiAPI.moderateContent(contentType, content);
       if (response.success) {
-        setResult(response.data as ModerationResult);
-        if (onFlagged && response.data.flagged) onFlagged(response.data as ModerationResult);
+        setResult(response.data);
+        if (onFlagged && response.data.flagged) onFlagged(response.data);
       } else {
         setError(response.message || "Moderation check failed");
       }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -77,7 +70,7 @@ const AIModeration = ({ contentType, content, onFlagged }: AIModerationProps) =>
           </div>
           {result.categories && result.categories.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
-              {result.categories.map((cat) => (
+              {result.categories.map((cat: string) => (
                 <Badge key={cat} variant="outline" className="text-xs">{cat}</Badge>
               ))}
             </div>

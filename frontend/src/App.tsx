@@ -4,33 +4,43 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { lazy, Suspense } from "react";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Pages
+// Eagerly loaded pages (critical for initial load)
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Listings from "./pages/Listings";
-import ListingDetail from "./pages/ListingDetail";
-import Account from "./pages/Account";
-import Admin from "./pages/Admin";
-import HostDashboard from "./pages/HostDashboard";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
-import Payment from "./pages/Payment";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import ForgotPasswordPage from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Messages from "./pages/Messages";
-import Wishlist from "./pages/Wishlist";
-import HelpCenter from "./pages/HelpCenter";
-import SupportTickets from "./pages/SupportTickets";
 
-// Components
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
+// Lazy-loaded pages (loaded on demand for performance)
+const ListingDetail = lazy(() => import("./pages/ListingDetail"));
+const Account = lazy(() => import("./pages/Account"));
+const Admin = lazy(() => import("./pages/Admin"));
+const HostDashboard = lazy(() => import("./pages/HostDashboard"));
+const About = lazy(() => import("./pages/About"));
+const Contact = lazy(() => import("./pages/Contact"));
+const Payment = lazy(() => import("./pages/Payment"));
+const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Messages = lazy(() => import("./pages/Messages"));
+const Wishlist = lazy(() => import("./pages/Wishlist"));
 
 const queryClient = new QueryClient();
+
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="space-y-4 w-full max-w-md">
+      <Skeleton className="h-8 w-1/2" />
+      <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="h-48 w-full rounded-2xl" />
+    </div>
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -49,23 +59,102 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/listings" element={<Listings />} />
-                <Route path="/listing/:id" element={<ListingDetail />} />
-                <Route path="/account" element={<Account />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/host" element={<HostDashboard />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/payment" element={<Payment />} />
-                <Route path="/payment-success" element={<PaymentSuccess />} />
-                <Route path="/messages" element={<Messages />} />
-                <Route path="/wishlist" element={<Wishlist />} />
-                <Route path="/help" element={<HelpCenter />} />
-                <Route path="/support" element={<SupportTickets />} />
+                <Route
+                  path="/listing/:id"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ListingDetail />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/account"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <Account />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <Admin />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/host"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <HostDashboard />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/about"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <About />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/contact"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <Contact />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/payment"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <Payment />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/payment-success"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <PaymentSuccess />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/messages"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <Messages />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/wishlist"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <Wishlist />
+                    </Suspense>
+                  }
+                />
                 <Route
                   path="/forgot-password"
-                  element={<ForgotPasswordPage />}
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ForgotPasswordPage />
+                    </Suspense>
+                  }
                 />
-                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route
+                  path="/reset-password"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ResetPassword />
+                    </Suspense>
+                  }
+                />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
@@ -79,4 +168,3 @@ const App = () => (
 );
 
 export default App;
- 

@@ -1,11 +1,26 @@
-import express from 'express';
-import { getDashboardStats, getAllBookings, getAllUsers, updateUser, getAllListings, verifyListing, deleteListing, deactivateUser, reactivateUser, getFlaggedReviews, moderateReview, getAnalytics, getAuditLogs, getReportsForAdmin, getSuspiciousListingsHandler, moderateListingHandler, getPendingHostVerificationsHandler, reviewHostVerificationHandler, getFinancialRecords } from '../controllers/adminController.js';
-import { updateReportStatus } from '../controllers/reportController.js';
-import { authenticate } from '../middlewares/auth.js';
-import { requireAdmin } from '../middlewares/roleAuth.js';
-import { validateObjectId } from '../middlewares/validation.js';
-
+export {};
+const express = require('express');
 const router = express.Router();
+const {
+  getDashboardStats,
+  getAllBookings,
+  getAllUsers,
+  updateUser,
+  getAllListings,
+  verifyListing,
+  deleteListing,
+  deactivateUser,
+  reactivateUser,
+  getFlaggedReviews,
+  moderateReview,
+  getAnalytics,
+  getAuditLogs,
+  getReportsForAdmin
+} = require('../controllers/adminController');
+const { updateReportStatus } = require('../controllers/reportController');
+const { authenticate } = require('../middlewares/auth');
+const { requireAdmin } = require('../middlewares/roleAuth');
+const { validateObjectId } = require('../middlewares/validation');
 
 // All admin routes require authentication and admin role
 router.use(authenticate);
@@ -34,15 +49,4 @@ router.patch('/reviews/:id/moderate', validateObjectId('id'), moderateReview);
 router.get('/reports', getReportsForAdmin);
 router.patch('/reports/:id/status', validateObjectId('id'), updateReportStatus);
 
-// Suspicious listing detection and moderation
-router.get('/listings/suspicious', getSuspiciousListingsHandler);
-router.patch('/listings/:id/moderate', validateObjectId('id'), moderateListingHandler);
-
-// Host verification
-router.get('/host-verifications/pending', getPendingHostVerificationsHandler);
-router.patch('/users/:id/host-verification', validateObjectId('id'), reviewHostVerificationHandler);
-
-// Financial records
-router.get('/transactions', getFinancialRecords);
-
-export default router;
+module.exports = router;

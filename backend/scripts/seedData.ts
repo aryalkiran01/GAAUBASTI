@@ -1,12 +1,12 @@
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
-import User from '../models/User.js';
-import Listing from '../models/Listing.js';
-import Booking from '../models/Booking.js';
-import Review from '../models/Review.js';
+export {};
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+require('dotenv').config();
 
-
-import 'dotenv/config';
+const User = require('../models/User');
+const Listing = require('../models/Listing');
+const Booking = require('../models/Booking');
+const Review = require('../models/Review');
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/gaunbasti')
@@ -64,6 +64,7 @@ const users = await User.create([
   }
 ]);
 User.schema.indexes();
+
 
     console.log('ðŸ‘¥ Created users');
 

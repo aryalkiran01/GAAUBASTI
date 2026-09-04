@@ -1,8 +1,8 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import User from '../models/User.js';
-import Booking from '../models/Booking.js';
-
+export {};
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const User = require('../models/User');
+const Booking = require('../models/Booking');
 
 test('user model includes hashed verification token fields', () => {
   assert.ok(User.schema.paths.verificationToken, 'verificationToken field missing');

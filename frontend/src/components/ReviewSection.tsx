@@ -7,7 +7,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { Star } from "lucide-react";
 import { format } from "date-fns";
-import ReportDialog from "@/components/ReportDialog";
 
 interface Review {
   id: string;
@@ -237,9 +236,6 @@ export default function ReviewSection({ listingId, canReview = false, bookingId 
                       {format(new Date(review.createdAt), "MMMM yyyy")}
                     </p>
                     <p className="text-sm">{review.comment}</p>
-                    <div className="mt-2">
-                      <ReportDialog entityType="review" entityId={review.id} />
-                    </div>
                   </div>
                 </div>
               </div>

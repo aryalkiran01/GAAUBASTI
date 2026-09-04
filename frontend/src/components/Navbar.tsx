@@ -163,8 +163,8 @@ export default function Navbar() {
                 <Button variant="outline" size="sm">Messages</Button>
               </Link>
 
-              <Link to="/wishlist">
-                <Button variant="outline" size="sm" className="px-2">
+              <Link to="/wishlist" aria-label="Saved listings">
+                <Button variant="ghost" size="icon" className="relative">
                   <Heart className="h-4 w-4" />
                 </Button>
               </Link>

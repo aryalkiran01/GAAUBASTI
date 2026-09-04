@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-
+export {};
+const mongoose = require('mongoose');
 
 const reviewSchema = new mongoose.Schema({
   listing: {
@@ -136,4 +136,4 @@ reviewSchema.methods.canBeEdited = function(this: any, userId: any) {
   return this.guest.toString() === userId.toString() && daysSinceCreated <= 30;
 };
 
-export default mongoose.model('Review', reviewSchema);
+module.exports = mongoose.model('Review', reviewSchema);

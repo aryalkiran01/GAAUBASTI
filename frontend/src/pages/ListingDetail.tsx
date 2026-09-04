@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useListing } from "@/hooks/useListings";
 import { bookingsAPI, conversationsAPI } from "@/lib/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
@@ -14,7 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import AvailabilityChecker from "@/components/AvailabilityChecker";
 import ReviewSection from "@/components/ReviewSection";
 import ReviewSummary from "@/components/ai/ReviewSummary";
-import ReportDialog from "@/components/ReportDialog";
+import SEO from "@/components/SEO";
+import { Heart, Share2, MessageCircle, Star } from "lucide-react";
+import { useWishlist } from "@/hooks/useWishlist";
 
 const ListingDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +29,13 @@ const ListingDetail = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toggle, isSaved, checkStatus, loading: wishlistLoading } = useWishlist();
+
+  useEffect(() => {
+    if (user && id) {
+      checkStatus([id]);
+    }
+  }, [user, id, checkStatus]);
 
   if (loading) {
     return (
@@ -211,52 +220,82 @@ const ListingDetail = () => {
     }
   };
 
+  const saved = isSaved(listing.id);
+
+  const handleToggleWishlist = async () => {
+    if (!user) {
+      toast({ title: "Please log in", description: "You need to be logged in to save listings.", variant: "destructive" });
+      navigate("/login");
+      return;
+    }
+    const response = await toggle(listing.id);
+    if (response.success) {
+      toast({ title: response.data?.saved ? "Saved to wishlist" : "Removed from wishlist" });
+    } else {
+      toast({ title: "Action failed", description: response.message, variant: "destructive" });
+    }
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: listing.title, url: window.location.href });
+      } catch { /* user cancelled */ }
+    } else {
+      navigator.clipboard?.writeText(window.location.href);
+      toast({ title: "Link copied" });
+    }
+  };
+
+  const locationString = typeof listing.location === "string"
+    ? listing.location
+    : `${listing.location.address}, ${listing.location.city}${listing.location.state ? `, ${listing.location.state}` : ""}, ${listing.location.country}`;
+
   return (
     <div className="min-h-screen py-12">
+      <SEO
+        title={listing.title}
+        description={`${listing.title} - ${locationString}. ${listing.description?.slice(0, 140) || ""}`}
+        canonicalPath={`/listing/${listing.id}`}
+        image={typeof listing.images[0] === "string" ? listing.images[0] : listing.images[0]?.url}
+        type="article"
+      />
       <div className="container">
         {/* Listing Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-serif font-bold mb-2">{listing.title}</h1>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="w-4 h-4 text-yellow-500"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                 <span className="ml-1 font-medium">{listing.rating}</span>
               </div>
-              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground" aria-hidden="true">·</span>
               <span className="text-muted-foreground">{listing.reviewCount} reviews</span>
-              <span className="text-muted-foreground">·</span>
-              <span>
-                {typeof listing.location === "string"
-                  ? listing.location
-                  : `${listing.location.address}, ${listing.location.city}${listing.location.state ? `, ${listing.location.state}` : ""}, ${listing.location.country}`}
-              </span>
+              <span className="text-muted-foreground" aria-hidden="true">·</span>
+              <span>{locationString}</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm">
-                Share
+              <Button variant="outline" size="sm" onClick={handleShare} aria-label="Share this listing">
+                <Share2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Share</span>
               </Button>
-              <Button variant="outline" size="sm">
-                Save
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleToggleWishlist}
+                disabled={wishlistLoading}
+                aria-label={saved ? "Remove from wishlist" : "Save to wishlist"}
+                aria-pressed={saved}
+              >
+                <Heart className={`h-4 w-4 ${saved ? "fill-red-500 text-red-500" : ""}`} />
+                <span className="hidden sm:inline">{saved ? "Saved" : "Save"}</span>
               </Button>
               {user && (
                 <Button variant="outline" size="sm" onClick={handleMessageHost}>
-                  Message host
+                  <MessageCircle className="h-4 w-4" />
+                  <span className="hidden sm:inline">Message host</span>
                 </Button>
-              )}
-              {user && (
-                <ReportDialog entityType="listing" entityId={listing.id} />
               )}
             </div>
           </div>
@@ -267,7 +306,8 @@ const ListingDetail = () => {
           <div className="aspect-square overflow-hidden rounded-lg">
             <img
               src={typeof listing.images[0] === "string" ? listing.images[0] : listing.images[0]?.url}
-              alt={listing.title}
+              alt={`${listing.title} - main view`}
+              loading="lazy"
               className="h-full w-full object-cover"
             />
           </div>
@@ -281,7 +321,8 @@ const ListingDetail = () => {
                       ? listing.images[0]
                       : listing.images[0]?.url)
               }
-              alt={listing.title}
+              alt={`${listing.title} - second view`}
+              loading="lazy"
               className="h-full w-full object-cover"
             />
           </div>

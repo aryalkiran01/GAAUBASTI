@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-
+export {};
+const mongoose = require('mongoose');
 
 const payoutSchema = new mongoose.Schema({
   host: {
@@ -48,4 +48,4 @@ const payoutSchema = new mongoose.Schema({
 payoutSchema.index({ host: 1, createdAt: -1 });
 payoutSchema.index({ status: 1, createdAt: -1 });
 
-export default mongoose.model('Payout', payoutSchema);
+module.exports = mongoose.model('Payout', payoutSchema);

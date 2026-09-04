@@ -3,7 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { adminAPI, auditLogsAPI } from "@/lib/api";
+import { adminAPI } from "@/lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -17,15 +17,6 @@ import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { Booking, DialogType, Listing, User } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 // Import our new dialog components
 import UserEditDialog from "@/components/admin/UserEditDialog";
@@ -55,15 +46,6 @@ const Admin = () => {
   
   // Filter state for listings
   const [listingFilter, setListingFilter] = useState<'all' | 'pending' | 'verified'>('all');
-
-  // Audit logs state
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
-  const [auditLoading, setAuditLoading] = useState(false);
-  const [auditPage, setAuditPage] = useState(1);
-  const [auditTotal, setAuditTotal] = useState(0);
-  const [auditFilter, setAuditFilter] = useState<string>('');
-  const [auditLimit] = useState(15);
-  const [selectedLog, setSelectedLog] = useState<any | null>(null);
 
   // Filtered listings based on selection
   const filteredListings = listings.filter(listing => {
@@ -137,27 +119,6 @@ const Admin = () => {
     return null; // Prevent rendering until redirect happens
   }
   
-  const fetchAuditLogs = async () => {
-    setAuditLoading(true);
-    try {
-      const params: Record<string, string | number> = { page: auditPage, limit: auditLimit };
-      if (auditFilter) params.action = auditFilter;
-      const res = await auditLogsAPI.getLogs(params);
-      if (res.success) {
-        setAuditLogs(res.data.logs || []);
-        setAuditTotal(res.data.total || 0);
-      }
-    } catch {
-      setAuditLogs([]);
-    } finally {
-      setAuditLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user?.role === 'admin') fetchAuditLogs();
-  }, [auditPage, user]);
-
   // Handle listing approval
   const handleApproveListing = async (listingId: string) => {
     try {
@@ -319,7 +280,6 @@ const Admin = () => {
             <TabsTrigger value="listings">Listings</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="moderation">Moderation</TabsTrigger>
-            <TabsTrigger value="audit">Audit Logs</TabsTrigger>
           </TabsList>
           
           <TabsContent value="users" className="mt-6">
@@ -595,175 +555,6 @@ const Admin = () => {
               </p>
               <AIModeration contentType="listing" content="" />
             </div>
-          </TabsContent>
-
-          <TabsContent value="audit" className="mt-6">
-            <div className="bg-white rounded-md border">
-              <div className="p-4 border-b flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Input
-                    placeholder="Filter by action (e.g. user.update)"
-                    value={auditFilter}
-                    onChange={(e) => setAuditFilter(e.target.value)}
-                    className="max-w-xs"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setAuditPage(1);
-                      fetchAuditLogs();
-                    }}
-                  >
-                    Apply
-                  </Button>
-                  {(auditFilter || auditPage > 1) && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => { setAuditFilter(''); setAuditPage(1); }}
-                    >
-                      Reset
-                    </Button>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {auditTotal} log{auditTotal !== 1 ? 's' : ''} total
-                </p>
-              </div>
-
-              {auditLoading ? (
-                <div className="p-6 space-y-4">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="flex items-center space-x-4">
-                      <Skeleton className="h-6 w-32" />
-                      <Skeleton className="h-6 w-24" />
-                      <Skeleton className="h-6 w-40" />
-                      <Skeleton className="h-6 w-20" />
-                    </div>
-                  ))}
-                </div>
-              ) : auditLogs.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Timestamp</TableHead>
-                      <TableHead>Admin</TableHead>
-                      <TableHead>Action</TableHead>
-                      <TableHead>Target</TableHead>
-                      <TableHead className="text-right">Details</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {auditLogs.map((log) => (
-                      <TableRow key={log._id || log.id}>
-                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                          {format(new Date(log.createdAt), "MMM d, yyyy 'at' h:mm a")}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {log.actor?.name || 'Unknown'}
-                          <span className="block text-xs text-muted-foreground">{log.actor?.email}</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="px-2 py-1 rounded-full text-xs bg-blue-50 text-blue-700 font-medium">
-                            {log.action}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          <span className="font-medium">{log.targetType}</span>
-                          <span className="block text-xs text-muted-foreground font-mono">{String(log.targetId).slice(-8)}</span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedLog(log)}
-                          >
-                            View
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="p-12 text-center">
-                  <p className="text-muted-foreground">No audit logs found.</p>
-                </div>
-              )}
-
-              {/* Pagination */}
-              {auditTotal > auditLimit && (
-                <div className="p-4 border-t flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={auditPage === 1}
-                    onClick={() => { setAuditPage(auditPage - 1); }}
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    Page {auditPage} of {Math.ceil(auditTotal / auditLimit)}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={auditPage * auditLimit >= auditTotal}
-                    onClick={() => { setAuditPage(auditPage + 1); }}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Detail Dialog */}
-            <Dialog open={!!selectedLog} onOpenChange={(open) => { if (!open) setSelectedLog(null); }}>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>Audit Log Detail</DialogTitle>
-                  <DialogDescription>
-                    {selectedLog?.action} on {selectedLog?.targetType}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Admin</p>
-                      <p className="font-medium">{selectedLog?.actor?.name}</p>
-                      <p className="text-xs text-muted-foreground">{selectedLog?.actor?.email}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Timestamp</p>
-                      <p className="font-medium">{selectedLog?.createdAt ? format(new Date(selectedLog.createdAt), "MMM d, yyyy 'at' h:mm a") : ''}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Action</p>
-                      <p className="font-medium">{selectedLog?.action}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Target ID</p>
-                      <p className="font-mono text-xs">{selectedLog?.targetId}</p>
-                    </div>
-                  </div>
-                  {selectedLog?.before && Object.keys(selectedLog.before).length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium mb-1">Before</p>
-                      <pre className="bg-gray-50 border rounded p-3 text-xs overflow-auto max-h-40">{JSON.stringify(selectedLog.before, null, 2)}</pre>
-                    </div>
-                  )}
-                  {selectedLog?.after && Object.keys(selectedLog.after).length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium mb-1">After</p>
-                      <pre className="bg-gray-50 border rounded p-3 text-xs overflow-auto max-h-40">{JSON.stringify(selectedLog.after, null, 2)}</pre>
-                    </div>
-                  )}
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setSelectedLog(null)}>Close</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           </TabsContent>
         </Tabs>
         

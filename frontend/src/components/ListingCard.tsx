@@ -1,24 +1,22 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Listing } from "../types";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Star, MapPin, Bed, Bath, Users, Heart } from "lucide-react";
+import { useWishlist } from "@/hooks/useWishlist";
 import { useAuth } from "@/context/AuthContext";
-import { listingsAPI } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface ListingCardProps {
   listing: Listing;
-  saved?: boolean;
-  onToggleSave?: (listingId: string, saved: boolean) => void;
 }
 
-export default function ListingCard({ listing, saved: savedProp, onToggleSave }: ListingCardProps) {
+export default function ListingCard({ listing }: ListingCardProps) {
   const { user } = useAuth();
+  const { toggle, isSaved, loading } = useWishlist();
   const { toast } = useToast();
-  const [saved, setSaved] = useState(savedProp || false);
-  const [toggling, setToggling] = useState(false);
+  const navigate = useNavigate();
 
   const getImageUrl = (images: string[] | Array<{url: string}>) => {
     if (Array.isArray(images) && images.length > 0) {
@@ -28,47 +26,51 @@ export default function ListingCard({ listing, saved: savedProp, onToggleSave }:
   };
 
   const getLocationString = (location: string | {city: string; state?: string; country: string}) => {
-    if (typeof location === 'string') return location;
+    if (typeof location === 'string') {
+      return location;
+    }
     return `${location.city}${location.state ? `, ${location.state}` : ''}, ${location.country}`;
   };
+
+  const saved = isSaved(listing.id);
 
   const handleToggleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
     if (!user) {
-      toast({ variant: "destructive", title: "Please log in", description: "You need to be logged in to save listings." });
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to save listings.",
+        variant: "destructive",
+      });
+      navigate("/login");
       return;
     }
-    if (toggling) return;
-    setToggling(true);
-    const wasSaved = saved;
-    setSaved(!wasSaved);
-    try {
-      const res = await listingsAPI.toggleWishlist(listing.id);
-      if (!res.success) {
-        setSaved(wasSaved);
-        toast({ variant: "destructive", title: "Failed to update wishlist", description: res.message || "Please try again." });
-        return;
-      }
-      const nowSaved = res.data?.saved ?? !wasSaved;
-      setSaved(nowSaved);
-      if (onToggleSave) onToggleSave(listing.id, nowSaved);
-    } catch {
-      setSaved(wasSaved);
-      toast({ variant: "destructive", title: "Failed to update wishlist", description: "Network error. Please try again." });
-    } finally {
-      setToggling(false);
+
+    const response = await toggle(listing.id);
+    if (response.success) {
+      toast({
+        title: response.data?.saved ? "Saved to wishlist" : "Removed from wishlist",
+      });
+    } else {
+      toast({
+        title: "Action failed",
+        description: response.message,
+        variant: "destructive",
+      });
     }
   };
 
   return (
-    <Link to={`/listing/${listing.id}`} className="block h-full group">
+    <Link to={`/listing/${listing.id}`} className="block h-full group" aria-label={`View ${listing.title}`}>
       <Card className="overflow-hidden border-border hover:shadow-lg transition-shadow duration-200 h-full">
         <div className="aspect-[4/3] overflow-hidden relative bg-secondary">
           <img
             src={getImageUrl(listing.images)}
             alt={listing.title}
-            className="listing-image h-full w-full object-cover"
+            loading="lazy"
+            className="listing-image h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
           <div className="absolute top-3 left-3">
             <Badge className="bg-white/95 text-foreground hover:bg-white/95 shadow-sm border-0">
@@ -78,13 +80,15 @@ export default function ListingCard({ listing, saved: savedProp, onToggleSave }:
           </div>
           {user && (
             <button
-              type="button"
               onClick={handleToggleWishlist}
-              disabled={toggling}
-              className="absolute top-3 right-3 rounded-full bg-white/90 p-1.5 shadow-sm transition hover:scale-110 disabled:opacity-50"
-              aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
+              disabled={loading}
+              aria-label={saved ? "Remove from wishlist" : "Save to wishlist"}
+              aria-pressed={saved}
+              className="absolute top-3 right-3 h-9 w-9 rounded-full bg-white/90 hover:bg-white shadow-sm flex items-center justify-center transition-all hover:scale-110 disabled:opacity-50"
             >
-              <Heart className={`w-4 h-4 ${saved ? "fill-red-500 text-red-500" : "text-gray-600"}`} />
+              <Heart
+                className={`h-5 w-5 transition-colors ${saved ? "fill-red-500 text-red-500" : "text-gray-600"}`}
+              />
             </button>
           )}
         </div>

@@ -1,5 +1,5 @@
-import Report from '../models/Report.js';
-
+export {};
+const Report = require('../models/Report');
 
 const createReport = async (req, res) => {
   try {
@@ -12,38 +12,10 @@ const createReport = async (req, res) => {
       });
     }
 
-    if (!['listing', 'user', 'message', 'review'].includes(reportedEntityType)) {
+    if (!['listing', 'user', 'message'].includes(reportedEntityType)) {
       return res.status(400).json({
         success: false,
-        message: 'reportedEntityType must be listing, user, message, or review'
-      });
-    }
-
-    // Anti-spam: max 5 open reports per user
-    const openReportCount = await Report.countDocuments({
-      reporter: req.user._id,
-      status: 'open'
-    });
-
-    if (openReportCount >= 5) {
-      return res.status(429).json({
-        success: false,
-        message: 'You have too many open reports. Please wait for them to be reviewed before submitting more.'
-      });
-    }
-
-    // Anti-spam: prevent duplicate reports of the same entity by the same user
-    const existing = await Report.findOne({
-      reporter: req.user._id,
-      reportedEntityType,
-      reportedEntityId,
-      status: { $in: ['open', 'resolved'] }
-    });
-
-    if (existing) {
-      return res.status(409).json({
-        success: false,
-        message: 'You have already reported this item. It is being reviewed.'
+        message: 'reportedEntityType must be listing, user, or message'
       });
     }
 
@@ -145,4 +117,8 @@ const updateReportStatus = async (req, res) => {
   }
 };
 
-export { createReport, getReports, updateReportStatus };
+module.exports = {
+  createReport,
+  getReports,
+  updateReportStatus
+};

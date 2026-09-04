@@ -9,18 +9,11 @@ interface ReviewSummaryProps {
   listingId: string;
 }
 
-interface ReviewSummaryResult {
-  sentiment: string;
-  summary: string;
-  pros: string[];
-  cons: string[];
-}
-
 const ReviewSummary = ({ listingId }: ReviewSummaryProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<ReviewSummaryResult | null>(null);
+  const [result, setResult] = useState<any>(null);
 
   if (!user) return null;
 
@@ -31,12 +24,12 @@ const ReviewSummary = ({ listingId }: ReviewSummaryProps) => {
     try {
       const response = await aiAPI.reviewSummary(listingId);
       if (response.success) {
-        setResult(response.data as ReviewSummaryResult);
+        setResult(response.data);
       } else {
         setError(response.message || "Failed to generate summary");
       }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -80,7 +73,7 @@ const ReviewSummary = ({ listingId }: ReviewSummaryProps) => {
                   <span className="text-xs font-medium">Common Praise</span>
                 </div>
                 <ul className="text-sm space-y-0.5">
-                  {result.pros.map((pro, i) => (
+                  {result.pros.map((pro: string, i: number) => (
                     <li key={i} className="flex items-start gap-1.5">
                       <span className="text-green-600 mt-0.5">+</span>
                       {pro}
@@ -97,7 +90,7 @@ const ReviewSummary = ({ listingId }: ReviewSummaryProps) => {
                   <span className="text-xs font-medium">Common Concerns</span>
                 </div>
                 <ul className="text-sm space-y-0.5">
-                  {result.cons.map((con, i) => (
+                  {result.cons.map((con: string, i: number) => (
                     <li key={i} className="flex items-start gap-1.5">
                       <span className="text-red-600 mt-0.5">-</span>
                       {con}

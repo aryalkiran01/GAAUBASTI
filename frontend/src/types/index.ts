@@ -48,11 +48,8 @@ export interface Booking {
   startDate: Date | string;
   endDate: Date | string;
   totalPrice: number;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'refunded';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   paymentStatus?: 'pending' | 'paid' | 'failed' | 'refunded';
-  cancellationReason?: string;
-  cancelledAt?: string;
-  cancelledBy?: string;
   guests?: {
     adults: number;
     children: number;
@@ -65,7 +62,7 @@ export interface Booking {
   };
 }
 
-export type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed' | 'refunded';
+export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export interface PaymentDetails {
   bookingId?: string;
@@ -109,7 +106,6 @@ export interface Conversation {
   listing?: string | Listing;
   booking?: string;
   lastMessageAt?: string | Date;
-  unreadCount?: Record<string, number>;
 }
 
 export interface Message {
@@ -119,8 +115,6 @@ export interface Message {
   sender?: User & { _id?: string };
   body?: string;
   attachments?: string[];
-  readBy?: string[];
-  systemType?: string | null;
   createdAt?: string;
 }
 
@@ -132,4 +126,35 @@ export interface NotificationItem {
   content?: Record<string, any>;
   read?: boolean;
   createdAt?: string;
+}
+
+export interface SavedSearch {
+  _id?: string;
+  id?: string;
+  name: string;
+  filters: {
+    location?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    guests?: number;
+    rating?: number;
+    category?: string;
+    amenities?: string[];
+    sortBy?: string;
+    sortOrder?: string;
+  };
+  notifyOnMatch?: boolean;
+  createdAt?: string;
+}
+
+export interface PaymentRecord {
+  _id?: string;
+  id?: string;
+  booking?: any;
+  listing?: any;
+  amount: number;
+  currency: string;
+  provider: string;
+  status: string;
+  createdAt: string;
 }

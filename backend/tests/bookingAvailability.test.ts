@@ -1,9 +1,9 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import Listing from '../models/Listing.js';
-import Booking from '../models/Booking.js';
-import { validateBookingDates, checkListingAvailability, canTransitionStatus, validateGuestCount, overlappingDateWindow } from '../services/bookingAvailability.js';
-
+export {};
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { validateBookingDates, checkListingAvailability, canTransitionStatus } = require('../services/bookingAvailability');
+const Listing = require('../models/Listing');
+const Booking = require('../models/Booking');
 
 const tomorrow = new Date();
 tomorrow.setDate(tomorrow.getDate() + 1);
@@ -78,13 +78,13 @@ test('invalid status transitions are rejected', () => {
 });
 
 test('guest count validation rejects zero adults', () => {
-  const result = validateGuestCount({ adults: 0, children: 0 }, 2);
+  const result = require('../services/bookingAvailability').validateGuestCount({ adults: 0, children: 0 }, 2);
   assert.equal(result.valid, false);
   assert.match(result.message, /At least 1 adult/i);
 });
 
 test('guest count validation rejects over max guests', () => {
-  const result = validateGuestCount({ adults: 3, children: 1 }, 3);
+  const result = require('../services/bookingAvailability').validateGuestCount({ adults: 3, children: 1 }, 3);
   assert.equal(result.valid, false);
   assert.match(result.message, /Maximum 3 guests allowed/i);
 });
@@ -95,6 +95,7 @@ test('half-open interval allows checkout on same day as next check-in', () => {
   const startB = new Date(dayAfterTomorrow);
   const endB = new Date(inThreeDays);
 
-  const result = overlappingDateWindow(startA, endA, startB, endB);
+  const result = require('../services/bookingAvailability').overlappingDateWindow(startA, endA, startB, endB);
   assert.equal(result, false);
 });
+

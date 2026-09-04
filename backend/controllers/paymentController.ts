@@ -1,7 +1,6 @@
-import Stripe from 'stripe';
-import Booking from '../models/Booking.js';
-import Payment from '../models/Payment.js';
-
+export {};
+const Booking = require('../models/Booking');
+const Payment = require('../models/Payment');
 
 const normalizeAmount = (value) => {
   if (typeof value === 'string') {
@@ -216,7 +215,7 @@ const createPayment = async (req, res) => {
 
       let stripe;
       try {
-        stripe = new Stripe(stripeKey);
+        stripe = require('stripe')(stripeKey);
       } catch (providerError) {
         return res.status(500).json({
           success: false,
@@ -325,7 +324,7 @@ const verifyPayment = async (req, res) => {
 
     let stripe;
     try {
-      stripe = new Stripe(stripeKey);
+      stripe = require('stripe')(stripeKey);
     } catch (providerError) {
       return res.status(500).json({
         success: false,
@@ -355,6 +354,20 @@ const verifyPayment = async (req, res) => {
       await booking.save();
     }
 
+    const populatedBooking = await Booking.findById(booking._id).populate([
+      { path: 'listing', select: 'title' },
+      { path: 'guest', select: 'name email' },
+      { path: 'host', select: 'name email' }
+    ]);
+
+    const { notifyPaymentConfirmed } = require('../utils/notifications');
+    notifyPaymentConfirmed({
+      booking: populatedBooking,
+      guest: populatedBooking.guest,
+      host: populatedBooking.host,
+      payment
+    }).catch(() => {});
+
     return res.status(200).json({
       success: true,
       message: 'Payment verified successfully',
@@ -371,6 +384,15 @@ const verifyPayment = async (req, res) => {
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
+};
+
+const isDuplicateWebhook = async (eventId) => {
+  if (!eventId) return false;
+  const WebhookLog = require('../models/WebhookLog');
+  const existing = await WebhookLog.findOne({ eventId });
+  if (existing) return true;
+  await WebhookLog.create({ eventId, processedAt: new Date() });
+  return false;
 };
 
 const handleStripeWebhook = async (req, res) => {
@@ -401,8 +423,13 @@ const handleStripeWebhook = async (req, res) => {
       });
     }
 
-    const stripe = new Stripe(stripeKey);
+    const stripe = require('stripe')(stripeKey);
     const event = stripe.webhooks.constructEvent(req.body, signature, stripeSecret);
+
+    if (await isDuplicateWebhook(event.id)) {
+      return res.status(200).json({ success: true, received: true, duplicate: true });
+    }
+
     const eventObject = event.data && event.data.object ? event.data.object : null;
 
     if (!eventObject) {
@@ -415,40 +442,65 @@ const handleStripeWebhook = async (req, res) => {
 
       if (payment) {
         if (event.type === 'payment_intent.succeeded') {
-          payment.status = 'paid';
-          await payment.save();
+          if (payment.status !== 'paid') {
+            payment.status = 'paid';
+            await payment.save();
 
-          const booking = await Booking.findById(payment.booking);
-          if (booking) {
-            booking.paymentStatus = 'paid';
-            if (booking.status === 'pending') {
+            const booking = await Booking.findById(payment.booking);
+            if (booking && booking.status !== 'confirmed') {
+              booking.paymentStatus = 'paid';
               booking.status = 'confirmed';
+              booking.paymentId = payment._id.toString();
+              await booking.save();
             }
-            booking.paymentId = payment._id.toString();
-            await booking.save();
           }
         }
 
         if (event.type === 'payment_intent.payment_failed') {
-          payment.status = 'failed';
-          await payment.save();
+          if (payment.status !== 'failed') {
+            payment.status = 'failed';
+            await payment.save();
 
-          const booking = await Booking.findById(payment.booking);
-          if (booking) {
-            booking.paymentStatus = 'failed';
-            await booking.save();
+            const booking = await Booking.findById(payment.booking);
+            if (booking) {
+              booking.paymentStatus = 'failed';
+              await booking.save();
+            }
           }
         }
 
         if (event.type === 'charge.refunded') {
-          payment.status = 'refunded';
-          await payment.save();
+          if (payment.status !== 'refunded') {
+            payment.status = 'refunded';
+            await payment.save();
 
-          const booking = await Booking.findById(payment.booking);
-          if (booking) {
-            booking.paymentStatus = 'refunded';
-            booking.status = 'refunded';
-            await booking.save();
+            const booking = await Booking.findById(payment.booking);
+            if (booking && booking.status !== 'refunded') {
+              booking.paymentStatus = 'refunded';
+              booking.status = 'refunded';
+              await booking.save();
+            }
+
+            const Transaction = require('../models/Transaction');
+            const existingRefundTx = await Transaction.findOne({
+              type: 'refund',
+              payment: payment._id,
+              reference: event.id
+            });
+            if (!existingRefundTx) {
+              await Transaction.create({
+                type: 'refund',
+                booking: booking ? booking._id : undefined,
+                payment: payment._id,
+                user: payment.payer,
+                amount: payment.amount,
+                currency: payment.currency,
+                direction: 'credit',
+                status: 'completed',
+                description: 'Stripe webhook refund',
+                reference: event.id
+              });
+            }
           }
         }
       }
@@ -505,4 +557,155 @@ const getPaymentStatus = async (req, res) => {
   }
 };
 
-export { createPayment, verifyPayment, handleStripeWebhook, getPaymentStatus, ensureBookingIsPayable, verifyPaymentOwnership, normalizeAmount, getConfiguredPaymentProvider };
+const processRefund = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    const { amount, reason } = req.body || {};
+
+    const payment = await Payment.findById(paymentId).populate('booking');
+    if (!payment) {
+      return res.status(404).json({ success: false, message: 'Payment not found' });
+    }
+
+    const isOwner = payment.payer && payment.payer.toString() === req.user._id.toString();
+    const isBookingGuest = payment.booking && payment.booking.guest && payment.booking.guest.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+    const isHost = payment.booking && payment.booking.host && payment.booking.host.toString() === req.user._id.toString();
+
+    if (!isOwner && !isBookingGuest && !isAdmin && !isHost) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to refund this payment' });
+    }
+
+    if (payment.status === 'refunded') {
+      return res.status(409).json({ success: false, message: 'Payment has already been refunded' });
+    }
+
+    if (payment.status !== 'paid') {
+      return res.status(400).json({ success: false, message: 'Only paid payments can be refunded' });
+    }
+
+    const refundAmount = amount ? Number(amount) : payment.amount;
+    if (!Number.isFinite(refundAmount) || refundAmount <= 0 || refundAmount > payment.amount) {
+      return res.status(400).json({ success: false, message: 'Invalid refund amount' });
+    }
+
+    const Transaction = require('../models/Transaction');
+    const idempotencyKey = `refund:${payment._id}:${refundAmount}`;
+    const existingRefund = await Transaction.findOne({ type: 'refund', payment: payment._id, reference: idempotencyKey });
+    if (existingRefund) {
+      return res.status(409).json({ success: false, message: 'Refund already processed for this payment' });
+    }
+
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeKey) {
+      return res.status(500).json({ success: false, message: 'Stripe is not configured' });
+    }
+
+    let stripe;
+    try {
+      stripe = require('stripe')(stripeKey);
+    } catch (providerError) {
+      return res.status(500).json({ success: false, message: 'Stripe integration is not installed' });
+    }
+
+    const chargeId = payment.metadata?.stripeChargeId || payment.providerPaymentId;
+    const refund = await stripe.refunds.create({
+      payment_intent: payment.providerPaymentId,
+      amount: Math.round(refundAmount * 100),
+      metadata: {
+        paymentId: payment._id.toString(),
+        bookingId: payment.booking ? payment.booking._id.toString() : '',
+        reason: reason || 'cancellation'
+      }
+    }, {
+      idempotencyKey
+    });
+
+    payment.status = 'refunded';
+    await payment.save();
+
+    const booking = payment.booking;
+    if (booking && booking.status !== 'refunded') {
+      booking.paymentStatus = 'refunded';
+      booking.status = 'refunded';
+      await booking.save();
+    }
+
+    await Transaction.create({
+      type: 'refund',
+      booking: booking ? booking._id : undefined,
+      payment: payment._id,
+      user: payment.payer,
+      amount: refundAmount,
+      currency: payment.currency,
+      direction: 'credit',
+      status: 'completed',
+      description: reason || 'Refund processed',
+      reference: refund.id || idempotencyKey
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Refund processed successfully',
+      data: { refundId: refund.id, amount: refundAmount, paymentId: payment._id }
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process refund',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+const getPaymentHistory = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const filter = { payer: req.user._id };
+
+    const [payments, total] = await Promise.all([
+      Payment.find(filter)
+        .populate('booking', 'title location images startDate endDate status')
+        .populate('listing', 'title location images')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Payment.countDocuments(filter)
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        payments,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / parseInt(limit)),
+          totalPayments: total
+        }
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch payment history',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+module.exports = {
+  createPayment,
+  verifyPayment,
+  handleStripeWebhook,
+  getPaymentStatus,
+  getPaymentHistory,
+  processRefund,
+  ensureBookingIsPayable,
+  verifyPaymentOwnership,
+  normalizeAmount,
+  getConfiguredPaymentProvider,
+  isDuplicateWebhook
+};
+

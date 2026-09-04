@@ -1,6 +1,6 @@
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
-
+export {};
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
 const toUserId = (value) => {
   if (!value) return null;
@@ -128,4 +128,10 @@ const requireOwnershipOrAdmin = (resourceField = 'user') => {
   };
 };
 
-export { authenticate, authorize, requireAdmin, requireHost, requireOwnershipOrAdmin };
+module.exports = {
+  authenticate,
+  authorize,
+  requireAdmin,
+  requireHost,
+  requireOwnershipOrAdmin
+};

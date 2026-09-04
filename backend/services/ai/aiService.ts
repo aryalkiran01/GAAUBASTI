@@ -86,7 +86,7 @@ const generate = async (request: any): Promise<any> => {
     errors.push(`${providerName}: ${err.message}`);
 
     if (!fallbackEnabled) {
-      throw new Error(`AI generation failed: ${err.message}`, { cause: err });
+      throw new Error(`AI generation failed: ${err.message}`);
     }
   }
 

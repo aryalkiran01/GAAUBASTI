@@ -1,5 +1,5 @@
-import AuditLog from '../models/AuditLog.js';
-
+export {};
+const AuditLog = require('../models/AuditLog');
 
 const logAdminAction = async ({ actor, action, targetType, targetId, before = {}, after = {} }) => {
   if (!actor || !action || !targetType || !targetId) {
@@ -16,4 +16,6 @@ const logAdminAction = async ({ actor, action, targetType, targetId, before = {}
   });
 };
 
-export { logAdminAction };
+module.exports = {
+  logAdminAction
+};

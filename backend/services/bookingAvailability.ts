@@ -1,6 +1,6 @@
-import Booking from '../models/Booking.js';
-import Listing from '../models/Listing.js';
-
+export {};
+const Booking = require('../models/Booking');
+const Listing = require('../models/Listing');
 
 const BLOCKING_BOOKING_STATUSES = ['pending', 'confirmed'];
 
@@ -205,4 +205,14 @@ const checkListingAvailability = async ({ listingId, startDate, endDate, exclude
   };
 };
 
-export { BLOCKING_BOOKING_STATUSES, parseDate, validateBookingDates, validateGuestCount, overlappingDateWindow, getAllowedStatusTransitions, canTransitionStatus, checkListingAvailability };
+module.exports = {
+  BLOCKING_BOOKING_STATUSES,
+  parseDate,
+  validateBookingDates,
+  validateGuestCount,
+  overlappingDateWindow,
+  getAllowedStatusTransitions,
+  canTransitionStatus,
+  checkListingAvailability
+};
+

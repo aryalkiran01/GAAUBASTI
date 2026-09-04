@@ -1,9 +1,9 @@
-import express from 'express';
-import User from '../models/User.js';
-import { authenticate, requireOwnershipOrAdmin } from '../middlewares/auth.js';
-import { validateObjectId } from '../middlewares/validation.js';
-
+export {};
+const express = require('express');
 const router = express.Router();
+const User = require('../models/User');
+const { authenticate, requireOwnershipOrAdmin } = require('../middlewares/auth');
+const { validateObjectId } = require('../middlewares/validation');
 
 // Get user profile by ID (public info only)
 router.get('/:id', validateObjectId('id'), async (req, res) => {
@@ -81,4 +81,4 @@ router.put('/:id', validateObjectId('id'), requireOwnershipOrAdmin('user'), asyn
   }
 });
 
-export default router;
+module.exports = router;

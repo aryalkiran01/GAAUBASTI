@@ -1,9 +1,8 @@
-import Listing from '../models/Listing.js';
-import User from '../models/User.js';
-import Booking from '../models/Booking.js';
-import { checkListingAvailability, validateBookingDates } from '../services/bookingAvailability.js';
-import { scoreAndFlagListing } from '../services/suspiciousListingService.js';
-
+export {};
+const Listing = require('../models/Listing');
+const User = require('../models/User');
+const Booking = require('../models/Booking');
+const { checkListingAvailability, validateBookingDates } = require('../services/bookingAvailability');
 
 const LISTING_ALLOWED_CREATE_FIELDS = [
   'title', 'description', 'location', 'price', 'images', 'amenities', 'maxGuests',
@@ -82,8 +81,6 @@ const getListings = async (req, res) => {
       category,
       image,
       amenities,
-      checkIn,
-      checkOut,
       sortBy = 'createdAt',
       sortOrder = 'desc'
     } = req.query;
@@ -119,35 +116,6 @@ const getListings = async (req, res) => {
     if (amenities) {
       const amenityArray = Array.isArray(amenities) ? amenities : [amenities];
       filter.amenities = { $in: amenityArray };
-    }
-
-    // Date availability filtering: exclude listings with conflicting bookings
-    let availableListingIds: string[] | null = null;
-    if (checkIn && checkOut) {
-      const dateValidation = validateBookingDates(checkIn, checkOut);
-      if (!dateValidation.valid) {
-        return res.status(400).json({
-          success: false,
-          message: dateValidation.message
-        });
-      }
-
-      const conflictingBookings = await Booking.find({
-        status: { $in: ['confirmed', 'pending'] },
-        startDate: { $lt: new Date(checkOut) },
-        endDate: { $gt: new Date(checkIn) }
-      }).select('listing');
-
-      const conflictingIds = new Set(conflictingBookings.map(b => String(b.listing)));
-      const activeListings = await Listing.find(filter).select('_id unavailableDates');
-      availableListingIds = activeListings
-        .filter(l => {
-          if (conflictingIds.has(String(l._id))) return false;
-          return l.isAvailable(checkIn, checkOut);
-        })
-        .map(l => l._id);
-
-      filter._id = { $in: availableListingIds };
     }
 
     // Build sort object
@@ -292,12 +260,7 @@ const createListing = async (req, res) => {
     const listing = new Listing(listingData);
     await listing.save();
 
-    try {
-      await scoreAndFlagListing(String(listing._id));
-      await listing.populate('host', 'name avatar');
-    } catch {
-      await listing.populate('host', 'name avatar');
-    }
+    await listing.populate('host', 'name avatar');
 
     res.status(201).json({
       success: true,
@@ -520,4 +483,15 @@ const getFeaturedListings = async (req, res) => {
   }
 };
 
-export { getListings, getListing, createListing, updateListing, deleteListing, getHostListings, checkAvailability, getFeaturedListings, sanitizeListingPayloadForCreate, sanitizeListingPayloadForUpdate };
+module.exports = {
+  getListings,
+  getListing,
+  createListing,
+  updateListing,
+  deleteListing,
+  getHostListings,
+  checkAvailability,
+  getFeaturedListings,
+  sanitizeListingPayloadForCreate,
+  sanitizeListingPayloadForUpdate
+};

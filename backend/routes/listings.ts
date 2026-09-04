@@ -1,11 +1,25 @@
-import express from 'express';
-import Listing from '../models/Listing.js';
-import { getListings, getListing, createListing, updateListing, deleteListing, getHostListings, checkAvailability, getFeaturedListings } from '../controllers/listingController.js';
-import { authenticate } from '../middlewares/auth.js';
-import { requireHost, requireOwnership } from '../middlewares/roleAuth.js';
-import { validateListing, validateObjectId, validateListingQuery } from '../middlewares/validation.js';
-
+export {};
+const express = require('express');
 const router = express.Router();
+const {
+  getListings,
+  getListing,
+  createListing,
+  updateListing,
+  deleteListing,
+  getHostListings,
+  checkAvailability,
+  getFeaturedListings
+} = require('../controllers/listingController');
+const Listing = require('../models/Listing');
+
+const { authenticate } = require('../middlewares/auth');
+const { requireHost, requireOwnership } = require('../middlewares/roleAuth');
+const {
+  validateListing,
+  validateObjectId,
+  validateListingQuery
+} = require('../middlewares/validation');
 
 // Public routes
 router.get('/', validateListingQuery, getListings);
@@ -22,4 +36,5 @@ router.get('/host/my-listings', requireHost, getHostListings);
 router.put('/:id', requireHost, validateObjectId('id'), requireOwnership(Listing, 'host'), validateListing, updateListing);
 router.delete('/:id', requireHost, validateObjectId('id'), requireOwnership(Listing, 'host'), deleteListing);
 
-export default router;
+
+module.exports = router;

@@ -1,5 +1,5 @@
-import Article from '../models/Article.js';
-
+export {};
+const Article = require('../models/Article');
 
 const getArticles = async (req, res) => {
   try {
@@ -92,4 +92,10 @@ const deleteArticle = async (req, res) => {
   }
 };
 
-export { getArticles, getArticleBySlug, createArticle, updateArticle, deleteArticle };
+module.exports = {
+  getArticles,
+  getArticleBySlug,
+  createArticle,
+  updateArticle,
+  deleteArticle
+};

@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-
+export {};
+const mongoose = require('mongoose');
 
 const reportSchema = new mongoose.Schema({
   reporter: {
@@ -10,7 +10,7 @@ const reportSchema = new mongoose.Schema({
   },
   reportedEntityType: {
     type: String,
-    enum: ['listing', 'user', 'message', 'review'],
+    enum: ['listing', 'user', 'message'],
     required: true,
     trim: true
   },
@@ -39,4 +39,4 @@ const reportSchema = new mongoose.Schema({
   timestamps: true
 });
 
-export default mongoose.model('Report', reportSchema);
+module.exports = mongoose.model('Report', reportSchema);

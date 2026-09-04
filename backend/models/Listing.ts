@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-
+export {};
+const mongoose = require('mongoose');
 
 const listingSchema = new mongoose.Schema({
   title: {
@@ -42,7 +42,7 @@ const listingSchema = new mongoose.Schema({
       type: String,
       required: true
     },
-    publicId: String,
+    publicId: String, // For Cloudinary
     caption: String
   }],
   amenities: [{
@@ -104,28 +104,6 @@ const listingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
-  adminNotes: String,
-  // Suspicious listing detection
-  riskScore: {
-    type: Number,
-    default: 0,
-    min: 0,
-    max: 100
-  },
-  riskFactors: [{
-    type: String,
-    trim: true
-  }],
-  moderationStatus: {
-    type: String,
-    enum: ['approved', 'pending', 'flagged', 'rejected'],
-    default: 'pending'
-  },
-  moderatedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  moderatedAt: Date,
   // Availability calendar
   unavailableDates: [{
     startDate: Date,
@@ -159,9 +137,7 @@ listingSchema.index({ price: 1 });
 listingSchema.index({ averageRating: -1 });
 listingSchema.index({ host: 1 });
 listingSchema.index({ isActive: 1, isVerified: 1 });
-listingSchema.index({ moderationStatus: 1 });
-listingSchema.index({ riskScore: -1 });
-listingSchema.index({ 'location.coordinates': '2dsphere' });
+listingSchema.index({ 'location.coordinates': '2dsphere' }); // For geospatial queries
 
 // Virtual for reviews
 listingSchema.virtual('reviews', {
@@ -177,6 +153,8 @@ listingSchema.virtual('bookings', {
   foreignField: 'listing'
 });
 
+// Manual blocked-date check only. Actual booking inventory is enforced by the
+// centralized availability service in backend/services/bookingAvailability.js.
 listingSchema.methods.isAvailable = function(startDate, endDate) {
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -189,6 +167,7 @@ listingSchema.methods.isAvailable = function(startDate, endDate) {
   });
 };
 
+// Method to add unavailable dates
 listingSchema.methods.addUnavailableDates = function(startDate, endDate, reason = 'Booked') {
   this.unavailableDates.push({
     startDate: new Date(startDate),
@@ -198,6 +177,7 @@ listingSchema.methods.addUnavailableDates = function(startDate, endDate, reason 
   return this.save();
 };
 
+// Update average rating when reviews change
 listingSchema.methods.updateRating = async function() {
   const Review = mongoose.model('Review');
   const stats = await Review.aggregate([
@@ -210,7 +190,7 @@ listingSchema.methods.updateRating = async function() {
       }
     }
   ]);
-
+  
   if (stats.length > 0) {
     this.averageRating = Math.round(stats[0].averageRating * 10) / 10;
     this.reviewCount = stats[0].reviewCount;
@@ -218,8 +198,8 @@ listingSchema.methods.updateRating = async function() {
     this.averageRating = 0;
     this.reviewCount = 0;
   }
-
+  
   return this.save();
 };
 
-export default mongoose.model('Listing', listingSchema);
+module.exports = mongoose.model('Listing', listingSchema);

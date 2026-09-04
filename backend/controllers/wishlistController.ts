@@ -1,6 +1,6 @@
-import Wishlist from '../models/Wishlist.js';
-import Listing from '../models/Listing.js';
-
+export {};
+const Wishlist = require('../models/Wishlist');
+const Listing = require('../models/Listing');
 
 const toggleWishlist = async (req, res) => {
   try {
@@ -50,4 +50,34 @@ const removeWishlistItem = async (req, res) => {
   }
 };
 
-export { toggleWishlist, getWishlist, removeWishlistItem };
+const checkWishlistStatus = async (req, res) => {
+  try {
+    const { listingIds } = req.body;
+
+    if (!Array.isArray(listingIds) || listingIds.length === 0) {
+      return res.json({ success: true, data: { savedIds: [] } });
+    }
+
+    const items = await Wishlist.find({
+      user: req.user._id,
+      listing: { $in: listingIds }
+    }).select('listing');
+
+    const savedIds = items.map((item: any) => item.listing.toString());
+
+    res.json({ success: true, data: { savedIds } });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check wishlist status',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+module.exports = {
+  toggleWishlist,
+  getWishlist,
+  removeWishlistItem,
+  checkWishlistStatus
+};

@@ -5,12 +5,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Star, MapPin, Compass, CalendarCheck, Heart, ArrowRight } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const Index = () => {
   const { listings: featuredListings, loading } = useFeaturedListings();
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SEO
+        title="Gau Basti - Authentic Nepali Homestays & Unique Stays"
+        description="Discover and book authentic Nepali homestays, cottages, villas, and unique stays in the heart of rural Nepal. Experience real village life with local hosts."
+        canonicalPath="/"
+      />
       {/* Hero Section */}
       <section
         className="relative min-h-[90vh] flex items-end pb-12 md:pb-20"

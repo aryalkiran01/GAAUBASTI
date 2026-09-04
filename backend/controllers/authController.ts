@@ -1,11 +1,8 @@
-import crypto from 'crypto';
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
-import OTP from '../models/Otp.js';
-import sendEmail from '../utils/sendemail.js';
-
-
- 
+export {};
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const OTP = require('../models/Otp'); 
 
 const getJwtSecret = () => {
   if (process.env.JWT_SECRET) {
@@ -29,7 +26,8 @@ const generateToken = (userId) => {
 // Register new user
 const register = async (req, res) => {
   try {
-    const { name, email, password, role = 'guest', username } = req.body;
+    const { name, email, password, username } = req.body;
+    const role = req.body.role === 'host' ? 'host' : 'guest';
 
     if (!username) {
       return res.status(400).json({
@@ -68,11 +66,13 @@ const register = async (req, res) => {
     await user.save();
 
     const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/verify-email/${verificationToken}`;
-    await sendEmail({
+    const verifyTemplate = emailTemplates.email_verification({ name: user.name, verifyUrl });
+    sendEmail({
       to: user.email,
-      subject: 'Verify your Gaubasti account',
-      text: `Hi ${user.name},\n\nPlease verify your account by visiting: ${verifyUrl}\n\nThis link expires in 24 hours.`
-    });
+      subject: verifyTemplate.subject,
+      text: verifyTemplate.text,
+      html: verifyTemplate.html
+    }).catch(() => {});
 
     const token = generateToken(user._id);
 
@@ -92,6 +92,7 @@ const register = async (req, res) => {
     });
   }
 };
+
 
 // Login user
 const login = async (req, res) => {
@@ -238,6 +239,11 @@ const changePassword = async (req, res) => {
   }
 };
 
+const sendEmail = require('../utils/sendemail');
+const emailTemplates = require('../utils/emailTemplates');
+const { sendOTPSMS } = require('../utils/sendSMS');
+
+
 // --- Forgot Password: send OTP ---
 const forgotPassword = async (req, res) => {
   try {
@@ -248,7 +254,7 @@ const forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      return res.status(200).json({ success: true, message: 'If an account with that email exists, an OTP has been sent.' });
     }
 
     // Generate 6-digit OTP
@@ -266,7 +272,19 @@ const forgotPassword = async (req, res) => {
       console.info('OTP generation requested for a user');
     }
 
-    res.json({ success: true, message: 'OTP sent to your email' });
+    const otpTemplate = emailTemplates.otp({ otp });
+    sendEmail({
+      to: user.email,
+      subject: otpTemplate.subject,
+      text: otpTemplate.text,
+      html: otpTemplate.html
+    }).catch(() => {});
+
+    if (user.phone) {
+      sendOTPSMS(user.phone, otp).catch(() => {});
+    }
+
+    res.json({ success: true, message: 'If an account with that email exists, an OTP has been sent.' });
   } catch (error: any) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Forgot password error');
@@ -323,6 +341,7 @@ const resetPassword = async (req, res) => {
     });
   }
 };
+
 
 // Refresh token
 const verifyEmail = async (req, res) => {
@@ -384,4 +403,14 @@ const refreshToken = async (req, res) => {
   }
 };
 
-export { register, login, getProfile, updateProfile, changePassword, verifyEmail, refreshToken, forgotPassword, resetPassword };
+module.exports = {
+  register,
+  login,
+  getProfile,
+  updateProfile,
+  changePassword,
+  verifyEmail,
+  refreshToken,
+  forgotPassword,
+  resetPassword
+};
