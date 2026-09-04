@@ -1,5 +1,5 @@
-export {};
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+
 
 const paymentSchema = new mongoose.Schema({
   booking: {
@@ -29,7 +29,7 @@ const paymentSchema = new mongoose.Schema({
   },
   provider: {
     type: String,
-    enum: ['mock', 'stripe', 'esewa'],
+    enum: ['mock', 'stripe'],
     default: 'mock'
   },
   providerPaymentId: {
@@ -65,5 +65,5 @@ paymentSchema.index(
   }
 );
 
-module.exports = mongoose.model('Payment', paymentSchema);
+export default mongoose.model('Payment', paymentSchema);
 

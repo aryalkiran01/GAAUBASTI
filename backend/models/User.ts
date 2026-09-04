@@ -1,6 +1,6 @@
-export {};
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -85,7 +85,24 @@ const userSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
-  }
+  },
+  // Host verification system
+  hostVerificationStatus: {
+    type: String,
+    enum: ['none', 'pending', 'approved', 'rejected'],
+    default: 'none'
+  },
+  hostVerificationDocuments: [{
+    type: String,
+    url: String,
+    uploadedAt: { type: Date, default: Date.now }
+  }],
+  hostVerifiedAt: Date,
+  hostVerifiedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  hostVerificationNotes: String
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
@@ -136,4 +153,4 @@ userSchema.methods.toJSON = function(this: any) {
   return userObject;
 };
 
-module.exports = mongoose.model('User', userSchema);
+export default mongoose.model('User', userSchema);

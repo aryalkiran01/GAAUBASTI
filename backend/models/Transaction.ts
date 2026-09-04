@@ -1,5 +1,5 @@
-export {};
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+
 
 const transactionSchema = new mongoose.Schema({
   type: {
@@ -76,4 +76,4 @@ const transactionSchema = new mongoose.Schema({
 transactionSchema.index({ type: 1, createdAt: -1 });
 transactionSchema.index({ user: 1, createdAt: -1 });
 
-module.exports = mongoose.model('Transaction', transactionSchema);
+export default mongoose.model('Transaction', transactionSchema);

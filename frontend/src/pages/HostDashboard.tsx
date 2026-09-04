@@ -34,9 +34,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/EmptyState";
-import { Home, CalendarCheck, DollarSign, Plus, Pencil, Trash2, MessageSquare } from "lucide-react";
+import { Home, CalendarCheck, DollarSign, Plus, Pencil, Trash2, MessageSquare, UserCheck, Loader2 } from "lucide-react";
 import ListingDescriptionGenerator from "@/components/ai/ListingDescriptionGenerator";
 import PricingRecommendation from "@/components/ai/PricingRecommendation";
+import { hostVerificationAPI } from "@/lib/api";
 
 const HostDashboard = () => {
   const { user } = useAuth();
@@ -53,6 +54,18 @@ const HostDashboard = () => {
   const [isEditingOpen, setIsEditingOpen] = useState(false);
 
   const [isCreatingListing, setIsCreatingListing] = useState(false);
+  const [noShowBookingId, setNoShowBookingId] = useState<string | null>(null);
+  const [noShowReason, setNoShowReason] = useState("");
+  const [markingNoShow, setMarkingNoShow] = useState(false);
+  const [verificationOpen, setVerificationOpen] = useState(false);
+  const [verificationForm, setVerificationForm] = useState({
+    fullName: "",
+    idType: "citizenship",
+    idNumber: "",
+    address: "",
+    phoneNumber: "",
+  });
+  const [submittingVerification, setSubmittingVerification] = useState(false);
   const [newListing, setNewListing] = useState({
     title: "",
     description: "",
@@ -172,6 +185,46 @@ const HostDashboard = () => {
   const openEditDialog = (listing: Listing) => {
     setEditingListing({ ...listing });
     setIsEditingOpen(true);
+  };
+
+  const handleMarkNoShow = async () => {
+    if (!noShowBookingId) return;
+    setMarkingNoShow(true);
+    try {
+      const res = await bookingsAPI.markNoShow(noShowBookingId, noShowReason);
+      if (res.success) {
+        toast({ title: "Guest marked as no-show", description: "The booking has been updated." });
+        setNoShowBookingId(null);
+        setNoShowReason("");
+        const bookingsResponse = await bookingsAPI.getHostBookings();
+        if (bookingsResponse.success) setBookings(bookingsResponse.data.bookings);
+      } else {
+        toast({ variant: "destructive", title: "Failed", description: res.message });
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Failed", description: "Please try again." });
+    } finally {
+      setMarkingNoShow(false);
+    }
+  };
+
+  const handleSubmitVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmittingVerification(true);
+    try {
+      const res = await hostVerificationAPI.submitVerification(verificationForm);
+      if (res.success) {
+        toast({ title: "Verification submitted", description: "Our team will review your request within 2-3 business days." });
+        setVerificationOpen(false);
+        setVerificationForm({ fullName: "", idType: "citizenship", idNumber: "", address: "", phoneNumber: "" });
+      } else {
+        toast({ variant: "destructive", title: "Failed", description: res.message });
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Failed", description: "Please try again." });
+    } finally {
+      setSubmittingVerification(false);
+    }
   };
 
   const stats = [
@@ -489,6 +542,16 @@ const HostDashboard = () => {
                                 </DialogFooter>
                               </DialogContent>
                             </Dialog>
+                            {booking.status === "confirmed" && new Date(booking.startDate) <= new Date() && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-amber-700 hover:bg-amber-50"
+                                onClick={() => setNoShowBookingId(booking.id)}
+                              >
+                                No-show
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -514,6 +577,94 @@ const HostDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* No-show Dialog */}
+      <Dialog open={!!noShowBookingId} onOpenChange={(open) => { if (!open) { setNoShowBookingId(null); setNoShowReason(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-display">Mark guest as no-show</DialogTitle>
+            <DialogDescription>
+              This will mark the booking as completed with a no-show note. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="noshow-reason">Reason (optional)</Label>
+              <Textarea
+                id="noshow-reason"
+                value={noShowReason}
+                onChange={(e) => setNoShowReason(e.target.value)}
+                placeholder="e.g. Guest did not arrive, no communication..."
+                rows={3}
+                className="mt-1.5"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNoShowBookingId(null)}>Cancel</Button>
+            <Button onClick={handleMarkNoShow} disabled={markingNoShow} className="bg-amber-600 hover:bg-amber-700">
+              {markingNoShow ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+              Confirm No-show
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Host Verification Dialog */}
+      <Dialog open={verificationOpen} onOpenChange={setVerificationOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" className="fixed bottom-6 right-6 shadow-lg z-50">
+            <UserCheck className="h-4 w-4 mr-1.5" />
+            Get Verified
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-display">Host Verification</DialogTitle>
+            <DialogDescription>
+              Submit your details to become a verified host. Verified hosts get a badge and higher booking trust.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmitVerification} className="space-y-4">
+            <div>
+              <Label htmlFor="vf-name">Full legal name</Label>
+              <Input id="vf-name" value={verificationForm.fullName} onChange={(e) => setVerificationForm({ ...verificationForm, fullName: e.target.value })} required className="mt-1.5" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>ID type</Label>
+                <Select value={verificationForm.idType} onValueChange={(v) => setVerificationForm({ ...verificationForm, idType: v })}>
+                  <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="citizenship">Citizenship</SelectItem>
+                    <SelectItem value="passport">Passport</SelectItem>
+                    <SelectItem value="drivers_license">Driver's License</SelectItem>
+                    <SelectItem value="national_id">National ID</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="vf-idnum">ID number</Label>
+                <Input id="vf-idnum" value={verificationForm.idNumber} onChange={(e) => setVerificationForm({ ...verificationForm, idNumber: e.target.value })} required className="mt-1.5" />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="vf-address">Address</Label>
+              <Input id="vf-address" value={verificationForm.address} onChange={(e) => setVerificationForm({ ...verificationForm, address: e.target.value })} required className="mt-1.5" />
+            </div>
+            <div>
+              <Label htmlFor="vf-phone">Phone number</Label>
+              <Input id="vf-phone" value={verificationForm.phoneNumber} onChange={(e) => setVerificationForm({ ...verificationForm, phoneNumber: e.target.value })} required className="mt-1.5" />
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={submittingVerification}>
+                {submittingVerification ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+                Submit for Verification
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

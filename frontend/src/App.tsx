@@ -22,6 +22,9 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import ForgotPasswordPage from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Messages from "./pages/Messages";
+import Wishlist from "./pages/Wishlist";
+import HelpCenter from "./pages/HelpCenter";
+import SupportTickets from "./pages/SupportTickets";
 
 // Components
 import Navbar from "./components/Navbar";
@@ -55,6 +58,9 @@ const App = () => (
                 <Route path="/payment" element={<Payment />} />
                 <Route path="/payment-success" element={<PaymentSuccess />} />
                 <Route path="/messages" element={<Messages />} />
+                <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/help" element={<HelpCenter />} />
+                <Route path="/support" element={<SupportTickets />} />
                 <Route
                   path="/forgot-password"
                   element={<ForgotPasswordPage />}

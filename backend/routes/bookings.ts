@@ -1,21 +1,11 @@
-export {};
-const express = require('express');
+import express from 'express';
+import { createBooking, getUserBookings, getHostBookings, getBooking, updateBookingStatus, cancelBooking, markNoShow } from '../controllers/bookingController.js';
+import { authenticate } from '../middlewares/auth.js';
+import { requireHost, requireGuest, requireTraveler, requireAdmin } from '../middlewares/roleAuth.js';
+import { validateBooking, validateObjectId } from '../middlewares/validation.js';
+import { bookingCreateLimiter } from '../middlewares/rateLimiters.js';
+
 const router = express.Router();
-const {
-  createBooking,
-  getUserBookings,
-  getHostBookings,
-  getBooking,
-  updateBookingStatus,
-  cancelBooking
-} = require('../controllers/bookingController');
-const { authenticate } = require('../middlewares/auth');
-const { requireHost, requireGuest, requireTraveler } = require('../middlewares/roleAuth');
-const {
-  validateBooking,
-  validateObjectId
-} = require('../middlewares/validation');
-const { bookingCreateLimiter } = require('../middlewares/rateLimiters');
 
 // All routes require authentication
 router.use(authenticate);
@@ -29,5 +19,9 @@ router.patch('/:id/cancel', requireTraveler, validateObjectId('id'), cancelBooki
 // Host routes
 router.get('/host/bookings', requireHost, getHostBookings);
 router.patch('/:id/status', requireHost, validateObjectId('id'), updateBookingStatus);
+router.patch('/:id/no-show', requireHost, validateObjectId('id'), markNoShow);
 
-module.exports = router;
+// Admin routes
+router.patch('/:id/admin-no-show', requireAdmin, validateObjectId('id'), markNoShow);
+
+export default router;

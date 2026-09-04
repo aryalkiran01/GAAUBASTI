@@ -1,9 +1,9 @@
-export {};
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const { requireAdmin, requireOwnership } = require('../middlewares/roleAuth');
-const { requireOwnershipOrAdmin } = require('../middlewares/auth');
-const { sanitizeListingPayloadForUpdate } = require('../controllers/listingController');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { requireAdmin, requireOwnership } from '../middlewares/roleAuth.js';
+import { requireOwnershipOrAdmin } from '../middlewares/auth.js';
+import { sanitizeListingPayloadForUpdate } from '../controllers/listingController.js';
+
 
 const createRes = () => ({
   code: null,

@@ -1,12 +1,12 @@
-export {};
-const express = require('express');
+import express from 'express';
+import { authenticate } from '../middlewares/auth.js';
+import { toggleWishlist, getWishlist, removeWishlistItem } from '../controllers/wishlistController.js';
+
 const router = express.Router();
-const { authenticate } = require('../middlewares/auth');
-const { toggleWishlist, getWishlist, removeWishlistItem } = require('../controllers/wishlistController');
 
 router.use(authenticate);
 router.post('/', toggleWishlist);
 router.get('/', getWishlist);
 router.delete('/:listingId', removeWishlistItem);
 
-module.exports = router;
+export default router;

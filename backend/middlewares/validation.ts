@@ -1,5 +1,5 @@
-export {};
-const { body, param, query, validationResult } = require('express-validator');
+import { body, param, query, validationResult } from 'express-validator';
+
 
 // Handle validation errors
 const handleValidationErrors = (req, res, next) => {
@@ -39,8 +39,8 @@ const validateUserRegistration = [
 
   body('role')
     .optional()
-    .isIn(['guest', 'host'])
-    .withMessage('Role must be either guest or host'),
+    .isIn(['guest', 'host', 'admin'])
+    .withMessage('Role must be either guest, host, or admin'),
 
   handleValidationErrors
 ];
@@ -233,14 +233,4 @@ const validateListingQuery = [
   handleValidationErrors
 ];
 
-module.exports = {
-  handleValidationErrors,
-  validateUserRegistration,
-  validateUserLogin,
-  validateListing,
-  validateBooking,
-  validateReview,
-  validateObjectId,
-  validateListingQuery
-};
-
+export { handleValidationErrors, validateUserRegistration, validateUserLogin, validateListing, validateBooking, validateReview, validateObjectId, validateListingQuery };

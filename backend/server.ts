@@ -1,31 +1,33 @@
-export {};
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
-const rateLimit = require('express-rate-limit');
-const { Server } = require('socket.io');
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
-const { globalLimiter } = require('./middlewares/rateLimiters');
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import rateLimit from 'express-rate-limit';
+import jwt from 'jsonwebtoken';
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/users.js';
+import listingRoutes from './routes/listings.js';
+import bookingRoutes from './routes/bookings.js';
+import reviewRoutes from './routes/reviews.js';
+import adminRoutes from './routes/admin.js';
+import paymentRoutes from './routes/payments.js';
+import conversationRoutes from './routes/conversations.js';
+import notificationRoutes from './routes/notifications.js';
+import articleRoutes from './routes/articles.js';
+import reportRoutes from './routes/reports.js';
+import wishlistRoutes from './routes/wishlist.js';
+import payoutRoutes from './routes/payouts.js';
+import supportTicketRoutes from './routes/supportTickets.js';
+import disputeRoutes from './routes/disputes.js';
+import errorHandler from './middlewares/errorHandler.js';
+import { Server } from 'socket.io';
+import { globalLimiter } from './middlewares/rateLimiters.js';
+
+
+import 'dotenv/config';
 
 // Import routes and middleware
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const listingRoutes = require('./routes/listings');
-const bookingRoutes = require('./routes/bookings');
-const reviewRoutes = require('./routes/reviews');
-const adminRoutes = require('./routes/admin');
-const paymentRoutes = require('./routes/payments');
-const conversationRoutes = require('./routes/conversations');
-const notificationRoutes = require('./routes/notifications');
-const articleRoutes = require('./routes/articles');
-const reportRoutes = require('./routes/reports');
-const wishlistRoutes = require('./routes/wishlist');
-const payoutRoutes = require('./routes/payouts');
-const aiRoutes = require('./routes/ai');
-const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 
@@ -125,7 +127,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/payouts', payoutRoutes);
-app.use('/api/ai', aiRoutes);
+app.use('/api/support-tickets', supportTicketRoutes);
+app.use('/api/disputes', disputeRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -177,8 +180,6 @@ const initializeSocketIO = (httpServer) => {
   });
 
   io.on('connection', (socket) => {
-    socket.join(`user:${socket.user._id}`);
-
     socket.on('joinConversation', (conversationId) => {
       if (conversationId) {
         socket.join(String(conversationId));
@@ -268,5 +269,4 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1);
 });
 
-module.exports = app;
-
+export default app;

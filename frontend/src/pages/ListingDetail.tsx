@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import AvailabilityChecker from "@/components/AvailabilityChecker";
 import ReviewSection from "@/components/ReviewSection";
 import ReviewSummary from "@/components/ai/ReviewSummary";
+import ReportDialog from "@/components/ReportDialog";
 
 const ListingDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -253,6 +254,9 @@ const ListingDetail = () => {
                 <Button variant="outline" size="sm" onClick={handleMessageHost}>
                   Message host
                 </Button>
+              )}
+              {user && (
+                <ReportDialog entityType="listing" entityId={listing.id} />
               )}
             </div>
           </div>
