@@ -306,6 +306,22 @@ export const conversationsAPI = {
       body: JSON.stringify(payload),
     });
   },
+
+  markMessagesRead: async (conversationId: string) => {
+    return await apiRequest(`/conversations/${conversationId}/read`, {
+      method: "PATCH",
+    });
+  },
+
+  getUnreadCounts: async () => {
+    return await apiRequest("/conversations/unread-counts");
+  },
+};
+
+export const payoutsAPI = {
+  getMyPayouts: async () => {
+    return await apiRequest("/payouts");
+  },
 };
 
 export const notificationsAPI = {

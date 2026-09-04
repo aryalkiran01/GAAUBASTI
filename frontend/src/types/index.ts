@@ -48,8 +48,11 @@ export interface Booking {
   startDate: Date | string;
   endDate: Date | string;
   totalPrice: number;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'refunded';
   paymentStatus?: 'pending' | 'paid' | 'failed' | 'refunded';
+  cancellationReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
   guests?: {
     adults: number;
     children: number;
@@ -62,7 +65,7 @@ export interface Booking {
   };
 }
 
-export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed' | 'refunded';
 
 export interface PaymentDetails {
   bookingId?: string;
@@ -106,6 +109,7 @@ export interface Conversation {
   listing?: string | Listing;
   booking?: string;
   lastMessageAt?: string | Date;
+  unreadCount?: Record<string, number>;
 }
 
 export interface Message {
@@ -115,6 +119,8 @@ export interface Message {
   sender?: User & { _id?: string };
   body?: string;
   attachments?: string[];
+  readBy?: string[];
+  systemType?: string | null;
   createdAt?: string;
 }
 

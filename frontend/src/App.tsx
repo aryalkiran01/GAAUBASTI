@@ -22,6 +22,7 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import ForgotPasswordPage from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Messages from "./pages/Messages";
+import Wishlist from "./pages/Wishlist";
 
 // Components
 import Navbar from "./components/Navbar";
@@ -55,6 +56,7 @@ const App = () => (
                 <Route path="/payment" element={<Payment />} />
                 <Route path="/payment-success" element={<PaymentSuccess />} />
                 <Route path="/messages" element={<Messages />} />
+                <Route path="/wishlist" element={<Wishlist />} />
                 <Route
                   path="/forgot-password"
                   element={<ForgotPasswordPage />}

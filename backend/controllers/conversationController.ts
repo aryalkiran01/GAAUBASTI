@@ -2,7 +2,7 @@ export {};
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Listing = require('../models/Listing');
-const { notifyUsers, notifyNewMessage } = require('../utils/notifications');
+const { notifyNewMessage } = require('../utils/notifications');
 
 const normalizeParticipants = (participants = [], currentUserId) => {
   const ids = participants
@@ -172,9 +172,52 @@ const sendMessage = async (req, res) => {
   }
 };
 
+const markMessagesRead = async (req, res) => {
+  try {
+    const conversation = await Conversation.findById(req.params.id);
+    if (!conversation) {
+      return res.status(404).json({ success: false, message: 'Conversation not found' });
+    }
+
+    if (!conversation.participants.some((p) => p.toString() === req.user._id.toString())) {
+      return res.status(403).json({ success: false, message: 'You do not belong to this conversation' });
+    }
+
+    await Message.updateMany(
+      { conversation: conversation._id, readBy: { $ne: req.user._id } },
+      { $addToSet: { readBy: req.user._id } }
+    );
+
+    res.json({ success: true, message: 'Messages marked as read' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to mark messages as read' });
+  }
+};
+
+const getUnreadCounts = async (req, res) => {
+  try {
+    const conversations = await Conversation.find({ participants: req.user._id }).select('_id');
+    const counts = {};
+    for (const conv of conversations) {
+      const count = await Message.countDocuments({
+        conversation: conv._id,
+        readBy: { $ne: req.user._id },
+        sender: { $ne: req.user._id },
+      });
+      if (count > 0) counts[conv._id.toString()] = count;
+    }
+    const total = (Object.values(counts) as number[]).reduce((sum, n) => sum + n, 0);
+    res.json({ success: true, data: { perConversation: counts, total } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch unread counts' });
+  }
+};
+
 module.exports = {
   getConversations,
   getOrCreateConversation,
   getMessages,
-  sendMessage
+  sendMessage,
+  markMessagesRead,
+  getUnreadCounts
 };

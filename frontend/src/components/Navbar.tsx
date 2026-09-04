@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, Menu, Bell, CheckCheck } from "lucide-react";
+import { LogOut, User, Menu, Bell, CheckCheck, Heart } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { notificationsAPI } from "@/lib/api";
 
@@ -163,6 +163,12 @@ export default function Navbar() {
                 <Button variant="outline" size="sm">Messages</Button>
               </Link>
 
+              <Link to="/wishlist">
+                <Button variant="outline" size="sm" className="px-2">
+                  <Heart className="h-4 w-4" />
+                </Button>
+              </Link>
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -272,6 +278,14 @@ export default function Navbar() {
                 >
                   <Bell className="mr-2 h-4 w-4" />
                   Messages {unreadCount > 0 && `(${unreadCount})`}
+                </Link>
+                <Link
+                  to="/wishlist"
+                  className="flex items-center text-sm font-medium hover:text-gaun-green"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Heart className="mr-2 h-4 w-4" />
+                  Saved Listings
                 </Link>
                 {user.role === "admin" && (
                   <Link 

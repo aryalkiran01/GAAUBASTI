@@ -179,7 +179,8 @@ const initializeSocketIO = (httpServer) => {
   io.on('connection', (socket) => {
     socket.join(`user:${socket.user._id}`);
 
-    socket.on('joinConversation', (conversationId) => {
+    socket.on('joinConversation', (payload) => {
+      const conversationId = typeof payload === 'string' ? payload : payload?.conversationId;
       if (conversationId) {
         socket.join(String(conversationId));
       }

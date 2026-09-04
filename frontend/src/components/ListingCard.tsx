@@ -1,14 +1,25 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Listing } from "../types";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star, MapPin, Bed, Bath, Users } from "lucide-react";
+import { Star, MapPin, Bed, Bath, Users, Heart } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { listingsAPI } from "@/lib/api";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ListingCardProps {
   listing: Listing;
+  saved?: boolean;
+  onToggleSave?: (listingId: string, saved: boolean) => void;
 }
 
-export default function ListingCard({ listing }: ListingCardProps) {
+export default function ListingCard({ listing, saved: savedProp, onToggleSave }: ListingCardProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [saved, setSaved] = useState(savedProp || false);
+  const [toggling, setToggling] = useState(false);
+
   const getImageUrl = (images: string[] | Array<{url: string}>) => {
     if (Array.isArray(images) && images.length > 0) {
       return typeof images[0] === 'string' ? images[0] : images[0].url;
@@ -17,10 +28,37 @@ export default function ListingCard({ listing }: ListingCardProps) {
   };
 
   const getLocationString = (location: string | {city: string; state?: string; country: string}) => {
-    if (typeof location === 'string') {
-      return location;
-    }
+    if (typeof location === 'string') return location;
     return `${location.city}${location.state ? `, ${location.state}` : ''}, ${location.country}`;
+  };
+
+  const handleToggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      toast({ variant: "destructive", title: "Please log in", description: "You need to be logged in to save listings." });
+      return;
+    }
+    if (toggling) return;
+    setToggling(true);
+    const wasSaved = saved;
+    setSaved(!wasSaved);
+    try {
+      const res = await listingsAPI.toggleWishlist(listing.id);
+      if (!res.success) {
+        setSaved(wasSaved);
+        toast({ variant: "destructive", title: "Failed to update wishlist", description: res.message || "Please try again." });
+        return;
+      }
+      const nowSaved = res.data?.saved ?? !wasSaved;
+      setSaved(nowSaved);
+      if (onToggleSave) onToggleSave(listing.id, nowSaved);
+    } catch {
+      setSaved(wasSaved);
+      toast({ variant: "destructive", title: "Failed to update wishlist", description: "Network error. Please try again." });
+    } finally {
+      setToggling(false);
+    }
   };
 
   return (
@@ -38,6 +76,17 @@ export default function ListingCard({ listing }: ListingCardProps) {
               <span className="text-muted-foreground font-normal"> / night</span>
             </Badge>
           </div>
+          {user && (
+            <button
+              type="button"
+              onClick={handleToggleWishlist}
+              disabled={toggling}
+              className="absolute top-3 right-3 rounded-full bg-white/90 p-1.5 shadow-sm transition hover:scale-110 disabled:opacity-50"
+              aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
+            >
+              <Heart className={`w-4 h-4 ${saved ? "fill-red-500 text-red-500" : "text-gray-600"}`} />
+            </button>
+          )}
         </div>
         <div className="p-4 md:p-5">
           <div className="flex items-start justify-between gap-2 mb-1.5">

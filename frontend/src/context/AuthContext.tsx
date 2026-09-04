@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { User } from "../types";
 import { authAPI, getAuthToken, removeAuthToken } from "../lib/api";
 import { useToast } from "@/components/ui/use-toast";
+import { useSocket } from "../hooks/useSocket";
 
 interface AuthContextType {
   user: User | null;
@@ -41,6 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
+  useSocket(!!user, user?.id);
 
   useEffect(() => {
     const initializeAuth = async () => {
