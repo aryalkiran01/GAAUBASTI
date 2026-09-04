@@ -74,11 +74,4 @@ const requireOwnership = (Model, resourceField = 'host') => {
   };
 };
 
-export {
-  requireRole,
-  requireAdmin,
-  requireHost,
-  requireGuest,
-  requireTraveler,
-  requireOwnership
-};
+export { requireRole, requireAdmin, requireHost, requireGuest, requireTraveler, requireOwnership };

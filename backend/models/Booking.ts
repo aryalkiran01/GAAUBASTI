@@ -1,5 +1,5 @@
-export {};
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+
 
 const bookingSchema = new mongoose.Schema({
   listing: {
@@ -164,4 +164,4 @@ bookingSchema.methods.calculateRefund = function(this: any, cancellationPolicy =
   }
 };
 
-module.exports = mongoose.model('Booking', bookingSchema);
+export default mongoose.model('Booking', bookingSchema);

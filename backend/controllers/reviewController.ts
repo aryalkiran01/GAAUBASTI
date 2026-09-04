@@ -1,7 +1,7 @@
-export {};
-const Review = require('../models/Review');
-const Booking = require('../models/Booking');
-const Listing = require('../models/Listing');
+import Review from '../models/Review.js';
+import Booking from '../models/Booking.js';
+import Listing from '../models/Listing.js';
+
 
 // Create new review
 const createReview = async (req, res) => {
@@ -329,12 +329,4 @@ const flagReview = async (req, res) => {
   }
 };
 
-module.exports = {
-  createReview,
-  getListingReviews,
-  getUserReviews,
-  updateReview,
-  deleteReview,
-  respondToReview,
-  flagReview
-};
+export { createReview, getListingReviews, getUserReviews, updateReview, deleteReview, respondToReview, flagReview };

@@ -1,8 +1,9 @@
 import express from 'express';
-const router = express.Router();
 import User from '../models/User.js';
 import { authenticate, requireOwnershipOrAdmin } from '../middlewares/auth.js';
 import { validateObjectId } from '../middlewares/validation.js';
+
+const router = express.Router();
 
 // Get user profile by ID (public info only)
 router.get('/:id', validateObjectId('id'), async (req, res) => {

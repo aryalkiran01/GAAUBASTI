@@ -1,7 +1,6 @@
-export {};
-const Payout = require('../models/Payout');
-const User = require('../models/User');
-const { notifyPayoutCreated } = require('../utils/notifications');
+import Payout from '../models/Payout.js';
+import User from '../models/User.js';
+
 
 const getMyPayouts = async (req, res) => {
   try {
@@ -38,15 +37,10 @@ const createPayout = async (req, res) => {
       status: 'pending'
     });
 
-    notifyPayoutCreated({ payout, host }).catch(() => {});
-
     res.status(201).json({ success: true, data: { payout } });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to create payout', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 };
 
-module.exports = {
-  getMyPayouts,
-  createPayout
-};
+export { getMyPayouts, createPayout };

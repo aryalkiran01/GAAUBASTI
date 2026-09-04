@@ -1,5 +1,6 @@
 import AuditLog from '../models/AuditLog.js';
 
+
 const logAdminAction = async ({ actor, action, targetType, targetId, before = {}, after = {} }) => {
   if (!actor || !action || !targetType || !targetId) {
     return null;
@@ -15,6 +16,4 @@ const logAdminAction = async ({ actor, action, targetType, targetId, before = {}
   });
 };
 
-export {
-  logAdminAction
-};
+export { logAdminAction };

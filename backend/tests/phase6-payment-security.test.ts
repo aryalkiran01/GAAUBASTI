@@ -1,9 +1,9 @@
-export {};
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const Booking = require('../models/Booking');
-const Payment = require('../models/Payment');
-const { ensureBookingIsPayable, verifyPaymentOwnership, normalizeAmount } = require('../controllers/paymentController');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import Booking from '../models/Booking.js';
+import Payment from '../models/Payment.js';
+import { ensureBookingIsPayable, verifyPaymentOwnership, normalizeAmount } from '../controllers/paymentController.js';
+
 
 test('normalizeAmount accepts numeric strings', () => {
   assert.equal(normalizeAmount('125.5'), 125.5);

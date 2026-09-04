@@ -1,9 +1,9 @@
-export {};
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const errorHandler = require('../middlewares/errorHandler');
-const { getConfiguredPaymentProvider } = require('../controllers/paymentController');
-const { createReport } = require('../controllers/reportController');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import errorHandler from '../middlewares/errorHandler.js';
+import { getConfiguredPaymentProvider } from '../controllers/paymentController.js';
+import { createReport } from '../controllers/reportController.js';
+
 
 const createRes = () => ({
   statusCode: null as number | null,

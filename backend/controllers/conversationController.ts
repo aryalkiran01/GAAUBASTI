@@ -1,8 +1,8 @@
-export {};
-const Conversation = require('../models/Conversation');
-const Message = require('../models/Message');
-const Listing = require('../models/Listing');
-const { notifyNewMessage } = require('../utils/notifications');
+import Conversation from '../models/Conversation.js';
+import Message from '../models/Message.js';
+import Listing from '../models/Listing.js';
+import { notifyUsers } from '../utils/notifications.js';
+
 
 const normalizeParticipants = (participants = [], currentUserId) => {
   const ids = participants
@@ -87,137 +87,50 @@ const sendMessage = async (req, res) => {
   try {
     const conversation = await Conversation.findById(req.params.id);
     if (!conversation) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Conversation not found" });
+      return res.status(404).json({ success: false, message: 'Conversation not found' });
     }
 
-    const isParticipant = conversation.participants.some(
-      (participant) => participant.toString() === req.user._id.toString(),
-    );
+    const isParticipant = conversation.participants.some((participant) => participant.toString() === req.user._id.toString());
     if (!isParticipant) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "You do not belong to this conversation",
-        });
+      return res.status(403).json({ success: false, message: 'You do not belong to this conversation' });
     }
 
     const { body, attachments = [] } = req.body;
-    if (
-      (!body || !String(body).trim()) &&
-      (!Array.isArray(attachments) || attachments.length === 0)
-    ) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Message body or attachment is required",
-        });
+    if ((!body || !String(body).trim()) && (!Array.isArray(attachments) || attachments.length === 0)) {
+      return res.status(400).json({ success: false, message: 'Message body or attachment is required' });
     }
 
     const message = await Message.create({
       conversation: conversation._id,
       sender: req.user._id,
-      body: body ? String(body).trim() : "",
-      attachments: Array.isArray(attachments)
-        ? attachments.filter(Boolean)
-        : [],
-      readBy: [req.user._id],
+      body: body ? String(body).trim() : '',
+      attachments: Array.isArray(attachments) ? attachments.filter(Boolean) : [],
+      readBy: [req.user._id]
     });
 
     conversation.lastMessageAt = new Date();
     await conversation.save();
 
-    await message.populate("sender", "name avatar role");
-    const recipientIds = conversation.participants.filter(
-      (participant) => participant.toString() !== req.user._id.toString(),
-    );
-
-    const User = require("../models/User");
-    const senderUser = await User.findById(req.user._id).select("name");
-
-    // Send individual notification with proper message field to each recipient
-    for (const recipientId of recipientIds) {
-      const recipient = await User.findById(recipientId).select("name email");
-      if (recipient && senderUser) {
-        await notifyNewMessage({
-          conversation,
-          sender: senderUser,
-          recipient,
-        }).catch((err) => {
-          console.error("Failed to send notification:", err);
-        });
-      }
-    }
+    await message.populate('sender', 'name avatar role');
+    const recipientIds = conversation.participants.filter((participant) => participant.toString() !== req.user._id.toString());
+    await notifyUsers(recipientIds, 'new_message', {
+      conversationId: conversation._id,
+      senderId: req.user._id,
+      messageId: message._id,
+      preview: message.body || 'Sent a file'
+    });
 
     if (global.io) {
-      global.io.to(conversation._id.toString()).emit("message:new", {
+      global.io.to(conversation._id.toString()).emit('message:new', {
         conversationId: conversation._id,
-        message: { ...message.toObject(), sender: message.sender },
+        message: { ...message.toObject(), sender: message.sender }
       });
     }
 
     res.status(201).json({ success: true, data: { message } });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to send message",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
+    res.status(500).json({ success: false, message: 'Failed to send message', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 };
 
-const markMessagesRead = async (req, res) => {
-  try {
-    const conversation = await Conversation.findById(req.params.id);
-    if (!conversation) {
-      return res.status(404).json({ success: false, message: 'Conversation not found' });
-    }
-
-    if (!conversation.participants.some((p) => p.toString() === req.user._id.toString())) {
-      return res.status(403).json({ success: false, message: 'You do not belong to this conversation' });
-    }
-
-    await Message.updateMany(
-      { conversation: conversation._id, readBy: { $ne: req.user._id } },
-      { $addToSet: { readBy: req.user._id } }
-    );
-
-    res.json({ success: true, message: 'Messages marked as read' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to mark messages as read' });
-  }
-};
-
-const getUnreadCounts = async (req, res) => {
-  try {
-    const conversations = await Conversation.find({ participants: req.user._id }).select('_id');
-    const counts = {};
-    for (const conv of conversations) {
-      const count = await Message.countDocuments({
-        conversation: conv._id,
-        readBy: { $ne: req.user._id },
-        sender: { $ne: req.user._id },
-      });
-      if (count > 0) counts[conv._id.toString()] = count;
-    }
-    const total = (Object.values(counts) as number[]).reduce((sum, n) => sum + n, 0);
-    res.json({ success: true, data: { perConversation: counts, total } });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to fetch unread counts' });
-  }
-};
-
-module.exports = {
-  getConversations,
-  getOrCreateConversation,
-  getMessages,
-  sendMessage,
-  markMessagesRead,
-  getUnreadCounts
-};
+export { getConversations, getOrCreateConversation, getMessages, sendMessage };

@@ -1,5 +1,5 @@
-export {};
-const Report = require('../models/Report');
+import Report from '../models/Report.js';
+
 
 const createReport = async (req, res) => {
   try {
@@ -117,8 +117,4 @@ const updateReportStatus = async (req, res) => {
   }
 };
 
-module.exports = {
-  createReport,
-  getReports,
-  updateReportStatus
-};
+export { createReport, getReports, updateReportStatus };

@@ -1,7 +1,8 @@
 import express from 'express';
-const router = express.Router();
 import { authenticate, requireAdmin } from '../middlewares/auth.js';
 import { getArticles, getArticleBySlug, createArticle, updateArticle, deleteArticle } from '../controllers/articleController.js';
+
+const router = express.Router();
 
 router.get('/', getArticles);
 router.get('/:slug', getArticleBySlug);

@@ -1,10 +1,12 @@
-export {};
-const User = require("../models/User");
-const Listing = require("../models/Listing");
-const Booking = require("../models/Booking");
-const Review = require("../models/Review");
-const AuditLog = require("../models/AuditLog");
-const Report = require("../models/Report");
+import User from '../models/User.js';
+import Listing from '../models/Listing.js';
+import Booking from '../models/Booking.js';
+import Review from '../models/Review.js';
+import AuditLog from '../models/AuditLog.js';
+import Report from '../models/Report.js';
+import Transaction from '../models/Transaction.js';
+import { getSuspiciousListings, moderateListing, getPendingHostVerifications, reviewHostVerification } from '../services/suspiciousListingService.js';
+
 
 // Get dashboard statistics
 const getDashboardStats = async (req, res) => {
@@ -17,43 +19,26 @@ const getDashboardStats = async (req, res) => {
       pendingListings,
       flaggedReviews,
       recentUsers,
-      recentBookings,
+      recentBookings
     ] = await Promise.all([
       User.countDocuments({ isActive: true }),
-
       Listing.countDocuments({ isActive: true }),
-
       Booking.countDocuments(),
-
       Booking.aggregate([
-        { $match: { status: "completed" } },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: "$totalPrice" },
-          },
-        },
+        { $match: { status: 'completed' } },
+        { $group: { _id: null, total: { $sum: '$totalPrice' } } }
       ]),
-
-      Listing.countDocuments({
-        isVerified: false,
-        isActive: true,
-      }),
-
-      Review.countDocuments({
-        isFlagged: true,
-      }),
-
+      Listing.countDocuments({ isVerified: false, isActive: true }),
+      Review.countDocuments({ isFlagged: true }),
       User.find({ isActive: true })
         .sort({ createdAt: -1 })
         .limit(5)
-        .select("name email role createdAt"),
-
+        .select('name email role createdAt'),
       Booking.find()
-        .populate("listing", "title")
-        .populate("guest", "name")
+        .populate('listing', 'title')
+        .populate('guest', 'name')
         .sort({ createdAt: -1 })
-        .limit(5),
+        .limit(5)
     ]);
 
     const revenue = totalRevenue.length > 0 ? totalRevenue[0].total : 0;
@@ -67,19 +52,19 @@ const getDashboardStats = async (req, res) => {
           totalBookings,
           totalRevenue: revenue,
           pendingListings,
-          flaggedReviews,
+          flaggedReviews
         },
         recentActivity: {
           recentUsers,
-          recentBookings,
-        },
-      },
+          recentBookings
+        }
+      }
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: "Failed to fetch dashboard stats",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: 'Failed to fetch dashboard stats',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -94,8 +79,8 @@ const getAllUsers = async (req, res) => {
     if (role) filter.role = role;
     if (search) {
       filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -104,7 +89,7 @@ const getAllUsers = async (req, res) => {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
-      User.countDocuments(filter),
+      User.countDocuments(filter)
     ]);
 
     res.json({
@@ -114,15 +99,15 @@ const getAllUsers = async (req, res) => {
         pagination: {
           currentPage: parseInt(page),
           totalPages: Math.ceil(total / parseInt(limit)),
-          totalUsers: total,
-        },
-      },
+          totalUsers: total
+        }
+      }
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: "Failed to fetch users",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: 'Failed to fetch users',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -131,30 +116,30 @@ const getAllUsers = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { name, email, role, isActive, isVerified } = req.body;
-
+    
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { name, email, role, isActive, isVerified },
-      { new: true, runValidators: true },
+      { new: true, runValidators: true }
     );
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: 'User not found'
       });
     }
 
     res.json({
       success: true,
-      message: "User updated successfully",
-      data: { user },
+      message: 'User updated successfully',
+      data: { user }
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: "Failed to update user",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: 'Failed to update user',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -166,23 +151,23 @@ const getAllListings = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const filter: any = {};
-    if (status === "pending") filter.isVerified = false;
-    if (status === "verified") filter.isVerified = true;
-    if (status === "inactive") filter.isActive = false;
+    if (status === 'pending') filter.isVerified = false;
+    if (status === 'verified') filter.isVerified = true;
+    if (status === 'inactive') filter.isActive = false;
     if (search) {
       filter.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { "location.city": { $regex: search, $options: "i" } },
+        { title: { $regex: search, $options: 'i' } },
+        { 'location.city': { $regex: search, $options: 'i' } }
       ];
     }
 
     const [listings, total] = await Promise.all([
       Listing.find(filter)
-        .populate("host", "name email")
+        .populate('host', 'name email')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
-      Listing.countDocuments(filter),
+      Listing.countDocuments(filter)
     ]);
 
     res.json({
@@ -192,15 +177,15 @@ const getAllListings = async (req, res) => {
         pagination: {
           currentPage: parseInt(page),
           totalPages: Math.ceil(total / parseInt(limit)),
-          totalListings: total,
-        },
-      },
+          totalListings: total
+        }
+      }
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: "Failed to fetch listings",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: 'Failed to fetch listings',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -210,10 +195,10 @@ const verifyListing = async (req, res) => {
   try {
     const { isVerified, notes } = req.body;
 
-    if (typeof isVerified !== "boolean") {
+    if (typeof isVerified !== 'boolean') {
       return res.status(400).json({
         success: false,
-        message: "isVerified must be a boolean",
+        message: 'isVerified must be a boolean'
       });
     }
 
@@ -221,7 +206,7 @@ const verifyListing = async (req, res) => {
     if (!listing) {
       return res.status(404).json({
         success: false,
-        message: "Listing not found",
+        message: 'Listing not found'
       });
     }
 
@@ -231,18 +216,18 @@ const verifyListing = async (req, res) => {
     if (notes) listing.adminNotes = notes;
 
     await listing.save();
-    await listing.populate("host", "name email");
+    await listing.populate('host', 'name email');
 
     res.json({
       success: true,
-      message: `Listing ${isVerified ? "verified" : "rejected"} successfully`,
-      data: { listing },
+      message: `Listing ${isVerified ? 'verified' : 'rejected'} successfully`,
+      data: { listing }
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: "Failed to verify listing",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: 'Failed to verify listing',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -258,13 +243,13 @@ const getAllBookings = async (req, res) => {
 
     const [bookings, total] = await Promise.all([
       Booking.find(filter)
-        .populate("listing", "title location")
-        .populate("guest", "name email")
-        .populate("host", "name email")
+        .populate('listing', 'title location')
+        .populate('guest', 'name email')
+        .populate('host', 'name email')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
-      Booking.countDocuments(filter),
+      Booking.countDocuments(filter)
     ]);
 
     res.json({
@@ -274,15 +259,15 @@ const getAllBookings = async (req, res) => {
         pagination: {
           currentPage: parseInt(page),
           totalPages: Math.ceil(total / parseInt(limit)),
-          totalBookings: total,
-        },
-      },
+          totalBookings: total
+        }
+      }
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: "Failed to fetch bookings",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: 'Failed to fetch bookings',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -295,12 +280,12 @@ const getFlaggedReviews = async (req, res) => {
 
     const [reviews, total] = await Promise.all([
       Review.find({ isFlagged: true })
-        .populate("guest", "name email")
-        .populate("listing", "title")
+        .populate('guest', 'name email')
+        .populate('listing', 'title')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
-      Review.countDocuments({ isFlagged: true }),
+      Review.countDocuments({ isFlagged: true })
     ]);
 
     res.json({
@@ -310,15 +295,15 @@ const getFlaggedReviews = async (req, res) => {
         pagination: {
           currentPage: parseInt(page),
           totalPages: Math.ceil(total / parseInt(limit)),
-          totalReviews: total,
-        },
-      },
+          totalReviews: total
+        }
+      }
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: "Failed to fetch flagged reviews",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: 'Failed to fetch flagged reviews',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -328,10 +313,10 @@ const moderateReview = async (req, res) => {
   try {
     const { action, reason } = req.body;
 
-    if (!["approve", "remove"].includes(action)) {
+    if (!['approve', 'remove'].includes(action)) {
       return res.status(400).json({
         success: false,
-        message: "Action must be approve or remove",
+        message: 'Action must be approve or remove'
       });
     }
 
@@ -339,16 +324,16 @@ const moderateReview = async (req, res) => {
     if (!review) {
       return res.status(404).json({
         success: false,
-        message: "Review not found",
+        message: 'Review not found'
       });
     }
 
-    if (action === "approve") {
+    if (action === 'approve') {
       review.isFlagged = false;
       review.flagReason = reason || null;
       review.isVerified = true;
       review.isPublic = true;
-    } else if (action === "remove") {
+    } else if (action === 'remove') {
       review.isPublic = false;
       review.isFlagged = false;
       review.flagReason = reason || null;
@@ -362,13 +347,13 @@ const moderateReview = async (req, res) => {
     res.json({
       success: true,
       message: `Review ${action}d successfully`,
-      data: { review },
+      data: { review }
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: "Failed to moderate review",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: 'Failed to moderate review',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -376,118 +361,123 @@ const moderateReview = async (req, res) => {
 // Get platform analytics
 const getAnalytics = async (req, res) => {
   try {
-    const { period = "30d" } = req.query;
-
+    const { period = '30d' } = req.query;
+    
     // Calculate date range
     const endDate = new Date();
     const startDate = new Date();
-
+    
     switch (period) {
-      case "7d":
+      case '7d':
         startDate.setDate(endDate.getDate() - 7);
         break;
-      case "30d":
+      case '30d':
         startDate.setDate(endDate.getDate() - 30);
         break;
-      case "90d":
+      case '90d':
         startDate.setDate(endDate.getDate() - 90);
         break;
-      case "1y":
+      case '1y':
         startDate.setFullYear(endDate.getFullYear() - 1);
         break;
       default:
         startDate.setDate(endDate.getDate() - 30);
     }
 
-    const [userGrowth, bookingTrends, revenueData, topListings, locationStats] =
-      await Promise.all([
-        // User growth over time
-        User.aggregate([
-          {
-            $match: {
-              createdAt: { $gte: startDate, $lte: endDate },
+    const [
+      userGrowth,
+      bookingTrends,
+      revenueData,
+      topListings,
+      locationStats
+    ] = await Promise.all([
+      // User growth over time
+      User.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: startDate, $lte: endDate }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
             },
-          },
-          {
-            $group: {
-              _id: {
-                $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
-              },
-              count: { $sum: 1 },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ]),
+      
+      // Booking trends
+      Booking.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: startDate, $lte: endDate }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
             },
-          },
-          { $sort: { _id: 1 } },
-        ]),
-
-        // Booking trends
-        Booking.aggregate([
-          {
-            $match: {
-              createdAt: { $gte: startDate, $lte: endDate },
-            },
-          },
-          {
-            $group: {
-              _id: {
-                $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
-              },
-              bookings: { $sum: 1 },
-              revenue: { $sum: "$totalPrice" },
-            },
-          },
-          { $sort: { _id: 1 } },
-        ]),
-
-        // Revenue by status
-        Booking.aggregate([
-          {
-            $match: {
-              createdAt: { $gte: startDate, $lte: endDate },
-            },
-          },
-          {
-            $group: {
-              _id: "$status",
-              count: { $sum: 1 },
-              revenue: { $sum: "$totalPrice" },
-            },
-          },
-        ]),
-
-        // Top performing listings
-        Listing.find({ isActive: true, isVerified: true })
-          .sort({ averageRating: -1, reviewCount: -1 })
-          .limit(10)
-          .select("title location averageRating reviewCount totalBookings")
-          .populate("host", "name"),
-
-        // Bookings by location
-        Booking.aggregate([
-          {
-            $match: {
-              createdAt: { $gte: startDate, $lte: endDate },
-            },
-          },
-          {
-            $lookup: {
-              from: "listings",
-              localField: "listing",
-              foreignField: "_id",
-              as: "listingData",
-            },
-          },
-          { $unwind: "$listingData" },
-          {
-            $group: {
-              _id: "$listingData.location.city",
-              bookings: { $sum: 1 },
-              revenue: { $sum: "$totalPrice" },
-            },
-          },
-          { $sort: { bookings: -1 } },
-          { $limit: 10 },
-        ]),
-      ]);
+            bookings: { $sum: 1 },
+            revenue: { $sum: '$totalPrice' }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ]),
+      
+      // Revenue by status
+      Booking.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: startDate, $lte: endDate }
+          }
+        },
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 },
+            revenue: { $sum: '$totalPrice' }
+          }
+        }
+      ]),
+      
+      // Top performing listings
+      Listing.find({ isActive: true, isVerified: true })
+        .sort({ averageRating: -1, reviewCount: -1 })
+        .limit(10)
+        .select('title location averageRating reviewCount totalBookings')
+        .populate('host', 'name'),
+      
+      // Bookings by location
+      Booking.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: startDate, $lte: endDate }
+          }
+        },
+        {
+          $lookup: {
+            from: 'listings',
+            localField: 'listing',
+            foreignField: '_id',
+            as: 'listingData'
+          }
+        },
+        { $unwind: '$listingData' },
+        {
+          $group: {
+            _id: '$listingData.location.city',
+            bookings: { $sum: 1 },
+            revenue: { $sum: '$totalPrice' }
+          }
+        },
+        { $sort: { bookings: -1 } },
+        { $limit: 10 }
+      ])
+    ]);
 
     res.json({
       success: true,
@@ -497,14 +487,14 @@ const getAnalytics = async (req, res) => {
         bookingTrends,
         revenueData,
         topListings,
-        locationStats,
-      },
+        locationStats
+      }
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: "Failed to fetch analytics",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: 'Failed to fetch analytics',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -513,17 +503,17 @@ const getAnalytics = async (req, res) => {
 const deactivateUser = async (req, res) => {
   try {
     const { reason } = req.body;
-
+    
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { isActive: false },
-      { new: true },
+      { new: true }
     );
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: 'User not found'
       });
     }
 
@@ -531,31 +521,34 @@ const deactivateUser = async (req, res) => {
     await Booking.updateMany(
       {
         $or: [{ guest: req.params.id }, { host: req.params.id }],
-        status: { $in: ["pending", "confirmed"] },
+        status: { $in: ['pending', 'confirmed'] }
       },
       {
-        status: "cancelled",
-        cancellationReason: "Account deactivated by admin",
+        status: 'cancelled',
+        cancellationReason: 'Account deactivated by admin',
         cancelledAt: new Date(),
-        cancelledBy: req.user._id,
-      },
+        cancelledBy: req.user._id
+      }
     );
 
     // Deactivate all listings if user is a host
-    if (user.role === "host") {
-      await Listing.updateMany({ host: req.params.id }, { isActive: false });
+    if (user.role === 'host') {
+      await Listing.updateMany(
+        { host: req.params.id },
+        { isActive: false }
+      );
     }
 
     res.json({
       success: true,
-      message: "User account deactivated successfully",
-      data: { user },
+      message: 'User account deactivated successfully',
+      data: { user }
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: "Failed to deactivate user",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: 'Failed to deactivate user',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -566,26 +559,26 @@ const reactivateUser = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { isActive: true },
-      { new: true },
+      { new: true }
     );
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: 'User not found'
       });
     }
 
     res.json({
       success: true,
-      message: "User account reactivated successfully",
-      data: { user },
+      message: 'User account reactivated successfully',
+      data: { user }
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: "Failed to reactivate user",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: 'Failed to reactivate user',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -594,25 +587,25 @@ const reactivateUser = async (req, res) => {
 const deleteListing = async (req, res) => {
   try {
     const listing = await Listing.findById(req.params.id);
-
+    
     if (!listing) {
       return res.status(404).json({
         success: false,
-        message: "Listing not found",
+        message: 'Listing not found'
       });
     }
 
     // Check for active bookings
     const activeBookings = await Booking.countDocuments({
       listing: req.params.id,
-      status: { $in: ["pending", "confirmed"] },
-      startDate: { $gte: new Date() },
+      status: { $in: ['pending', 'confirmed'] },
+      startDate: { $gte: new Date() }
     });
 
     if (activeBookings > 0) {
       return res.status(400).json({
         success: false,
-        message: "Cannot delete listing with active bookings",
+        message: 'Cannot delete listing with active bookings'
       });
     }
 
@@ -622,13 +615,13 @@ const deleteListing = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Listing deleted successfully",
+      message: 'Listing deleted successfully'
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: "Failed to delete listing",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: 'Failed to delete listing',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -638,17 +631,17 @@ const getAuditLogs = async (req, res) => {
     const { actor, action, targetType, page = 1, limit = 20 } = req.query;
     const filter: Record<string, any> = {};
     if (actor) filter.actor = actor;
-    if (action) filter.action = { $regex: String(action), $options: "i" };
+    if (action) filter.action = { $regex: String(action), $options: 'i' };
     if (targetType) filter.targetType = targetType;
 
     const skip = (Number(page) - 1) * Number(limit);
     const [logs, total] = await Promise.all([
       AuditLog.find(filter)
-        .populate("actor", "name email role")
+        .populate('actor', 'name email role')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit)),
-      AuditLog.countDocuments(filter),
+      AuditLog.countDocuments(filter)
     ]);
 
     return res.json({
@@ -658,15 +651,15 @@ const getAuditLogs = async (req, res) => {
         pagination: {
           currentPage: Number(page),
           totalPages: Math.ceil(total / Number(limit)),
-          totalLogs: total,
-        },
-      },
+          totalLogs: total
+        }
+      }
     });
   } catch (error: any) {
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch audit logs",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: 'Failed to fetch audit logs',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -681,11 +674,11 @@ const getReportsForAdmin = async (req, res) => {
 
     const [reports, total] = await Promise.all([
       Report.find(filter)
-        .populate("reporter", "name email")
+        .populate('reporter', 'name email')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit)),
-      Report.countDocuments(filter),
+      Report.countDocuments(filter)
     ]);
 
     return res.json({
@@ -695,32 +688,176 @@ const getReportsForAdmin = async (req, res) => {
         pagination: {
           currentPage: Number(page),
           totalPages: Math.ceil(total / Number(limit)),
-          totalReports: total,
-        },
-      },
+          totalReports: total
+        }
+      }
     });
   } catch (error: any) {
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch reports",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: 'Failed to fetch reports',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
 
-module.exports = {
-  getDashboardStats,
-  getAllBookings,
-  getAllUsers,
-  updateUser,
-  getAllListings,
-  verifyListing,
-  deleteListing,
-  deactivateUser,
-  reactivateUser,
-  getFlaggedReviews,
-  moderateReview,
-  getAnalytics,
-  getAuditLogs,
-  getReportsForAdmin,
+export { getDashboardStats, getAllBookings, getAllUsers, updateUser, getAllListings, verifyListing, deleteListing, deactivateUser, reactivateUser, getFlaggedReviews, moderateReview, getAnalytics, getAuditLogs, getReportsForAdmin, getSuspiciousListingsHandler, moderateListingHandler, getPendingHostVerificationsHandler, reviewHostVerificationHandler, getFinancialRecords };
+
+// Get suspicious listings with risk scores
+const getSuspiciousListingsHandler = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, minScore, status } = req.query;
+    const result = await getSuspiciousListings({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      minScore: minScore ? parseInt(minScore) : 20,
+      status: status as string | undefined
+    });
+
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch suspicious listings',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Moderate a flagged listing (approve/reject/flag)
+const moderateListingHandler = async (req, res) => {
+  try {
+    const { action, notes } = req.body;
+
+    if (!['approve', 'reject', 'flag'].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Action must be approve, reject, or flag'
+      });
+    }
+
+    const listing = await moderateListing(req.params.id, req.user._id, action, notes);
+
+    res.json({
+      success: true,
+      message: `Listing ${action}d successfully`,
+      data: { listing }
+    });
+  } catch (error: any) {
+    const status = error.message === 'Listing not found' ? 404 : 500;
+    res.status(status).json({
+      success: false,
+      message: error.message || 'Failed to moderate listing',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Get pending host verification requests
+const getPendingHostVerificationsHandler = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const result = await getPendingHostVerifications({
+      page: parseInt(page),
+      limit: parseInt(limit)
+    });
+
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pending host verifications',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Approve or reject a host verification request
+const reviewHostVerificationHandler = async (req, res) => {
+  try {
+    const { decision, notes } = req.body;
+
+    if (!['approved', 'rejected'].includes(decision)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Decision must be approved or rejected'
+      });
+    }
+
+    const user = await reviewHostVerification(req.params.id, req.user._id, decision, notes);
+
+    res.json({
+      success: true,
+      message: `Host verification ${decision} successfully`,
+      data: { user }
+    });
+  } catch (error: any) {
+    const status = error.message === 'User not found' ? 404 : error.message.includes('No pending') ? 400 : 500;
+    res.status(status).json({
+      success: false,
+      message: error.message || 'Failed to review host verification',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Get financial records (transactions) with filtering
+const getFinancialRecords = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, type, status, direction, startDate, endDate } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const filter: any = {};
+    if (type) filter.type = type;
+    if (status) filter.status = status;
+    if (direction) filter.direction = direction;
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    const [transactions, total, summary] = await Promise.all([
+      Transaction.find(filter)
+        .populate('user', 'name email')
+        .populate('booking', 'listing')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Transaction.countDocuments(filter),
+      Transaction.aggregate([
+        { $match: filter },
+        {
+          $group: {
+            _id: null,
+            totalAmount: { $sum: '$amount' },
+            totalCommission: { $sum: '$commissionAmount' },
+            totalHostEarnings: { $sum: '$hostEarnings' },
+            count: { $sum: 1 }
+          }
+        }
+      ])
+    ]);
+
+    const summaryData = summary.length > 0 ? summary[0] : { totalAmount: 0, totalCommission: 0, totalHostEarnings: 0, count: 0 };
+
+    res.json({
+      success: true,
+      data: {
+        transactions,
+        summary: summaryData,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / parseInt(limit)),
+          totalTransactions: total
+        }
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch financial records',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 };

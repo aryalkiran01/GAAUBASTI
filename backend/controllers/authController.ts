@@ -1,10 +1,11 @@
-import crypto from 'node:crypto';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import OTP from '../models/Otp.js';
 import sendEmail from '../utils/sendemail.js';
-import emailTemplates from '../utils/emailTemplates.js';
-import { sendOTPSMS } from '../utils/sendSMS.js';
+
+
+ 
 
 const getJwtSecret = () => {
   if (process.env.JWT_SECRET) {
@@ -28,8 +29,7 @@ const generateToken = (userId) => {
 // Register new user
 const register = async (req, res) => {
   try {
-    const { name, email, password, username } = req.body;
-    const role = req.body.role === 'host' ? 'host' : 'guest';
+    const { name, email, password, role = 'guest', username } = req.body;
 
     if (!username) {
       return res.status(400).json({
@@ -68,13 +68,11 @@ const register = async (req, res) => {
     await user.save();
 
     const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/verify-email/${verificationToken}`;
-    const verifyTemplate = emailTemplates.email_verification({ name: user.name, verifyUrl });
-    sendEmail({
+    await sendEmail({
       to: user.email,
-      subject: verifyTemplate.subject,
-      text: verifyTemplate.text,
-      html: verifyTemplate.html
-    }).catch(() => {});
+      subject: 'Verify your Gaubasti account',
+      text: `Hi ${user.name},\n\nPlease verify your account by visiting: ${verifyUrl}\n\nThis link expires in 24 hours.`
+    });
 
     const token = generateToken(user._id);
 
@@ -95,7 +93,6 @@ const register = async (req, res) => {
   }
 };
 
-
 // Login user
 const login = async (req, res) => {
   try {
@@ -115,13 +112,6 @@ const login = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: 'Account has been deactivated'
-      });
-    }
-
-    if (!user.isVerified) {
-      return res.status(403).json({
-        success: false,
-        message: 'Please verify your email before logging in. Check your inbox for the verification link.'
       });
     }
 
@@ -248,7 +238,6 @@ const changePassword = async (req, res) => {
   }
 };
 
-
 // --- Forgot Password: send OTP ---
 const forgotPassword = async (req, res) => {
   try {
@@ -259,7 +248,7 @@ const forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(200).json({ success: true, message: 'If an account with that email exists, an OTP has been sent.' });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
     // Generate 6-digit OTP
@@ -277,19 +266,7 @@ const forgotPassword = async (req, res) => {
       console.info('OTP generation requested for a user');
     }
 
-    const otpTemplate = emailTemplates.otp({ otp });
-    sendEmail({
-      to: user.email,
-      subject: otpTemplate.subject,
-      text: otpTemplate.text,
-      html: otpTemplate.html
-    }).catch(() => {});
-
-    if (user.phone) {
-      sendOTPSMS(user.phone, otp).catch(() => {});
-    }
-
-    res.json({ success: true, message: 'If an account with that email exists, an OTP has been sent.' });
+    res.json({ success: true, message: 'OTP sent to your email' });
   } catch (error: any) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Forgot password error');
@@ -346,7 +323,6 @@ const resetPassword = async (req, res) => {
     });
   }
 };
-
 
 // Refresh token
 const verifyEmail = async (req, res) => {
@@ -408,60 +384,4 @@ const refreshToken = async (req, res) => {
   }
 };
 
-const resendVerification = async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required' });
-    }
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(200).json({ success: true, message: 'If an account with that email exists, a verification link has been sent.' });
-    }
-
-    if (user.isVerified) {
-      return res.status(400).json({ success: false, message: 'Email is already verified' });
-    }
-
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const hashedVerificationToken = crypto
-      .createHash('sha256')
-      .update(verificationToken)
-      .digest('hex');
-
-    user.verificationToken = hashedVerificationToken;
-    user.verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
-    await user.save();
-
-    const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/verify-email/${verificationToken}`;
-    const verifyTemplate = emailTemplates.email_verification({ name: user.name, verifyUrl });
-    sendEmail({
-      to: user.email,
-      subject: verifyTemplate.subject,
-      text: verifyTemplate.text,
-      html: verifyTemplate.html
-    }).catch(() => {});
-
-    res.json({ success: true, message: 'If an account with that email exists, a verification link has been sent.' });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to resend verification email',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-};
-
-export {
-  register,
-  login,
-  getProfile,
-  updateProfile,
-  changePassword,
-  verifyEmail,
-  refreshToken,
-  forgotPassword,
-  resetPassword,
-  resendVerification
-};
+export { register, login, getProfile, updateProfile, changePassword, verifyEmail, refreshToken, forgotPassword, resetPassword };

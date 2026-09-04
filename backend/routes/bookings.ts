@@ -1,20 +1,11 @@
 import express from 'express';
-const router = express.Router();
-import {
-  createBooking,
-  getUserBookings,
-  getHostBookings,
-  getBooking,
-  updateBookingStatus,
-  cancelBooking
-} from '../controllers/bookingController.js';
+import { createBooking, getUserBookings, getHostBookings, getBooking, updateBookingStatus, cancelBooking } from '../controllers/bookingController.js';
 import { authenticate } from '../middlewares/auth.js';
 import { requireHost, requireGuest, requireTraveler } from '../middlewares/roleAuth.js';
-import {
-  validateBooking,
-  validateObjectId
-} from '../middlewares/validation.js';
+import { validateBooking, validateObjectId } from '../middlewares/validation.js';
 import { bookingCreateLimiter } from '../middlewares/rateLimiters.js';
+
+const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);

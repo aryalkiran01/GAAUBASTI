@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
+
 const toUserId = (value) => {
   if (!value) return null;
   if (typeof value === 'object' && value._id) return value._id.toString();
@@ -127,10 +128,4 @@ const requireOwnershipOrAdmin = (resourceField = 'user') => {
   };
 };
 
-export {
-  authenticate,
-  authorize,
-  requireAdmin,
-  requireHost,
-  requireOwnershipOrAdmin
-};
+export { authenticate, authorize, requireAdmin, requireHost, requireOwnershipOrAdmin };
