@@ -1,8 +1,7 @@
-export {};
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { authenticate, requireAdmin } = require('../middlewares/auth');
-const { getArticles, getArticleBySlug, createArticle, updateArticle, deleteArticle } = require('../controllers/articleController');
+import { authenticate, requireAdmin } from '../middlewares/auth.js';
+import { getArticles, getArticleBySlug, createArticle, updateArticle, deleteArticle } from '../controllers/articleController.js';
 
 router.get('/', getArticles);
 router.get('/:slug', getArticleBySlug);
@@ -12,4 +11,4 @@ router.post('/', requireAdmin, createArticle);
 router.put('/:id', requireAdmin, updateArticle);
 router.delete('/:id', requireAdmin, deleteArticle);
 
-module.exports = router;
+export default router;

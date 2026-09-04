@@ -1,21 +1,20 @@
-export {};
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const {
+import {
   createBooking,
   getUserBookings,
   getHostBookings,
   getBooking,
   updateBookingStatus,
   cancelBooking
-} = require('../controllers/bookingController');
-const { authenticate } = require('../middlewares/auth');
-const { requireHost, requireGuest, requireTraveler } = require('../middlewares/roleAuth');
-const {
+} from '../controllers/bookingController.js';
+import { authenticate } from '../middlewares/auth.js';
+import { requireHost, requireGuest, requireTraveler } from '../middlewares/roleAuth.js';
+import {
   validateBooking,
   validateObjectId
-} = require('../middlewares/validation');
-const { bookingCreateLimiter } = require('../middlewares/rateLimiters');
+} from '../middlewares/validation.js';
+import { bookingCreateLimiter } from '../middlewares/rateLimiters.js';
 
 // All routes require authentication
 router.use(authenticate);
@@ -30,4 +29,4 @@ router.patch('/:id/cancel', requireTraveler, validateObjectId('id'), cancelBooki
 router.get('/host/bookings', requireHost, getHostBookings);
 router.patch('/:id/status', requireHost, validateObjectId('id'), updateBookingStatus);
 
-module.exports = router;
+export default router;

@@ -1,5 +1,3 @@
-export {};
-
 const toObjectIdString = (value) => {
   if (!value) return null;
   if (typeof value === 'object' && value._id) return value._id.toString();
@@ -76,7 +74,7 @@ const requireOwnership = (Model, resourceField = 'host') => {
   };
 };
 
-module.exports = {
+export {
   requireRole,
   requireAdmin,
   requireHost,
@@ -84,4 +82,3 @@ module.exports = {
   requireTraveler,
   requireOwnership
 };
-

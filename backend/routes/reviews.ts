@@ -1,7 +1,6 @@
-export {};
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const {
+import {
   createReview,
   getListingReviews,
   getUserReviews,
@@ -9,13 +8,13 @@ const {
   deleteReview,
   respondToReview,
   flagReview
-} = require('../controllers/reviewController');
-const { authenticate } = require('../middlewares/auth');
-const { requireHost, requireTraveler } = require('../middlewares/roleAuth');
-const {
+} from '../controllers/reviewController.js';
+import { authenticate } from '../middlewares/auth.js';
+import { requireHost, requireTraveler } from '../middlewares/roleAuth.js';
+import {
   validateReview,
   validateObjectId
-} = require('../middlewares/validation');
+} from '../middlewares/validation.js';
 
 // Public routes
 router.get('/listing/:listingId', validateObjectId('listingId'), getListingReviews);
@@ -32,4 +31,4 @@ router.post('/:id/flag', requireTraveler, validateObjectId('id'), flagReview);
 // Host routes
 router.post('/:id/respond', requireHost, validateObjectId('id'), respondToReview);
 
-module.exports = router;
+export default router;

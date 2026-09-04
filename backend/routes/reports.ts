@@ -1,10 +1,9 @@
-export {};
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { authenticate } = require('../middlewares/auth');
-const { createReport } = require('../controllers/reportController');
+import { authenticate } from '../middlewares/auth.js';
+import { createReport } from '../controllers/reportController.js';
 
 router.use(authenticate);
 router.post('/', createReport);
 
-module.exports = router;
+export default router;

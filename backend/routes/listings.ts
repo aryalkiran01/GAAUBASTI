@@ -1,7 +1,6 @@
-export {};
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const {
+import {
   getListings,
   getListing,
   createListing,
@@ -10,16 +9,16 @@ const {
   getHostListings,
   checkAvailability,
   getFeaturedListings
-} = require('../controllers/listingController');
-const Listing = require('../models/Listing');
+} from '../controllers/listingController.js';
+import Listing from '../models/Listing.js';
 
-const { authenticate } = require('../middlewares/auth');
-const { requireHost, requireOwnership } = require('../middlewares/roleAuth');
-const {
+import { authenticate } from '../middlewares/auth.js';
+import { requireHost, requireOwnership } from '../middlewares/roleAuth.js';
+import {
   validateListing,
   validateObjectId,
   validateListingQuery
-} = require('../middlewares/validation');
+} from '../middlewares/validation.js';
 
 // Public routes
 router.get('/', validateListingQuery, getListings);
@@ -37,4 +36,4 @@ router.put('/:id', requireHost, validateObjectId('id'), requireOwnership(Listing
 router.delete('/:id', requireHost, validateObjectId('id'), requireOwnership(Listing, 'host'), deleteListing);
 
 
-module.exports = router;
+export default router;

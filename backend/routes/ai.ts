@@ -1,7 +1,6 @@
-export {};
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const {
+import {
   getHealth,
   getConfig,
   testProvider,
@@ -13,9 +12,9 @@ const {
   reviewSummary,
   semanticSearch,
   translate,
-} = require('../controllers/aiController');
-const { authenticate, requireHost } = require('../middlewares/auth');
-const { aiLimiter } = require('../middlewares/rateLimiters');
+} from '../controllers/aiController.js';
+import { authenticate, requireHost } from '../middlewares/auth.js';
+import { aiLimiter } from '../middlewares/rateLimiters.js';
 
 // Public health check — no auth required so monitoring tools can probe it
 router.get('/health', getHealth);
@@ -37,4 +36,4 @@ router.post('/listing-description', aiLimiter, requireHost, generateListingDescr
 router.post('/pricing-recommendation', aiLimiter, requireHost, pricingRecommendation);
 router.post('/moderate', aiLimiter, requireHost, moderateContent);
 
-module.exports = router;
+export default router;

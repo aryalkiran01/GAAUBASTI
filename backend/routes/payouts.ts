@@ -1,10 +1,9 @@
-export {};
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { authenticate } = require('../middlewares/auth');
-const { getMyPayouts } = require('../controllers/payoutController');
+import { authenticate } from '../middlewares/auth.js';
+import { getMyPayouts } from '../controllers/payoutController.js';
 
 router.use(authenticate);
 router.get('/', getMyPayouts);
 
-module.exports = router;
+export default router;

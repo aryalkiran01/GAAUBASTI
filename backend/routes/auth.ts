@@ -1,7 +1,6 @@
-export {};
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const {
+import {
   register,
   login,
   getProfile,
@@ -13,13 +12,13 @@ const {
   forgotPassword,
   resetPassword,
   resendVerification
-} = require('../controllers/authController');
-const { authenticate } = require('../middlewares/auth');
-const {
+} from '../controllers/authController.js';
+import { authenticate } from '../middlewares/auth.js';
+import {
   validateUserRegistration,
   validateUserLogin
-} = require('../middlewares/validation');
-const { loginLimiter, passwordLimiter, resendVerificationLimiter } = require('../middlewares/rateLimiters');
+} from '../middlewares/validation.js';
+import { loginLimiter, passwordLimiter, resendVerificationLimiter } from '../middlewares/rateLimiters.js';
 
 // Public routes
 router.post('/register', validateUserRegistration, register);
@@ -36,5 +35,5 @@ router.put('/profile', updateProfile);
 router.post('/change-password', changePassword);
 router.post('/refresh-token', refreshToken);
 
-module.exports = router;
+export default router;
 

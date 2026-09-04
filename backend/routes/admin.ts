@@ -1,7 +1,6 @@
-export {};
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const {
+import {
   getDashboardStats,
   getAllBookings,
   getAllUsers,
@@ -16,11 +15,11 @@ const {
   getAnalytics,
   getAuditLogs,
   getReportsForAdmin
-} = require('../controllers/adminController');
-const { updateReportStatus } = require('../controllers/reportController');
-const { authenticate } = require('../middlewares/auth');
-const { requireAdmin } = require('../middlewares/roleAuth');
-const { validateObjectId } = require('../middlewares/validation');
+} from '../controllers/adminController.js';
+import { updateReportStatus } from '../controllers/reportController.js';
+import { authenticate } from '../middlewares/auth.js';
+import { requireAdmin } from '../middlewares/roleAuth.js';
+import { validateObjectId } from '../middlewares/validation.js';
 
 // All admin routes require authentication and admin role
 router.use(authenticate);
@@ -49,4 +48,4 @@ router.patch('/reviews/:id/moderate', validateObjectId('id'), moderateReview);
 router.get('/reports', getReportsForAdmin);
 router.patch('/reports/:id/status', validateObjectId('id'), updateReportStatus);
 
-module.exports = router;
+export default router;

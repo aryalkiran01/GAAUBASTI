@@ -1,9 +1,8 @@
-export {};
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { authenticate } = require('../middlewares/auth');
-const { createPayment, verifyPayment, getPaymentStatus, handleStripeWebhook, processRefund } = require('../controllers/paymentController');
-const { createEsewaPayment, verifyEsewaPayment } = require('../controllers/esewaController');
+import { authenticate } from '../middlewares/auth.js';
+import { createPayment, verifyPayment, getPaymentStatus, handleStripeWebhook, processRefund } from '../controllers/paymentController.js';
+import { createEsewaPayment, verifyEsewaPayment } from '../controllers/esewaController.js';
 
 router.post('/webhook', handleStripeWebhook);
 
@@ -16,5 +15,5 @@ router.post('/:paymentId/verify', verifyPayment);
 router.post('/:paymentId/refund', processRefund);
 router.get('/:paymentId', getPaymentStatus);
 
-module.exports = router;
+export default router;
 

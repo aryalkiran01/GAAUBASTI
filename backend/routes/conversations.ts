@@ -1,8 +1,7 @@
-export {};
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { authenticate } = require('../middlewares/auth');
-const { getConversations, getOrCreateConversation, getMessages, sendMessage } = require('../controllers/conversationController');
+import { authenticate } from '../middlewares/auth.js';
+import { getConversations, getOrCreateConversation, getMessages, sendMessage } from '../controllers/conversationController.js';
 
 router.use(authenticate);
 router.get('/', getConversations);
@@ -10,4 +9,4 @@ router.post('/', getOrCreateConversation);
 router.get('/:id/messages', getMessages);
 router.post('/:id/messages', sendMessage);
 
-module.exports = router;
+export default router;

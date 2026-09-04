@@ -2,9 +2,10 @@
   "name": "gaunbasti-backend",
   "version": "1.0.0",
   "description": "Backend API for Gaunbasti rural tourism platform",
+  "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node dist/server.js",
+    "start": "node --import tsx server.ts",
     "dev": "tsx watch server.ts",
     "seed": "node --import tsx scripts/seedData.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
