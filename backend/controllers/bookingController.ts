@@ -8,12 +8,36 @@ const {
   validateBookingDates,
   canTransitionStatus,
   checkListingAvailability,
+  lockBookingNights,
+  releaseBookingNights,
 } = require("../services/bookingAvailability");
 const {
   notifyBookingCreated,
   notifyBookingCancelled,
   notifyPaymentConfirmed,
 } = require("../utils/notifications");
+
+const calculateBookingPrice = (listing, startDate, endDate) => {
+  const bookingStart = new Date(startDate);
+  const bookingEnd = new Date(endDate);
+  const nights = Math.ceil(
+    (Number(bookingEnd) - Number(bookingStart)) / (1000 * 60 * 60 * 24),
+  );
+  const basePrice = listing.price * nights;
+  const cleaningFee = 25;
+  const serviceFee = Math.round(basePrice * 0.1);
+  const taxes = Math.round(basePrice * 0.05);
+  const totalPrice = basePrice + cleaningFee + serviceFee + taxes;
+
+  return {
+    nights,
+    basePrice,
+    cleaningFee,
+    serviceFee,
+    taxes,
+    totalPrice,
+  };
+};
 
 // Create new booking
 const createBooking = async (req, res) => {
@@ -82,7 +106,7 @@ const createBooking = async (req, res) => {
     }
 
     const session = await mongoose.startSession();
-    let createdBooking: any = null;
+    let createdBooking = null;
 
     try {
       await session.withTransaction(async () => {
@@ -90,7 +114,7 @@ const createBooking = async (req, res) => {
           .session(session)
           .populate("host");
         if (!activeListing || !activeListing.isActive) {
-          const error: any = new Error("Listing not found or not available");
+          const error = new Error("Listing not found or not available") as any;
           error.statusCode = 404;
           throw error;
         }
@@ -100,12 +124,13 @@ const createBooking = async (req, res) => {
           startDate: dateValidation.start,
           endDate: dateValidation.end,
           excludeBookingId: null,
+          session,
         });
 
         if (!availability.available) {
-          const error: any = new Error(
+          const error = new Error(
             availability.reason || "Selected dates are unavailable",
-          );
+          ) as any;
           error.statusCode = 409;
           throw error;
         }
@@ -122,33 +147,28 @@ const createBooking = async (req, res) => {
           }
         }
 
-        const bookingStart = new Date(String(startDate));
-        const bookingEnd = new Date(String(endDate));
-        const nights = Math.ceil(
-          (Number(bookingEnd) - Number(bookingStart)) / (1000 * 60 * 60 * 24),
+        const priceCalc = calculateBookingPrice(
+          activeListing,
+          dateValidation.start,
+          dateValidation.end,
         );
-        const basePrice = activeListing.price * nights;
-        const cleaningFee = 25;
-        const serviceFee = Math.round(basePrice * 0.1);
-        const taxes = Math.round(basePrice * 0.05);
-        const totalPrice = basePrice + cleaningFee + serviceFee + taxes;
 
         const booking = new Booking({
           listing: listingId,
           guest: req.user._id,
           host: activeListing.host._id,
-          startDate: bookingStart,
-          endDate: bookingEnd,
+          startDate: dateValidation.start,
+          endDate: dateValidation.end,
           guests: {
             adults: guestValidation.adults,
             children: guestValidation.children,
           },
-          totalPrice,
+          totalPrice: priceCalc.totalPrice,
           priceBreakdown: {
-            basePrice,
-            cleaningFee,
-            serviceFee,
-            taxes,
+            basePrice: priceCalc.basePrice,
+            cleaningFee: priceCalc.cleaningFee,
+            serviceFee: priceCalc.serviceFee,
+            taxes: priceCalc.taxes,
           },
           specialRequests,
           idempotencyKey: normalizedKey,
@@ -156,6 +176,24 @@ const createBooking = async (req, res) => {
         });
 
         await booking.save({ session });
+
+        try {
+          await lockBookingNights({
+            listingId,
+            bookingId: booking._id,
+            startDate: dateValidation.start,
+            endDate: dateValidation.end,
+            session,
+          });
+        } catch (lockError) {
+          if (lockError.code === 11000) {
+            const error = new Error("Selected dates are already booked.") as any;
+            error.statusCode = 409;
+            throw error;
+          }
+          throw lockError;
+        }
+
         createdBooking = booking;
       });
     } finally {
@@ -180,7 +218,7 @@ const createBooking = async (req, res) => {
     }
 
     const populatedBooking = await Booking.findById(
-      createdBooking._id,
+      (createdBooking as any)._id,
     ).populate([
       { path: "listing", select: "title location images" },
       { path: "guest", select: "name email" },
@@ -198,7 +236,7 @@ const createBooking = async (req, res) => {
       message: "Booking created successfully",
       data: { booking: populatedBooking },
     });
-  } catch (error: any) {
+  } catch (error) {
     const isDuplicateKey = error && error.code === 11000;
     const statusCode = error.statusCode || (isDuplicateKey ? 409 : 500);
     const safeErrorMessage =
@@ -222,7 +260,7 @@ const getUserBookings = async (req, res) => {
     const { page = 1, limit = 10, status } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const filter: any = { guest: req.user._id };
+    const filter = { guest: req.user._id } as any;
     if (status) {
       filter.status = status;
     }
@@ -248,7 +286,7 @@ const getUserBookings = async (req, res) => {
         },
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: "Failed to fetch bookings",
@@ -263,7 +301,7 @@ const getHostBookings = async (req, res) => {
     const { page = 1, limit = 10, status } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const filter: any = { host: req.user._id };
+    const filter = { host: req.user._id } as any;
     if (status) {
       filter.status = status;
     }
@@ -289,7 +327,7 @@ const getHostBookings = async (req, res) => {
         },
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: "Failed to fetch host bookings",
@@ -329,7 +367,7 @@ const getBooking = async (req, res) => {
       success: true,
       data: { booking },
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: "Failed to fetch booking",
@@ -436,6 +474,8 @@ const updateBookingStatus = async (req, res) => {
           });
         await listingForDates.save();
       }
+
+      await releaseBookingNights({ bookingId: booking._id });
     }
 
     await booking.populate([
@@ -448,7 +488,7 @@ const updateBookingStatus = async (req, res) => {
       message: `Booking ${status} successfully`,
       data: { booking },
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: "Failed to update booking status",
@@ -515,6 +555,8 @@ const cancelBooking = async (req, res) => {
       await listingForDates.save();
     }
 
+    await releaseBookingNights({ bookingId: booking._id });
+
     const populatedForNotif = await Booking.findById(booking._id).populate([
       { path: "listing", select: "title" },
       { path: "guest", select: "name email phone" },
@@ -536,12 +578,37 @@ const cancelBooking = async (req, res) => {
         refundAmount,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: "Failed to cancel booking",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
+  }
+};
+
+// Auto-complete bookings whose checkout date has passed
+const autoCompleteBookings = async () => {
+  const now = new Date();
+  try {
+    const result = await Booking.updateMany(
+      {
+        status: "confirmed",
+        endDate: { $lte: now },
+      },
+      {
+        $set: { status: "completed" },
+      },
+    );
+
+    if (result.modifiedCount > 0) {
+      console.log(`[autoCompleteBookings] ${result.modifiedCount} booking(s) transitioned to completed`);
+    }
+
+    return result;
+  } catch (error) {
+    console.error("[autoCompleteBookings] Failed:", error.message);
+    throw error;
   }
 };
 
@@ -552,4 +619,6 @@ module.exports = {
   getBooking,
   updateBookingStatus,
   cancelBooking,
+  autoCompleteBookings,
+  calculateBookingPrice,
 };

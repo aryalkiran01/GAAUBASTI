@@ -12,7 +12,6 @@ const {
 } = require('../controllers/paymentController');
 
 router.post('/webhook', handleStripeWebhook);
-router.post('/create-intent', createPayment);
 
 router.use(authenticate);
 router.post('/create', createPayment);

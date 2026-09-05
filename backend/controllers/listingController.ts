@@ -2,8 +2,9 @@ export {};
 const Listing = require('../models/Listing');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
-const { checkListingAvailability, validateBookingDates } = require('../services/bookingAvailability');
+const { checkListingAvailability, validateBookingDates, isListingAvailableForDates } = require('../services/bookingAvailability');
 const { moderateContent } = require('../services/moderationService');
+const { deleteImage } = require('../utils/cloudinary');
 
 const LISTING_ALLOWED_CREATE_FIELDS = [
   'title', 'description', 'location', 'price', 'images', 'amenities', 'maxGuests',
@@ -17,9 +18,14 @@ const LISTING_ALLOWED_UPDATE_FIELDS = [
   'cancellationPolicy', 'isActive'
 ];
 
-const buildAllowedListingPayload = (payload: Record<string, any> = {}, allowedFields = LISTING_ALLOWED_CREATE_FIELDS) => {
+const escapeRegex = (str) => {
+  if (typeof str !== 'string') return '';
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+const buildAllowedListingPayload = (payload = {}, allowedFields = LISTING_ALLOWED_CREATE_FIELDS) => {
   const source = payload && typeof payload === 'object' ? payload : {};
-  const safePayload: Record<string, any> = {};
+  const safePayload = {} as any;
 
   for (const field of allowedFields) {
     if (Object.prototype.hasOwnProperty.call(source, field)) {
@@ -30,12 +36,12 @@ const buildAllowedListingPayload = (payload: Record<string, any> = {}, allowedFi
   return safePayload;
 };
 
-const sanitizeListingPayloadForCreate = (payload: Record<string, any> = {}) => {
-  const safePayload: Record<string, any> = buildAllowedListingPayload(payload, LISTING_ALLOWED_CREATE_FIELDS);
+const sanitizeListingPayloadForCreate = (payload = {}) => {
+  const safePayload = buildAllowedListingPayload(payload, LISTING_ALLOWED_CREATE_FIELDS);
 
   if (safePayload.location && typeof safePayload.location === 'object') {
-    const location = safePayload.location as Record<string, any>;
-    const cleanedLocation: Record<string, any> = {};
+    const location = safePayload.location as any;
+    const cleanedLocation = {} as any;
 
     if (location.address) cleanedLocation.address = location.address;
     if (location.city) cleanedLocation.city = location.city;
@@ -49,12 +55,12 @@ const sanitizeListingPayloadForCreate = (payload: Record<string, any> = {}) => {
   return safePayload;
 };
 
-const sanitizeListingPayloadForUpdate = (payload: Record<string, any> = {}) => {
-  const safePayload: Record<string, any> = buildAllowedListingPayload(payload, LISTING_ALLOWED_UPDATE_FIELDS);
+const sanitizeListingPayloadForUpdate = (payload = {}) => {
+  const safePayload = buildAllowedListingPayload(payload, LISTING_ALLOWED_UPDATE_FIELDS);
 
   if (safePayload.location && typeof safePayload.location === 'object') {
-    const location = safePayload.location as Record<string, any>;
-    const cleanedLocation: Record<string, any> = {};
+    const location = safePayload.location as any;
+    const cleanedLocation = {} as any;
 
     if (location.address) cleanedLocation.address = location.address;
     if (location.city) cleanedLocation.city = location.city;
@@ -66,6 +72,16 @@ const sanitizeListingPayloadForUpdate = (payload: Record<string, any> = {}) => {
   }
 
   return safePayload;
+};
+
+const processUploadedFiles = (files) => {
+  if (!Array.isArray(files) || files.length === 0) return [];
+
+  return files.map((file) => ({
+    url: file.path || file.secure_url,
+    publicId: file.filename || file.public_id,
+    caption: 'Uploaded image'
+  }));
 };
 
 // Get all listings with filtering and pagination
@@ -80,20 +96,24 @@ const getListings = async (req, res) => {
       guests,
       rating,
       category,
-      image,
       amenities,
       sortBy = 'createdAt',
-      sortOrder = 'desc'
+      sortOrder = 'desc',
+      checkIn,
+      checkOut
     } = req.query;
 
     // Build filter object
-    const filter: any = { isActive: true, isVerified: true };
+    const filter = { isActive: true, isVerified: true } as any;
 
     if (location) {
-      filter.$or = [
-        { 'location.city': { $regex: location, $options: 'i' } },
-        { 'location.address': { $regex: location, $options: 'i' } }
-      ];
+      const escapedLocation = escapeRegex(location);
+      if (escapedLocation) {
+        filter.$or = [
+          { 'location.city': { $regex: escapedLocation, $options: 'i' } },
+          { 'location.address': { $regex: escapedLocation, $options: 'i' } }
+        ];
+      }
     }
 
     if (minPrice || maxPrice) {
@@ -120,20 +140,39 @@ const getListings = async (req, res) => {
     }
 
     // Build sort object
-    const sort: Record<string, number> = {};
+    const sort = {} as any;
     sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     // Execute query with pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    
-    const [listings, total] = await Promise.all([
-      Listing.find(filter)
-        .populate('host', 'name avatar hostProfile.responseRate')
-        .sort(sort)
-        .skip(skip)
-        .limit(parseInt(limit)),
-      Listing.countDocuments(filter)
-    ]);
+
+    let listings = await Listing.find(filter)
+      .populate('host', 'name avatar hostProfile.responseRate')
+      .sort(sort)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    let total = await Listing.countDocuments(filter);
+
+    // Filter by date availability if check-in/check-out provided
+    if (checkIn && checkOut) {
+      const dateValidation = validateBookingDates(checkIn, checkOut);
+      if (dateValidation.valid) {
+        const availabilityResults = await Promise.all(
+          listings.map(async (listing) => {
+            const result = await isListingAvailableForDates({
+              listingId: listing._id,
+              startDate: dateValidation.start,
+              endDate: dateValidation.end,
+            });
+            return result.available ? listing : null;
+          })
+        );
+
+        listings = availabilityResults.filter(Boolean);
+        total = listings.length;
+      }
+    }
 
     res.json({
       success: true,
@@ -148,7 +187,7 @@ const getListings = async (req, res) => {
         }
       }
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch listings',
@@ -160,9 +199,9 @@ const getListings = async (req, res) => {
 // Get single listing by ID
 const getListing = async (req, res) => {
   try {
-    const listing = await Listing.findOne({ 
-      _id: req.params.id, 
-      isActive: true 
+    const listing = await Listing.findOne({
+      _id: req.params.id,
+      isActive: true
     })
       .populate('host', 'name avatar hostProfile phone email')
       .populate({
@@ -185,7 +224,7 @@ const getListing = async (req, res) => {
       success: true,
       data: { listing }
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch listing',
@@ -225,9 +264,15 @@ const createListing = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Maximum guests must be at least 1' });
     }
 
-    const images: Array<{ url: string; publicId?: string; caption?: string }> = [];
-    const bodyImages = Array.isArray(payload.images) ? payload.images : [];
+    const images = [] as any[];
 
+    // Process uploaded files (multer)
+    if (Array.isArray(req.files) && req.files.length > 0) {
+      images.push(...processUploadedFiles(req.files));
+    }
+
+    // Also accept body-provided image URLs (for flexibility)
+    const bodyImages = Array.isArray(payload.images) ? payload.images : [];
     for (const image of bodyImages) {
       if (!image || typeof image.url !== 'string' || !image.url.trim()) {
         continue;
@@ -239,21 +284,14 @@ const createListing = async (req, res) => {
       });
     }
 
-    if (req.file) {
-      const fileUrl = req.file.path || req.file.secure_url;
-      if (fileUrl) {
-        images.push({
-          url: String(fileUrl),
-          publicId: req.file.filename || req.file.public_id,
-          caption: 'Main image'
-        });
-      }
+    if (images.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one image is required' });
     }
 
     const listingData = {
       ...payload,
       host: req.user._id,
-      images: images.length > 0 ? images : undefined,
+      images,
       price: normalizedPrice,
       maxGuests: normalizedGuests
     };
@@ -277,19 +315,18 @@ const createListing = async (req, res) => {
       message: 'Listing created successfully',
       data: { listing }
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to create listing',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
-}
+};
 
 // Update listing (host or admin only)
 const updateListing = async (req, res) => {
   try {
-    // Use the listing from middleware if available (from ownership check)
     const listing = req.resource || await Listing.findById(req.params.id);
 
     if (!listing) {
@@ -298,39 +335,46 @@ const updateListing = async (req, res) => {
         message: 'Listing not found'
       });
     }
-   const updates = sanitizeListingPayloadForUpdate(req.body || {});
+    const updates = sanitizeListingPayloadForUpdate(req.body || {});
 
-   // If listing is being updated by host, set verification to false
-   if (req.user.role === 'host') {
-     updates.isVerified = false;
-     updates.verifiedAt = null;
-     updates.verifiedBy = null;
-   }
+    // If listing is being updated by host, set verification to false
+    if (req.user.role === 'host') {
+      updates.isVerified = false;
+      updates.verifiedAt = null;
+      updates.verifiedBy = null;
+    }
 
-   if (req.file) {
-     const uploadedImage = {
-       url: req.file.path || req.file.secure_url,
-       publicId: req.file.filename || req.file.public_id,
-       caption: 'Updated image'
-     };
+    // Process uploaded files
+    const uploadedImages = processUploadedFiles(req.files);
 
-     updates.images = Array.isArray(updates.images)
-       ? [...updates.images, uploadedImage]
-       : [uploadedImage];
-   }
+    if (uploadedImages.length > 0) {
+      // Delete old images from Cloudinary if new ones are uploaded
+      if (Array.isArray(listing.images) && listing.images.length > 0) {
+        for (const oldImage of listing.images) {
+          if (oldImage.publicId) {
+            deleteImage(oldImage.publicId).catch(() => {});
+          }
+        }
+      }
+      updates.images = uploadedImages;
+    } else if (updates.images && Array.isArray(updates.images)) {
+      // Keep body-provided images
+    } else {
+      delete updates.images;
+    }
 
-   const updatedListing = await Listing.findByIdAndUpdate(
-     req.params.id,
-     updates,
-     { new: true, runValidators: true }
-   ).populate('host', 'name avatar');
+    const updatedListing = await Listing.findByIdAndUpdate(
+      req.params.id,
+      updates,
+      { new: true, runValidators: true }
+    ).populate('host', 'name avatar');
 
     res.json({
       success: true,
       message: 'Listing updated successfully',
       data: { listing: updatedListing }
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to update listing',
@@ -342,7 +386,6 @@ const updateListing = async (req, res) => {
 // Delete listing (host or admin only)
 const deleteListing = async (req, res) => {
   try {
-    // Use the listing from middleware if available (from ownership check)
     const listing = req.resource || await Listing.findById(req.params.id);
 
     if (!listing) {
@@ -365,6 +408,15 @@ const deleteListing = async (req, res) => {
       });
     }
 
+    // Delete images from Cloudinary
+    if (Array.isArray(listing.images) && listing.images.length > 0) {
+      for (const image of listing.images) {
+        if (image.publicId) {
+          deleteImage(image.publicId).catch(() => {});
+        }
+      }
+    }
+
     // Soft delete by setting isActive to false
     listing.isActive = false;
     await listing.save();
@@ -373,7 +425,7 @@ const deleteListing = async (req, res) => {
       success: true,
       message: 'Listing deleted successfully'
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to delete listing',
@@ -407,7 +459,7 @@ const getHostListings = async (req, res) => {
         }
       }
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch host listings',
@@ -459,7 +511,7 @@ const checkAvailability = async (req, res) => {
         } : null
       }
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to check availability',
@@ -484,7 +536,7 @@ const getFeaturedListings = async (req, res) => {
       success: true,
       data: { listings }
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch featured listings',
@@ -503,5 +555,6 @@ module.exports = {
   checkAvailability,
   getFeaturedListings,
   sanitizeListingPayloadForCreate,
-  sanitizeListingPayloadForUpdate
+  sanitizeListingPayloadForUpdate,
+  escapeRegex
 };

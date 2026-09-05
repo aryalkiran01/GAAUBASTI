@@ -1,6 +1,7 @@
 export {};
 const Booking = require('../models/Booking');
 const Listing = require('../models/Listing');
+const BookingNight = require('../models/BookingNight');
 
 const BLOCKING_BOOKING_STATUSES = ['pending', 'confirmed'];
 
@@ -41,7 +42,7 @@ const validateBookingDates = (startDate, endDate) => {
       start,
       end
     };
-  } catch (error: any) {
+  } catch (error) {
     return {
       valid: false,
       message: error.message || 'Invalid date provided'
@@ -111,8 +112,8 @@ const canTransitionStatus = (currentStatus, nextStatus) => {
   return getAllowedStatusTransitions(currentStatus).includes(nextStatus);
 };
 
-const findConflictingBooking = async ({ listingId, startDate, endDate, excludeBookingId = null }: any) => {
-  const query: any = {
+const findConflictingBooking = async ({ listingId, startDate, endDate, excludeBookingId = null, session = null }) => {
+  const query = {
     listing: listingId,
     status: { $in: BLOCKING_BOOKING_STATUSES },
     startDate: { $lt: new Date(endDate) },
@@ -124,6 +125,9 @@ const findConflictingBooking = async ({ listingId, startDate, endDate, excludeBo
   }
 
   let bookingQuery = Booking.findOne(query);
+  if (session) {
+    bookingQuery = bookingQuery.session(session);
+  }
   if (typeof bookingQuery.sort === 'function') {
     bookingQuery = bookingQuery.sort({ startDate: 1 });
   }
@@ -132,7 +136,7 @@ const findConflictingBooking = async ({ listingId, startDate, endDate, excludeBo
   return result && typeof result.toObject === 'function' ? result.toObject() : result;
 };
 
-const checkListingAvailability = async ({ listingId, startDate, endDate, excludeBookingId = null }) => {
+const checkListingAvailability = async ({ listingId, startDate, endDate, excludeBookingId = null, session = null }) => {
   const dateValidation = validateBookingDates(startDate, endDate);
 
   if (!dateValidation.valid) {
@@ -144,7 +148,11 @@ const checkListingAvailability = async ({ listingId, startDate, endDate, exclude
     };
   }
 
-  let listing = await Listing.findById(listingId);
+  let listingQuery = Listing.findById(listingId);
+  if (session) {
+    listingQuery = listingQuery.session(session);
+  }
+  let listing = await listingQuery;
   listing = listing && typeof listing.toObject === 'function' ? listing.toObject() : listing;
 
   if (!listing) {
@@ -185,7 +193,8 @@ const checkListingAvailability = async ({ listingId, startDate, endDate, exclude
     listingId,
     startDate: requestStart,
     endDate: requestEnd,
-    excludeBookingId
+    excludeBookingId,
+    session
   });
 
   if (conflictingBooking) {
@@ -205,6 +214,62 @@ const checkListingAvailability = async ({ listingId, startDate, endDate, exclude
   };
 };
 
+const generateNights = (startDate, endDate) => {
+  const nights = [];
+  const cursor = new Date(startDate);
+  cursor.setHours(0, 0, 0, 0);
+
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+
+  while (cursor < end) {
+    nights.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return nights;
+};
+
+const lockBookingNights = async ({ listingId, bookingId, startDate, endDate, session = null }) => {
+  const nights = generateNights(startDate, endDate);
+  const docs = nights.map((date) => ({
+    listing: listingId,
+    date,
+    booking: bookingId
+  }));
+
+  if (session) {
+    await BookingNight.insertMany(docs, { session, ordered: true });
+  } else {
+    await BookingNight.insertMany(docs, { ordered: true });
+  }
+};
+
+const releaseBookingNights = async ({ bookingId, session = null }) => {
+  const filter = { booking: bookingId };
+  if (session) {
+    await BookingNight.deleteMany(filter).session(session);
+  } else {
+    await BookingNight.deleteMany(filter);
+  }
+};
+
+const isListingAvailableForDates = async ({ listingId, startDate, endDate, excludeBookingId = null }) => {
+  const dateValidation = validateBookingDates(startDate, endDate);
+  if (!dateValidation.valid) {
+    return { available: false, reason: dateValidation.message };
+  }
+
+  const availability = await checkListingAvailability({
+    listingId,
+    startDate: dateValidation.start,
+    endDate: dateValidation.end,
+    excludeBookingId
+  });
+
+  return { available: availability.available, reason: availability.reason };
+};
+
 module.exports = {
   BLOCKING_BOOKING_STATUSES,
   parseDate,
@@ -213,6 +278,10 @@ module.exports = {
   overlappingDateWindow,
   getAllowedStatusTransitions,
   canTransitionStatus,
-  checkListingAvailability
+  findConflictingBooking,
+  checkListingAvailability,
+  generateNights,
+  lockBookingNights,
+  releaseBookingNights,
+  isListingAvailableForDates
 };
-

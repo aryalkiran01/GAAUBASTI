@@ -229,6 +229,21 @@ const startServer = async () => {
     });
 
     initializeSocketIO(server);
+
+    // Start booking auto-completion job (runs every hour)
+    const { autoCompleteBookings } = require('./controllers/bookingController');
+    const BOOKING_COMPLETION_INTERVAL_MS = 60 * 60 * 1000;
+    const bookingCompletionTimer = setInterval(async () => {
+      try {
+        await autoCompleteBookings();
+      } catch (err) {
+        console.error('[bookingCompletionJob] Error:', err.message);
+      }
+    }, BOOKING_COMPLETION_INTERVAL_MS);
+    bookingCompletionTimer.unref();
+
+    process.on('SIGINT', () => clearInterval(bookingCompletionTimer));
+    process.on('SIGTERM', () => clearInterval(bookingCompletionTimer));
   } catch {
     console.error('Failed to start server');
     process.exitCode = 1;

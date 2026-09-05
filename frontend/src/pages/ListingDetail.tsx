@@ -15,7 +15,7 @@ import AvailabilityChecker from "@/components/AvailabilityChecker";
 import ReviewSection from "@/components/ReviewSection";
 import ReviewSummary from "@/components/ai/ReviewSummary";
 import SEO from "@/components/SEO";
-import { Heart, Share2, MessageCircle, Star } from "lucide-react";
+import { Heart, Share2, MessageCircle, Star, Minus, Plus } from "lucide-react";
 import { useWishlist } from "@/hooks/useWishlist";
 
 const ListingDetail = () => {
@@ -26,6 +26,8 @@ const ListingDetail = () => {
   const [nights, setNights] = useState(1);
   const [isBooking, setIsBooking] = useState(false);
   const [isAvailable, setIsAvailable] = useState(false);
+  const [adults, setAdults] = useState(1);
+  const [children, setChildren] = useState(0);
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -84,8 +86,9 @@ const ListingDetail = () => {
   const calculateTotalPrice = () => {
     const basePrice = listing!.price * nights;
     const cleaningFee = 25;
-    const serviceFee = 15;
-    return basePrice + cleaningFee + serviceFee;
+    const serviceFee = Math.round(basePrice * 0.1);
+    const taxes = Math.round(basePrice * 0.05);
+    return basePrice + cleaningFee + serviceFee + taxes;
   };
 
   const handleAvailabilityCheck = (available: boolean, startDate: Date, checkEndDate: Date) => {
@@ -176,8 +179,7 @@ const ListingDetail = () => {
         listing: listing.id,
         startDate: selectedDate.toISOString(),
         endDate: endDate.toISOString(),
-        guests: { adults: 1, children: 0 },
-        totalPrice: calculateTotalPrice()
+        guests: { adults, children },
       };
 
       const response = await bookingsAPI.createBooking(bookingData);
@@ -415,6 +417,73 @@ const ListingDetail = () => {
                 />
               </div>
 
+              {/* Guest Selector */}
+              <div className="border-t pt-4 mb-4">
+                <h4 className="text-sm font-medium mb-3">Guests</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-medium">Adults</span>
+                      <p className="text-xs text-muted-foreground">Age 13+</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        aria-label="Decrease adults"
+                        className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-40 transition-colors"
+                        onClick={() => setAdults(Math.max(1, adults - 1))}
+                        disabled={adults <= 1}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="w-6 text-center text-sm font-medium">{adults}</span>
+                      <button
+                        type="button"
+                        aria-label="Increase adults"
+                        className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-40 transition-colors"
+                        onClick={() => {
+                          if (adults + children < (listing?.maxGuests || 1)) setAdults(adults + 1);
+                        }}
+                        disabled={adults + children >= (listing?.maxGuests || 1)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-medium">Children</span>
+                      <p className="text-xs text-muted-foreground">Age 2-12</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        aria-label="Decrease children"
+                        className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-40 transition-colors"
+                        onClick={() => setChildren(Math.max(0, children - 1))}
+                        disabled={children <= 0}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="w-6 text-center text-sm font-medium">{children}</span>
+                      <button
+                        type="button"
+                        aria-label="Increase children"
+                        className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-40 transition-colors"
+                        onClick={() => {
+                          if (adults + children < (listing?.maxGuests || 1)) setChildren(children + 1);
+                        }}
+                        disabled={adults + children >= (listing?.maxGuests || 1)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Max {listing?.maxGuests} guests</p>
+                </div>
+              </div>
+
+              {/* Price Breakdown */}
               {selectedDate && endDate && (
                 <div className="border-t pt-4 mb-4">
                   <div className="flex justify-between mb-2">
@@ -431,33 +500,16 @@ const ListingDetail = () => {
                   </div>
                   <div className="flex justify-between mb-2">
                     <span>Service fee</span>
-                    <span>$15</span>
+                    <span>${Math.round(listing!.price * nights * 0.1)}</span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span>Taxes</span>
+                    <span>${Math.round(listing!.price * nights * 0.05)}</span>
                   </div>
                   <div className="border-t pt-4 mt-4 flex justify-between font-bold">
                     <span>Total</span>
                     <span>${calculateTotalPrice()}</span>
                   </div>
-                </div>
-              )}
-
-              {(!selectedDate || !endDate) &&(
-                <div className="border-t pt-4 mb-4">
-                <div className="flex justify-between mb-2">
-                  <span>${listing!.price} x {nights} nights</span>
-                  <span>${listing!.price * nights}</span>
-                </div>
-                <div className="flex justify-between mb-2">
-                  <span>Cleaning fee</span>
-                  <span>$25</span>
-                </div>
-                <div className="flex justify-between mb-2">
-                  <span>Service fee</span>
-                  <span>$15</span>
-                </div>
-                <div className="border-t pt-4 mt-4 flex justify-between font-bold">
-                  <span>Total</span>
-                  <span>${calculateTotalPrice()}</span>
-                </div>
                 </div>
               )}
 

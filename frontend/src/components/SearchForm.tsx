@@ -3,23 +3,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, differenceInCalendarDays } from "date-fns";
 import { Calendar as CalendarIcon, Search, MapPin, Users, Minus, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 export default function SearchForm() {
   const [location, setLocation] = useState("");
-  const [date, setDate] = useState<Date>();
+  const [checkIn, setCheckIn] = useState<Date | undefined>(undefined);
+  const [checkOut, setCheckOut] = useState<Date | undefined>(undefined);
   const [guests, setGuests] = useState(1);
   const navigate = useNavigate();
+
+  const nights = checkIn && checkOut ? differenceInCalendarDays(checkOut, checkIn) : 0;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
 
     const params = new URLSearchParams();
     if (location) params.append("location", location);
-    if (date) params.append("date", format(date, "yyyy-MM-dd"));
+    if (checkIn) params.append("checkIn", format(checkIn, "yyyy-MM-dd"));
+    if (checkOut) params.append("checkOut", format(checkOut, "yyyy-MM-dd"));
     params.append("guests", guests.toString());
 
     navigate(`/listings?${params.toString()}`);
@@ -46,26 +50,70 @@ export default function SearchForm() {
         />
       </div>
 
-      {/* Date */}
+      {/* Check-in */}
       <div className="relative flex-1 md:px-4">
-        <label htmlFor="search-date" className="absolute top-2 left-10 md:left-6 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <label htmlFor="search-checkin" className="absolute top-2 left-10 md:left-6 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
           Check-in
         </label>
         <Popover>
           <PopoverTrigger asChild>
             <button
-              id="search-date"
-              aria-label={`Check-in date${date ? `: ${format(date, "MMMM d, yyyy")}` : ""}`}
+              id="search-checkin"
+              aria-label={`Check-in date${checkIn ? `: ${format(checkIn, "MMMM d, yyyy")}` : ""}`}
               className={cn(
                 "w-full h-14 pl-10 md:pl-12 pr-3 text-left text-sm font-medium flex items-center pt-5 pb-1 rounded-lg hover:bg-secondary/50 transition-colors"
               )}
             >
               <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              {date ? format(date, "MMM d, yyyy") : "Add dates"}
+              {checkIn ? format(checkIn, "MMM d, yyyy") : "Add dates"}
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
-            <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+            <Calendar
+              mode="single"
+              selected={checkIn}
+              onSelect={(date) => {
+                setCheckIn(date);
+                if (checkOut && date && date >= checkOut) {
+                  setCheckOut(undefined);
+                }
+              }}
+              disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Check-out */}
+      <div className="relative flex-1 md:px-4">
+        <label htmlFor="search-checkout" className="absolute top-2 left-10 md:left-6 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Check-out
+        </label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              id="search-checkout"
+              aria-label={`Check-out date${checkOut ? `: ${format(checkOut, "MMMM d, yyyy")}` : ""}`}
+              className={cn(
+                "w-full h-14 pl-10 md:pl-12 pr-3 text-left text-sm font-medium flex items-center pt-5 pb-1 rounded-lg hover:bg-secondary/50 transition-colors"
+              )}
+            >
+              <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              {checkOut ? format(checkOut, "MMM d, yyyy") : "Add dates"}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={checkOut}
+              onSelect={setCheckOut}
+              disabled={(date) => {
+                const today = new Date(new Date().setHours(0, 0, 0, 0));
+                return date < today || (checkIn && date <= checkIn);
+              }}
+              initialFocus
+            />
           </PopoverContent>
         </Popover>
       </div>
@@ -79,6 +127,7 @@ export default function SearchForm() {
         <div className="flex items-center justify-between h-14 pl-10 md:pl-12 pr-3 pt-5 pb-1">
           <span className="text-sm font-medium">
             {guests} {guests === 1 ? "Guest" : "Guests"}
+            {nights > 0 && <span className="text-muted-foreground ml-1">· {nights} {nights === 1 ? "night" : "nights"}</span>}
           </span>
           <div className="flex items-center gap-1">
             <button

@@ -22,6 +22,12 @@ interface PaymentIntentData {
   clientSecret: string;
   amount: number;
   currency: string;
+  priceBreakdown?: {
+    basePrice: number;
+    cleaningFee: number;
+    serviceFee: number;
+    taxes: number;
+  };
 }
 
 const Payment = () => {
@@ -62,7 +68,6 @@ const Payment = () => {
       const paymentResponse = await bookingsAPI.createPayment({
         bookingId: paymentDetails.bookingId,
         listingId: paymentDetails.listingId,
-        amount: paymentDetails.amount,
         currency: paymentDetails.currency || "USD",
       });
 
@@ -82,6 +87,7 @@ const Payment = () => {
         clientSecret,
         amount: paymentResponse.data.amount ?? paymentDetails.amount,
         currency: paymentResponse.data.currency ?? paymentDetails.currency ?? "USD",
+        priceBreakdown: paymentResponse.data.priceBreakdown,
       });
     } catch (error) {
       const message =
@@ -115,6 +121,9 @@ const Payment = () => {
     },
   };
 
+  const breakdown = paymentIntentData?.priceBreakdown;
+  const displayAmount = paymentIntentData?.amount ?? paymentDetails.amount;
+
   return (
     <div className="container py-12">
       <SEO title="Payment" description="Complete your booking payment securely via Stripe." canonicalPath="/payment" noindex />
@@ -138,9 +147,29 @@ const Payment = () => {
                     Check-in: {format(paymentDetails.startDate, "PPP")}
                   </p>
                 )}
+                {breakdown && (
+                  <div className="space-y-1 mt-2 text-sm text-muted-foreground">
+                    <div className="flex justify-between">
+                      <span>Base price</span>
+                      <span>${breakdown.basePrice}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Cleaning fee</span>
+                      <span>${breakdown.cleaningFee}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Service fee</span>
+                      <span>${breakdown.serviceFee}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Taxes</span>
+                      <span>${breakdown.taxes}</span>
+                    </div>
+                  </div>
+                )}
                 <div className="border-t mt-2 pt-2 flex justify-between font-medium">
                   <span>Total</span>
-                  <span>${paymentDetails.amount}</span>
+                  <span>${displayAmount}</span>
                 </div>
               </div>
 
@@ -161,7 +190,7 @@ const Payment = () => {
                   >
                     <StripePaymentForm
                       paymentId={paymentIntentData.paymentId}
-                      providerPaymentId={paymentIntentData.providerPaymentId}
+                      clientSecret={paymentIntentData.clientSecret}
                       amount={paymentIntentData.amount}
                       bookingId={paymentDetails.bookingId}
                       onSuccess={handlePaymentSuccess}

@@ -29,7 +29,7 @@ const getConfiguredPaymentProvider = () => {
   return provider;
 };
 
-const ensureBookingIsPayable = async ({ bookingId, userId, amount, listingId }) => {
+const ensureBookingIsPayable = async ({ bookingId, userId, listingId, amount }) => {
   const booking = await Booking.findById(bookingId).populate('listing');
 
   if (!booking) {
@@ -44,17 +44,15 @@ const ensureBookingIsPayable = async ({ bookingId, userId, amount, listingId }) 
     return { status: 400, error: 'Booking does not match the selected listing' };
   }
 
+  if (amount !== undefined && amount !== null) {
+    const clientAmount = normalizeAmount(amount);
+    if (clientAmount === null || Math.abs(Number(booking.totalPrice) - clientAmount) > 0.01) {
+      return { status: 400, error: 'Client-provided amount does not match the booking total' };
+    }
+  }
+
   if (booking.paymentStatus === 'paid' || booking.status === 'confirmed') {
     return { status: 409, error: 'This booking is already paid and confirmed' };
-  }
-
-  if (amount === null) {
-    return { status: 400, error: 'Valid payment amount is required' };
-  }
-
-  const expectedAmount = Number(booking.totalPrice);
-  if (!Number.isFinite(expectedAmount) || Math.abs(expectedAmount - amount) > 0.01) {
-    return { status: 400, error: 'Payment amount does not match the booking total' };
   }
 
   return { booking };
@@ -90,21 +88,13 @@ const verifyPaymentOwnership = async ({ paymentId, userId, userRole, providerPay
 
 const createPayment = async (req, res) => {
   try {
-    const { bookingId, listingId, amount, currency = 'USD', idempotencyKey } = req.body;
-    const normalizedAmount = normalizeAmount(amount);
-
-    if (normalizedAmount === null) {
-      return res.status(400).json({
-        success: false,
-        message: 'Valid payment amount is required'
-      });
-    }
+    const { bookingId, listingId, currency = 'USD', idempotencyKey } = req.body;
 
     const validation = await ensureBookingIsPayable({
       bookingId,
       userId: req.user._id,
-      amount: normalizedAmount,
-      listingId
+      listingId,
+      amount: undefined
     });
 
     if (validation.status) {
@@ -115,10 +105,19 @@ const createPayment = async (req, res) => {
     }
 
     const { booking } = validation;
+
+    const authoritativeAmount = Number(booking.totalPrice);
+    if (!Number.isFinite(authoritativeAmount) || authoritativeAmount < 0) {
+      return res.status(500).json({
+        success: false,
+        message: 'Booking total price is not available. Cannot initialize payment.'
+      });
+    }
+
     let provider;
     try {
       provider = getConfiguredPaymentProvider();
-    } catch (error: any) {
+    } catch (error) {
       return res.status(500).json({
         success: false,
         message: error.message
@@ -190,7 +189,7 @@ const createPayment = async (req, res) => {
         booking: booking._id,
         listing: booking.listing._id,
         payer: req.user._id,
-        amount: normalizedAmount,
+        amount: authoritativeAmount,
         currency,
         provider,
         idempotencyKey: key,
@@ -224,7 +223,7 @@ const createPayment = async (req, res) => {
       }
 
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(normalizedAmount * 100),
+        amount: Math.round(authoritativeAmount * 100),
         currency: String(currency || 'usd').toLowerCase(),
         metadata: {
           bookingId: booking._id.toString(),
@@ -253,8 +252,9 @@ const createPayment = async (req, res) => {
           status: 'processing',
           providerPaymentId: paymentIntent.id,
           clientSecret: paymentIntent.client_secret,
-          amount: normalizedAmount,
-          currency: String(currency || 'USD').toUpperCase()
+          amount: authoritativeAmount,
+          currency: String(currency || 'USD').toUpperCase(),
+          priceBreakdown: booking.priceBreakdown
         }
       });
     }
@@ -263,7 +263,7 @@ const createPayment = async (req, res) => {
       success: false,
       message: 'No supported payment provider is configured for this environment.'
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to initialize payment',
@@ -377,7 +377,7 @@ const verifyPayment = async (req, res) => {
         status: 'paid'
       }
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to verify payment',
@@ -507,7 +507,7 @@ const handleStripeWebhook = async (req, res) => {
     }
 
     return res.status(200).json({ success: true, received: true });
-  } catch (error: any) {
+  } catch (error) {
     return res.status(400).json({
       success: false,
       message: 'Stripe webhook verification failed',
@@ -548,7 +548,7 @@ const getPaymentStatus = async (req, res) => {
         currency: payment.currency
       }
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch payment status',
@@ -608,7 +608,6 @@ const processRefund = async (req, res) => {
       return res.status(500).json({ success: false, message: 'Stripe integration is not installed' });
     }
 
-    const chargeId = payment.metadata?.stripeChargeId || payment.providerPaymentId;
     const refund = await stripe.refunds.create({
       payment_intent: payment.providerPaymentId,
       amount: Math.round(refundAmount * 100),
@@ -649,7 +648,7 @@ const processRefund = async (req, res) => {
       message: 'Refund processed successfully',
       data: { refundId: refund.id, amount: refundAmount, paymentId: payment._id }
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to process refund',
@@ -686,7 +685,7 @@ const getPaymentHistory = async (req, res) => {
         }
       }
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch payment history',
@@ -708,4 +707,3 @@ module.exports = {
   getConfiguredPaymentProvider,
   isDuplicateWebhook
 };
-
