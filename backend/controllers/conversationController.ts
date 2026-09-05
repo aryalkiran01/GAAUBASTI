@@ -3,6 +3,7 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Listing = require('../models/Listing');
 const { notifyUsers, notifyNewMessage } = require('../utils/notifications');
+const { moderateContent } = require('../services/moderationService');
 
 const normalizeParticipants = (participants = [], currentUserId) => {
   const ids = participants
@@ -129,6 +130,17 @@ const sendMessage = async (req, res) => {
 
     conversation.lastMessageAt = new Date();
     await conversation.save();
+
+    // Non-blocking AI moderation of message content
+    if (body && String(body).trim()) {
+      moderateContent({
+        contentType: 'message',
+        content: String(body),
+        actorId: req.user._id,
+        targetType: 'Message',
+        targetId: message._id,
+      }).catch(() => {});
+    }
 
     await message.populate("sender", "name avatar role");
     const recipientIds = conversation.participants.filter(

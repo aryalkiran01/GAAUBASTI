@@ -3,6 +3,7 @@ const Listing = require('../models/Listing');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
 const { checkListingAvailability, validateBookingDates } = require('../services/bookingAvailability');
+const { moderateContent } = require('../services/moderationService');
 
 const LISTING_ALLOWED_CREATE_FIELDS = [
   'title', 'description', 'location', 'price', 'images', 'amenities', 'maxGuests',
@@ -261,6 +262,15 @@ const createListing = async (req, res) => {
     await listing.save();
 
     await listing.populate('host', 'name avatar');
+
+    // Non-blocking AI moderation of listing description
+    moderateContent({
+      contentType: 'listing',
+      content: `${payload.title || ''} ${payload.description || ''}`,
+      actorId: req.user._id,
+      targetType: 'Listing',
+      targetId: listing._id,
+    }).catch(() => {});
 
     res.status(201).json({
       success: true,

@@ -1,3 +1,4 @@
+export {};
 const Notification = require("../models/Notification");
 const sendEmail = require("./sendemail");
 const emailTemplates = require("./emailTemplates");

@@ -48,7 +48,55 @@ const validateJsonResponse = (
     }
   }
 
+  if (schema && schema.properties) {
+    for (const [field, def] of Object.entries(schema.properties as Record<string, any>)) {
+      if (!(field in parsed)) continue;
+
+      const value = parsed[field];
+      if (value === null || value === undefined) continue;
+
+      if (!validateSchemaType(value, def)) {
+        return null;
+      }
+    }
+  }
+
   return parsed;
+};
+
+const validateSchemaType = (value: any, def: Record<string, any>): boolean => {
+  if (def.type === 'string') {
+    return typeof value === 'string';
+  }
+  if (def.type === 'number') {
+    return typeof value === 'number' && !isNaN(value);
+  }
+  if (def.type === 'boolean') {
+    return typeof value === 'boolean';
+  }
+  if (def.type === 'array') {
+    return Array.isArray(value);
+  }
+  if (def.type === 'object') {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+  return true;
+};
+
+const sanitizeUserContent = (content: string): string => {
+  if (!content || typeof content !== 'string') return '';
+  return content
+    .replace(/```/g, '`\u200B`\u200B`')
+    .replace(/<system>/gi, '<system\u200B>')
+    .replace(/<\/system>/gi, '</system\u200B>');
+};
+
+const sanitizeMessages = (messages: any[]): any[] => {
+  return messages.map((msg) => {
+    if (!msg || typeof msg.content !== 'string') return msg;
+    if (msg.role === 'system') return msg;
+    return { ...msg, content: sanitizeUserContent(msg.content) };
+  });
 };
 
 const getProvider = (name: string): any => {
@@ -68,9 +116,10 @@ const generate = async (request: any): Promise<any> => {
   }
 
   const errors: string[] = [];
+  const sanitizedRequest = { ...request, messages: sanitizeMessages(request.messages || []) };
 
   try {
-    const response = await primaryProvider.generate(request);
+    const response = await primaryProvider.generate(sanitizedRequest);
 
     if (request.jsonMode) {
       const parsed = validateJsonResponse(response.content, request.jsonSchema);
@@ -97,7 +146,7 @@ const generate = async (request: any): Promise<any> => {
     if (!fallbackProvider || !fallbackProvider.isConfigured()) continue;
 
     try {
-      const response = await fallbackProvider.generate(request);
+      const response = await fallbackProvider.generate(sanitizedRequest);
 
       if (request.jsonMode) {
         const parsed = validateJsonResponse(response.content, request.jsonSchema);
@@ -199,4 +248,6 @@ module.exports = {
   validateJsonResponse,
   getProvider,
   isAIConfigured,
+  sanitizeUserContent,
+  sanitizeMessages,
 };

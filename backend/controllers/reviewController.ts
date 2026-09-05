@@ -2,6 +2,7 @@ export {};
 const Review = require('../models/Review');
 const Booking = require('../models/Booking');
 const Listing = require('../models/Listing');
+const { moderateContent } = require('../services/moderationService');
 
 // Create new review
 const createReview = async (req, res) => {
@@ -54,6 +55,21 @@ const createReview = async (req, res) => {
     });
 
     await review.save();
+
+    // Non-blocking AI moderation
+    moderateContent({
+      contentType: 'review',
+      content: comment || '',
+      actorId: req.user._id,
+      targetType: 'Review',
+      targetId: review._id,
+    }).then((result) => {
+      if (result && result.flagged) {
+        review.isFlagged = true;
+        review.flagReason = result.reason;
+        review.save().catch(() => {});
+      }
+    }).catch(() => {});
 
     // Populate review details
     await review.populate([
