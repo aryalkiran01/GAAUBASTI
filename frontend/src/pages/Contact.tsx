@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Phone, Mail, MapPin, Send } from "lucide-react";
 import HelpAssistant from "@/components/ai/HelpAssistant";
 import Translation from "@/components/ai/Translation";
+import SEO from "@/components/SEO";
 
 const Contact = () => {
   const [name, setName] = useState("");
@@ -31,6 +32,11 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title="Contact Us"
+        description="Get in touch with the Gau Basti team. We're here to help with bookings, host inquiries, and any questions about your Nepali homestay experience."
+        canonicalPath="/contact"
+      />
       {/* Hero */}
       <section
         className="relative py-20 md:py-28 flex items-center"

@@ -1,5 +1,5 @@
-export {};
-const SavedSearch = require('../models/SavedSearch');
+import SavedSearch from '../models/SavedSearch';
+import { Response } from 'express';
 
 const ALLOWED_FILTER_KEYS = [
   'location', 'minPrice', 'maxPrice', 'guests', 'rating',
@@ -16,7 +16,7 @@ const sanitizeFilters = (raw: any = {}) => {
   return filters;
 };
 
-const getSavedSearches = async (req, res) => {
+export const getSavedSearches = async (req: any, res: Response) => {
   try {
     const searches = await SavedSearch.find({ user: req.user._id }).sort({ createdAt: -1 });
     res.json({ success: true, data: { searches } });
@@ -29,7 +29,7 @@ const getSavedSearches = async (req, res) => {
   }
 };
 
-const createSavedSearch = async (req, res) => {
+export const createSavedSearch = async (req: any, res: Response) => {
   try {
     const { name, filters, notifyOnMatch } = req.body;
 
@@ -59,7 +59,7 @@ const createSavedSearch = async (req, res) => {
   }
 };
 
-const deleteSavedSearch = async (req, res) => {
+export const deleteSavedSearch = async (req: any, res: Response) => {
   try {
     const result = await SavedSearch.findOneAndDelete({
       _id: req.params.id,
@@ -78,10 +78,4 @@ const deleteSavedSearch = async (req, res) => {
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
-};
-
-module.exports = {
-  getSavedSearches,
-  createSavedSearch,
-  deleteSavedSearch
 };

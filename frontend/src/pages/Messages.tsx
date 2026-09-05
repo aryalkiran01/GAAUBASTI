@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { conversationsAPI } from "@/lib/api";
 import MessageReplySuggestions from "@/components/ai/MessageReplySuggestions";
+import SEO from "@/components/SEO";
 
 const getUserId = (user: any) => user?._id || user?.id;
 
@@ -130,6 +131,7 @@ const Messages = () => {
 
   return (
     <div className="container mx-auto max-w-6xl py-8">
+      <SEO title="Messages" description="View and send messages to your hosts." canonicalPath="/messages" noindex />
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-serif font-bold">Messages</h1>
         <Link to="/listings">

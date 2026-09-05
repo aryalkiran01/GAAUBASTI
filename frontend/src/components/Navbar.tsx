@@ -221,8 +221,10 @@ export default function Navbar() {
         <Button 
           variant="ghost" 
           size="icon" 
-          className="md:hidden" 
+          className="md:hidden"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMobileMenuOpen}
         >
           <Menu className="h-5 w-5" />
         </Button>

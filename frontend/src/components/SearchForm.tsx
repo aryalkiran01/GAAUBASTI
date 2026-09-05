@@ -32,11 +32,12 @@ export default function SearchForm() {
     >
       {/* Location */}
       <div className="relative flex-1 md:px-4">
-        <label className="absolute top-2 left-10 md:left-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <label htmlFor="search-location" className="absolute top-2 left-10 md:left-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
           Location
         </label>
         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <Input
+          id="search-location"
           type="text"
           placeholder="Where are you going?"
           className="border-0 shadow-none focus-visible:ring-0 pl-10 md:pl-10 pt-5 pb-1 h-14 text-sm font-medium bg-transparent"
@@ -47,12 +48,14 @@ export default function SearchForm() {
 
       {/* Date */}
       <div className="relative flex-1 md:px-4">
-        <label className="absolute top-2 left-10 md:left-6 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <label htmlFor="search-date" className="absolute top-2 left-10 md:left-6 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
           Check-in
         </label>
         <Popover>
           <PopoverTrigger asChild>
             <button
+              id="search-date"
+              aria-label={`Check-in date${date ? `: ${format(date, "MMMM d, yyyy")}` : ""}`}
               className={cn(
                 "w-full h-14 pl-10 md:pl-12 pr-3 text-left text-sm font-medium flex items-center pt-5 pb-1 rounded-lg hover:bg-secondary/50 transition-colors"
               )}

@@ -1,32 +1,32 @@
-export {};
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
-const rateLimit = require('express-rate-limit');
-const { Server } = require('socket.io');
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
-const { globalLimiter } = require('./middlewares/rateLimiters');
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import { Server } from 'socket.io';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+dotenv.config();
+import { globalLimiter } from './middlewares/rateLimiters.js';
 
 // Import routes and middleware
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const listingRoutes = require('./routes/listings');
-const bookingRoutes = require('./routes/bookings');
-const reviewRoutes = require('./routes/reviews');
-const adminRoutes = require('./routes/admin');
-const paymentRoutes = require('./routes/payments');
-const conversationRoutes = require('./routes/conversations');
-const notificationRoutes = require('./routes/notifications');
-const articleRoutes = require('./routes/articles');
-const reportRoutes = require('./routes/reports');
-const wishlistRoutes = require('./routes/wishlist');
-const payoutRoutes = require('./routes/payouts');
-const aiRoutes = require('./routes/ai');
-const savedSearchRoutes = require('./routes/savedSearches');
-const errorHandler = require('./middlewares/errorHandler');
+import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
+import listingRoutes from './routes/listings';
+import bookingRoutes from './routes/bookings';
+import reviewRoutes from './routes/reviews';
+import adminRoutes from './routes/admin';
+import paymentRoutes from './routes/payments';
+import conversationRoutes from './routes/conversations';
+import notificationRoutes from './routes/notifications';
+import articleRoutes from './routes/articles';
+import reportRoutes from './routes/reports';
+import wishlistRoutes from './routes/wishlist';
+import payoutRoutes from './routes/payouts';
+import aiRoutes from './routes/ai';
+import savedSearchRoutes from './routes/savedSearches';
+import errorHandler from './middlewares/errorHandler';
+import Conversation from './models/Conversation';
 
 const app = express();
 
@@ -82,10 +82,10 @@ const allowedOrigins = [
   'https://gaaubasti-19rzg9sr5-aryalkiran01s-projects.vercel.app',
   'https://gaaubasti.vercel.app',
   process.env.FRONTEND_URL
-].filter(Boolean);
+].filter(Boolean) as string[];
 
 const corsOptions = {
-  origin: function (origin, callback) {
+  origin: function (origin: string | undefined, callback: (err: Error | null, ok?: boolean) => void) {
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.indexOf(origin) === -1) {
@@ -130,7 +130,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/saved-searches', savedSearchRoutes);
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({
     status: 'OK',
     message: 'Gaunbasti API is running',
@@ -139,7 +139,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use('*', (_req, res) => {
   res.status(404).json({
     success: false,
     message: 'API endpoint not found'
@@ -150,9 +150,9 @@ app.use('*', (req, res) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
-let server;
+let server: any;
 
-const initializeSocketIO = (httpServer) => {
+const initializeSocketIO = (httpServer: any) => {
   const io = new Server(httpServer, {
     cors: {
       origin: allowedOrigins,
@@ -160,7 +160,7 @@ const initializeSocketIO = (httpServer) => {
     }
   });
 
-  global.io = io;
+  (global as any).io = io;
 
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
@@ -170,10 +170,10 @@ const initializeSocketIO = (httpServer) => {
     }
 
     try {
-      const decoded = jwt.verify(token, jwtSecret);
+      const decoded = jwt.verify(token, jwtSecret) as any;
       socket.user = { _id: decoded.userId };
       return next();
-    } catch (error) {
+    } catch {
       return next(new Error('Invalid token'));
     }
   });
@@ -181,14 +181,13 @@ const initializeSocketIO = (httpServer) => {
   io.on('connection', (socket) => {
     socket.join(`user:${socket.user._id}`);
 
-    socket.on('joinConversation', async (conversationId) => {
+    socket.on('joinConversation', async (conversationId: string) => {
       if (!conversationId) return;
       try {
-        const Conversation = require('./models/Conversation');
         const conversation = await Conversation.findById(conversationId).lean();
         if (!conversation) return;
         const isParticipant = conversation.participants.some(
-          (p) => (typeof p === 'object' ? p._id?.toString() : p.toString()) === socket.user._id
+          (p: any) => (typeof p === 'object' ? p._id?.toString() : p.toString()) === socket.user._id
         );
         if (!isParticipant) return;
         socket.join(String(conversationId));
@@ -197,7 +196,7 @@ const initializeSocketIO = (httpServer) => {
       }
     });
 
-    socket.on('typing:start', (payload) => {
+    socket.on('typing:start', (payload: any) => {
       if (payload?.conversationId) {
         socket.to(payload.conversationId).emit('typing:start', {
           userId: socket.user?._id,
@@ -206,7 +205,7 @@ const initializeSocketIO = (httpServer) => {
       }
     });
 
-    socket.on('typing:stop', (payload) => {
+    socket.on('typing:stop', (payload: any) => {
       if (payload?.conversationId) {
         socket.to(payload.conversationId).emit('typing:stop', {
           userId: socket.user?._id,
@@ -230,7 +229,7 @@ const startServer = async () => {
     });
 
     initializeSocketIO(server);
-  } catch (error) {
+  } catch {
     console.error('Failed to start server');
     process.exitCode = 1;
   }
@@ -280,5 +279,4 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1);
 });
 
-module.exports = app;
-
+export default app;

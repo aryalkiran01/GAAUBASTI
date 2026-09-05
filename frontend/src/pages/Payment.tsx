@@ -10,6 +10,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import StripePaymentForm from "@/components/StripePaymentForm";
 import { Loader as Loader2 } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
 
@@ -116,6 +117,7 @@ const Payment = () => {
 
   return (
     <div className="container py-12">
+      <SEO title="Payment" description="Complete your booking payment securely via Stripe." canonicalPath="/payment" noindex />
       <div className="max-w-md mx-auto">
         <Card>
           <CardHeader>

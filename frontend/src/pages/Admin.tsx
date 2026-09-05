@@ -23,6 +23,7 @@ import UserEditDialog from "@/components/admin/UserEditDialog";
 import ListingEditDialog from "@/components/admin/ListingEditDialog";
 import BookingEditDialog from "@/components/admin/BookingEditDialog";
 import AIModeration from "@/components/ai/AIModeration";
+import SEO from "@/components/SEO";
 
 const Admin = () => {
   const { user } = useAuth();
@@ -239,6 +240,7 @@ const Admin = () => {
   
   return (
     <div className="min-h-screen py-12">
+      <SEO title="Admin Dashboard" description="Manage users, listings, bookings, and platform moderation." canonicalPath="/admin" noindex />
       <div className="container">
         <h1 className="text-3xl font-serif font-bold mb-6">Admin Dashboard</h1>
         
@@ -275,7 +277,7 @@ const Admin = () => {
         )}
         
         <Tabs defaultValue="listings" className="w-full">
-          <TabsList>
+          <TabsList className="flex flex-wrap h-auto">
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="listings">Listings</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>

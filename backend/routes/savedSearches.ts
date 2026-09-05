@@ -1,13 +1,13 @@
-export {};
-const express = require('express');
-const router = express.Router();
-const { authenticate } = require('../middlewares/auth');
-const { validateObjectId } = require('../middlewares/validation');
-const {
+import express from 'express';
+import { authenticate } from '../middlewares/auth';
+import { validateObjectId } from '../middlewares/validation';
+import {
   getSavedSearches,
   createSavedSearch,
   deleteSavedSearch
-} = require('../controllers/savedSearchController');
+} from '../controllers/savedSearchController';
+
+const router = express.Router();
 
 router.use(authenticate);
 
@@ -15,4 +15,4 @@ router.get('/', getSavedSearches);
 router.post('/', createSavedSearch);
 router.delete('/:id', validateObjectId('id'), deleteSavedSearch);
 
-module.exports = router;
+export default router;

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { authAPI } from "../lib/api";
 import { Mail, CircleCheck as CheckCircle2, ArrowLeft } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
@@ -70,6 +71,7 @@ const ForgotPasswordPage = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
+      <SEO title="Forgot Password" description="Reset your Gau Basti account password." canonicalPath="/forgot-password" noindex />
       <div className="max-w-sm w-full space-y-6">
         <Link to="/login" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" />

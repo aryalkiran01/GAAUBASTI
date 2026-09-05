@@ -12,3 +12,14 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /account
+Disallow: /admin
+Disallow: /host
+Disallow: /messages
+Disallow: /wishlist
+Disallow: /payment
+Disallow: /payment-success
+Disallow: /forgot-password
+Disallow: /reset-password
+
+Sitemap: https://gaunbasti.com/sitemap.xml

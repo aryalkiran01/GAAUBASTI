@@ -1,5 +1,4 @@
-export {};
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const savedSearchSchema = new mongoose.Schema({
   user: {
@@ -35,4 +34,4 @@ const savedSearchSchema = new mongoose.Schema({
 
 savedSearchSchema.index({ user: 1, createdAt: -1 });
 
-module.exports = mongoose.model('SavedSearch', savedSearchSchema);
+export default mongoose.model('SavedSearch', savedSearchSchema);

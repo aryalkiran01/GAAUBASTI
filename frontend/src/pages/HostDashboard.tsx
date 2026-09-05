@@ -199,7 +199,7 @@ const HostDashboard = () => {
                 <DialogDescription>Add a new homestay to your portfolio</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateListing} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="title">Title</Label>
                     <Input id="title" value={newListing.title} onChange={(e) => setNewListing({ ...newListing, title: e.target.value })} required className="mt-1.5" />
@@ -225,7 +225,7 @@ const HostDashboard = () => {
                   }}
                   onApply={(data) => setNewListing((prev) => ({ ...prev, title: data.title, description: data.description }))}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="city">City</Label>
                     <Input id="city" value={newListing.location.city} onChange={(e) => setNewListing({ ...newListing, location: { ...newListing.location, city: e.target.value } })} required className="mt-1.5" />
@@ -235,7 +235,7 @@ const HostDashboard = () => {
                     <Input id="address" value={newListing.location.address} onChange={(e) => setNewListing({ ...newListing, location: { ...newListing.location, address: e.target.value } })} required className="mt-1.5" />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="maxGuests">Max Guests</Label>
                     <Input id="maxGuests" type="number" min="1" value={newListing.maxGuests} onChange={(e) => setNewListing({ ...newListing, maxGuests: Number(e.target.value) })} required className="mt-1.5" />
@@ -275,7 +275,7 @@ const HostDashboard = () => {
         </div>
 
         <Tabs defaultValue="listings" className="w-full">
-          <TabsList>
+          <TabsList className="flex flex-wrap h-auto">
             <TabsTrigger value="listings">My Listings</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
@@ -283,7 +283,7 @@ const HostDashboard = () => {
 
           {/* Listings Tab */}
           <TabsContent value="listings" className="mt-6">
-            <div className="bg-white rounded-2xl border border-border overflow-hidden">
+            <div className="bg-white rounded-2xl border border-border overflow-x-auto">
               {loading ? (
                 <div className="p-6 space-y-4">
                   {Array.from({ length: 3 }).map((_, index) => (
@@ -358,7 +358,7 @@ const HostDashboard = () => {
                                       <Label htmlFor="edit-description">Description</Label>
                                       <Textarea id="edit-description" value={editingListing.description} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, description: e.target.value } : null))} required rows={3} className="mt-1.5" />
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                       <div>
                                         <Label htmlFor="edit-city">City</Label>
                                         <Input id="edit-city" value={typeof editingListing.location === "string" ? "" : editingListing.location.city} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, location: typeof prev.location === "string" ? { address: "", city: e.target.value, state: "", country: "Nepal" } : { ...prev.location, city: e.target.value } } : null))} required className="mt-1.5" />
@@ -368,7 +368,7 @@ const HostDashboard = () => {
                                         <Input id="edit-address" value={typeof editingListing.location === "string" ? "" : editingListing.location.address} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, location: typeof prev.location === "string" ? { address: e.target.value, city: "", state: "", country: "Nepal" } : { ...prev.location, address: e.target.value } } : null))} required className="mt-1.5" />
                                       </div>
                                     </div>
-                                    <div className="grid grid-cols-4 gap-4">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                       <div>
                                         <Label htmlFor="edit-maxGuests">Guests</Label>
                                         <Input id="edit-maxGuests" type="number" min="1" value={editingListing.maxGuests} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, maxGuests: Number(e.target.value) } : null))} required className="mt-1.5" />
@@ -410,7 +410,7 @@ const HostDashboard = () => {
 
           {/* Bookings Tab */}
           <TabsContent value="bookings" className="mt-6">
-            <div className="bg-white rounded-2xl border border-border overflow-hidden">
+            <div className="bg-white rounded-2xl border border-border">
               {loading ? (
                 <div className="p-6 space-y-4">
                   {Array.from({ length: 5 }).map((_, index) => (
