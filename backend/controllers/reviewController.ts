@@ -3,6 +3,7 @@ const Review = require('../models/Review');
 const Booking = require('../models/Booking');
 const Listing = require('../models/Listing');
 const { moderateContent } = require('../services/moderationService');
+const { notifyReviewReceived } = require('../utils/notifications');
 
 // Create new review
 const createReview = async (req, res) => {
@@ -55,6 +56,13 @@ const createReview = async (req, res) => {
     });
 
     await review.save();
+
+    // Notify host about new review
+    const Listing = require('../models/Listing');
+    const listingForHost = await Listing.findById(booking.listing._id).select('host');
+    if (listingForHost) {
+      notifyReviewReceived({ review, host: listingForHost.host }).catch(() => {});
+    }
 
     // Non-blocking AI moderation
     moderateContent({
@@ -237,7 +245,12 @@ const deleteReview = async (req, res) => {
       });
     }
 
-    await Review.findByIdAndDelete(req.params.id);
+    const listingId = review.listing;
+    await Review.deleteOne({ _id: review._id });
+
+    // Manually recalculate listing rating since deleteOne bypasses post('remove') hook
+    const Review2 = require('../models/Review');
+    await Review2.updateListingRating(listingId);
 
     res.json({
       success: true,
@@ -274,7 +287,7 @@ const respondToReview = async (req, res) => {
     }
 
     // Check if host has already responded
-    if (review.hostResponse.comment) {
+    if (review.hostResponse && review.hostResponse.comment) {
       return res.status(400).json({
         success: false,
         message: 'Host has already responded to this review'

@@ -8,6 +8,18 @@ export interface User {
   email: string;
   role: UserRole;
   avatar?: string;
+  username?: string;
+  phone?: string;
+  isVerified?: boolean;
+  isActive?: boolean;
+  hostStatus?: 'none' | 'pending' | 'approved' | 'rejected';
+  hostProfile?: {
+    bio?: string;
+    languages?: string[];
+    responseRate?: number;
+    responseTime?: string;
+    joinedDate?: string;
+  };
 }
 
 export interface Listing {
@@ -48,8 +60,9 @@ export interface Booking {
   startDate: Date | string;
   endDate: Date | string;
   totalPrice: number;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'refunded' | 'no-show' | 'payment_failed';
   paymentStatus?: 'pending' | 'paid' | 'failed' | 'refunded';
+  bookingReference?: string;
   guests?: {
     adults: number;
     children: number;
@@ -62,7 +75,7 @@ export interface Booking {
   };
 }
 
-export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'paid' | 'refunded';
 
 export interface PaymentDetails {
   bookingId?: string;

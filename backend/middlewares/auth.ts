@@ -1,6 +1,7 @@
 export {};
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { isBlacklisted } = require('../controllers/authController');
 
 const toUserId = (value) => {
   if (!value) return null;
@@ -29,6 +30,13 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'Access denied. No token provided.'
+      });
+    }
+
+    if (isBlacklisted(token)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token has been invalidated. Please log in again.'
       });
     }
 

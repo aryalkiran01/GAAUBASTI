@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { WishlistProvider } from "./context/WishlistContext";
 import { lazy, Suspense } from "react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -29,6 +30,7 @@ const ForgotPasswordPage = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Messages = lazy(() => import("./pages/Messages"));
 const Wishlist = lazy(() => import("./pages/Wishlist"));
+const BookingConfirmation = lazy(() => import("./pages/BookingConfirmation"));
 
 const queryClient = new QueryClient();
 
@@ -46,6 +48,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <AuthProvider>
+        <WishlistProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -146,6 +149,14 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="/booking-confirmation"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <BookingConfirmation />
+                    </Suspense>
+                  }
+                />
+                <Route
                   path="/forgot-password"
                   element={
                     <Suspense fallback={<PageLoader />}>
@@ -168,6 +179,7 @@ const App = () => (
             <Footer />
           </div>
         </TooltipProvider>
+        </WishlistProvider>
       </AuthProvider>
     </BrowserRouter>
   </QueryClientProvider>

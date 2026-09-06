@@ -5,6 +5,7 @@ const Booking = require("../models/Booking");
 const Review = require("../models/Review");
 const AuditLog = require("../models/AuditLog");
 const Report = require("../models/Report");
+const { notifyListingApproved, notifyListingRejected } = require("../utils/notifications");
 
 // Get dashboard statistics
 const getDashboardStats = async (req, res) => {
@@ -228,10 +229,27 @@ const verifyListing = async (req, res) => {
     listing.isVerified = isVerified;
     listing.verifiedAt = isVerified ? new Date() : null;
     listing.verifiedBy = isVerified ? req.user._id : null;
+    listing.status = isVerified ? "approved" : "rejected";
     if (notes) listing.adminNotes = notes;
 
     await listing.save();
     await listing.populate("host", "name email");
+
+    // Audit log
+    await AuditLog.create({
+      actor: req.user._id,
+      action: isVerified ? "listing_approve" : "listing_reject",
+      targetType: "Listing",
+      targetId: listing._id,
+      description: `${isVerified ? "Approved" : "Rejected"} listing ${listing.title}`,
+    });
+
+    // Notify host about listing approval/rejection
+    if (isVerified) {
+      notifyListingApproved({ listing, host: listing.host }).catch(() => {});
+    } else {
+      notifyListingRejected({ listing, host: listing.host, reason: notes }).catch(() => {});
+    }
 
     res.json({
       success: true,
@@ -358,6 +376,15 @@ const moderateReview = async (req, res) => {
     review.moderatedAt = new Date();
 
     await review.save();
+
+    // Audit log
+    await AuditLog.create({
+      actor: req.user._id,
+      action: `review_${action}`,
+      targetType: "Review",
+      targetId: review._id,
+      description: `${action === "approve" ? "Approved" : "Removed"} review`,
+    });
 
     res.json({
       success: true,
@@ -514,6 +541,14 @@ const deactivateUser = async (req, res) => {
   try {
     const { reason } = req.body;
 
+    // Prevent admin from deactivating their own account
+    if (req.params.id === req.user._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot deactivate your own account",
+      });
+    }
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { isActive: false },
@@ -523,8 +558,7 @@ const deactivateUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
-      });
+        message: "User not found" });
     }
 
     // Cancel all pending/confirmed bookings for this user
@@ -545,6 +579,15 @@ const deactivateUser = async (req, res) => {
     if (user.role === "host") {
       await Listing.updateMany({ host: req.params.id }, { isActive: false });
     }
+
+    // Audit log
+    await AuditLog.create({
+      actor: req.user._id,
+      action: "user_deactivate",
+      targetType: "User",
+      targetId: req.params.id,
+      description: `Deactivated user ${user.email}${reason ? `: ${reason}` : ""}`,
+    });
 
     res.json({
       success: true,
@@ -576,6 +619,15 @@ const reactivateUser = async (req, res) => {
       });
     }
 
+    // Audit log
+    await AuditLog.create({
+      actor: req.user._id,
+      action: "user_reactivate",
+      targetType: "User",
+      targetId: req.params.id,
+      description: `Reactivated user ${user.email}`,
+    });
+
     res.json({
       success: true,
       message: "User account reactivated successfully",
@@ -585,6 +637,110 @@ const reactivateUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to reactivate user",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+// Approve host application
+const approveHost = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    if (user.hostStatus !== "pending") {
+      return res.status(400).json({ success: false, message: "User has not applied for host status" });
+    }
+
+    user.hostStatus = "approved";
+    user.role = "host";
+    user.hostVerifiedAt = new Date();
+    user.hostVerifiedBy = req.user._id;
+    user.hostRejectionReason = null;
+    await user.save();
+
+    await AuditLog.create({
+      actor: req.user._id,
+      action: "host_approve",
+      targetType: "User",
+      targetId: user._id,
+      description: `Approved host application for ${user.email}`,
+    });
+
+    res.json({ success: true, message: "Host application approved", data: { user } });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to approve host",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+// Reject host application
+const rejectHost = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    if (user.hostStatus !== "pending") {
+      return res.status(400).json({ success: false, message: "User has not applied for host status" });
+    }
+
+    user.hostStatus = "rejected";
+    user.hostRejectionReason = reason || "Application rejected";
+    await user.save();
+
+    await AuditLog.create({
+      actor: req.user._id,
+      action: "host_reject",
+      targetType: "User",
+      targetId: user._id,
+      description: `Rejected host application for ${user.email}: ${reason || ""}`,
+    });
+
+    res.json({ success: true, message: "Host application rejected", data: { user } });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to reject host",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+// Get pending host applications
+const getPendingHosts = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const [users, total] = await Promise.all([
+      User.find({ hostStatus: "pending" })
+        .sort({ hostAppliedAt: 1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      User.countDocuments({ hostStatus: "pending" }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        users,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / parseInt(limit)),
+          totalUsers: total,
+        },
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch pending hosts",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
@@ -602,11 +758,15 @@ const deleteListing = async (req, res) => {
       });
     }
 
-    // Check for active bookings
+    // Check for active or in-progress bookings
+    const now = new Date();
     const activeBookings = await Booking.countDocuments({
       listing: req.params.id,
       status: { $in: ["pending", "confirmed"] },
-      startDate: { $gte: new Date() },
+      $or: [
+        { startDate: { $gte: now } },
+        { startDate: { $lte: now }, endDate: { $gte: now } },
+      ],
     });
 
     if (activeBookings > 0) {
@@ -619,6 +779,15 @@ const deleteListing = async (req, res) => {
     // Soft delete
     listing.isActive = false;
     await listing.save();
+
+    // Audit log
+    await AuditLog.create({
+      actor: req.user._id,
+      action: "listing_delete",
+      targetType: "Listing",
+      targetId: listing._id,
+      description: `Deleted listing ${listing.title}`,
+    });
 
     res.json({
       success: true,
@@ -718,6 +887,9 @@ module.exports = {
   deleteListing,
   deactivateUser,
   reactivateUser,
+  approveHost,
+  rejectHost,
+  getPendingHosts,
   getFlaggedReviews,
   moderateReview,
   getAnalytics,

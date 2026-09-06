@@ -124,6 +124,15 @@ const listingSchema = new mongoose.Schema({
   reviewCount: {
     type: Number,
     default: 0
+  },
+  adminNotes: {
+    type: String,
+    default: null
+  },
+  status: {
+    type: String,
+    enum: ['draft', 'pending', 'approved', 'rejected'],
+    default: 'draft'
   }
 }, {
   timestamps: true,

@@ -50,8 +50,13 @@ const bookingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'cancelled', 'completed', 'refunded'],
+    enum: ['pending', 'confirmed', 'cancelled', 'completed', 'refunded', 'no-show', 'payment_failed'],
     default: 'pending'
+  },
+  bookingReference: {
+    type: String,
+    unique: true,
+    sparse: true
   },
   paymentStatus: {
     type: String,
@@ -97,6 +102,16 @@ bookingSchema.index({ listing: 1, startDate: 1, endDate: 1 }, {
 });
 bookingSchema.index({ status: 1 });
 bookingSchema.index({ startDate: 1, endDate: 1 });
+
+// Pre-save hook to generate booking reference
+bookingSchema.pre('save', function(this: any, next) {
+  if (!this.bookingReference) {
+    const dateStr = new Date().toISOString().slice(2, 8).replace(/-/g, '');
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    this.bookingReference = `GAU-${dateStr}-${random}`;
+  }
+  next();
+});
 
 // Virtual for number of nights
 bookingSchema.virtual('nights').get(function(this: any) {

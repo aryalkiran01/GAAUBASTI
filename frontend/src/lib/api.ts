@@ -159,8 +159,27 @@ export const authAPI = {
     return data;
   },
 
-  logout: () => {
+  logout: async () => {
+    const result = await apiRequest("/auth/logout", { method: "POST" });
     removeAuthToken();
+    return result;
+  },
+
+  resendVerification: async () => {
+    return await apiRequest("/auth/resend-verification", { method: "POST" });
+  },
+
+  deleteAccount: async () => {
+    const result = await apiRequest("/auth/account", { method: "DELETE" });
+    removeAuthToken();
+    return result;
+  },
+
+  applyForHost: async (data?: { bio?: string; languages?: string[] }) => {
+    return await apiRequest("/auth/apply-host", {
+      method: "POST",
+      body: JSON.stringify(data || {}),
+    });
   },
 
   getProfile: async () => {
@@ -517,6 +536,26 @@ export const adminAPI = {
   deleteListing: async (id: string) => {
     return await apiRequest(`/admin/listings/${id}`, {
       method: "DELETE",
+    });
+  },
+
+  getPendingHosts: async (params: any = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return await apiRequest(
+      `/admin/hosts/pending${queryString ? `?${queryString}` : ""}`,
+    );
+  },
+
+  approveHost: async (id: string) => {
+    return await apiRequest(`/admin/hosts/${id}/approve`, {
+      method: "PATCH",
+    });
+  },
+
+  rejectHost: async (id: string, reason?: string) => {
+    return await apiRequest(`/admin/hosts/${id}/reject`, {
+      method: "PATCH",
+      body: JSON.stringify({ reason }),
     });
   },
 

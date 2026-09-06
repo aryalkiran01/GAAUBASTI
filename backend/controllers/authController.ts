@@ -257,14 +257,17 @@ const forgotPassword = async (req, res) => {
       return res.status(200).json({ success: true, message: 'If an account with that email exists, an OTP has been sent.' });
     }
 
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate 6-digit OTP using cryptographically secure RNG
+    const otp = crypto.randomInt(100000, 1000000).toString();
     const expires = Date.now() + 10 * 60 * 1000;
 
-    // Save OTP to separate collection
+    // Hash OTP before storing
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+
+    // Save hashed OTP to separate collection
     await OTP.findOneAndUpdate(
       { email },
-      { otp, expires },
+      { otp: hashedOtp, expires },
       { upsert: true, new: true }
     );
 
@@ -302,8 +305,9 @@ const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
 
-    // Check OTP from separate collection
-    const otpRecord = await OTP.findOne({ email, otp });
+    // Hash the submitted OTP and compare
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+    const otpRecord = await OTP.findOne({ email, otp: hashedOtp });
 
     if (!otpRecord) {
       return res.status(400).json({ success: false, message: 'Invalid OTP' });
@@ -403,6 +407,170 @@ const refreshToken = async (req, res) => {
   }
 };
 
+// Logout - blacklist the current token
+const blacklistedTokens = new Set<string>();
+
+const addToBlacklist = (token: string) => {
+  blacklistedTokens.add(token);
+  // Auto-remove after 7 days (matches JWT expiry)
+  setTimeout(() => blacklistedTokens.delete(token), 7 * 24 * 60 * 60 * 1000);
+};
+
+const isBlacklisted = (token: string) => blacklistedTokens.has(token);
+
+const logout = async (req, res) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (token) {
+      addToBlacklist(token);
+    }
+    res.json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Logout failed',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Resend email verification
+const resendVerification = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already verified'
+      });
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedVerificationToken = crypto
+      .createHash('sha256')
+      .update(verificationToken)
+      .digest('hex');
+
+    user.verificationToken = hashedVerificationToken;
+    user.verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
+    await user.save();
+
+    const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/verify-email/${verificationToken}`;
+    const verifyTemplate = emailTemplates.email_verification({ name: user.name, verifyUrl });
+    sendEmail({
+      to: user.email,
+      subject: verifyTemplate.subject,
+      text: verifyTemplate.text,
+      html: verifyTemplate.html
+    }).catch(() => {});
+
+    res.json({
+      success: true,
+      message: 'Verification email sent. Please check your inbox.'
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to resend verification email',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Delete account (soft delete - deactivate)
+const deleteAccount = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Deactivate instead of hard delete to preserve referential integrity
+    user.isActive = false;
+    await user.save();
+
+    // Blacklist current token
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (token) {
+      addToBlacklist(token);
+    }
+
+    res.json({
+      success: true,
+      message: 'Account deleted successfully'
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete account',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Apply to become a host
+const applyForHost = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    if (user.role === 'host' || user.hostStatus === 'approved') {
+      return res.status(400).json({
+        success: false,
+        message: 'You are already a host'
+      });
+    }
+
+    if (user.hostStatus === 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Your host application is already pending review'
+      });
+    }
+
+    const { bio, languages } = req.body;
+
+    user.hostStatus = 'pending';
+    user.hostAppliedAt = new Date();
+    if (bio) user.hostProfile = { ...user.hostProfile, bio };
+    if (languages) user.hostProfile = { ...user.hostProfile, languages };
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Host application submitted. An admin will review your request.',
+      data: { user }
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit host application',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -412,5 +580,10 @@ module.exports = {
   verifyEmail,
   refreshToken,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  logout,
+  resendVerification,
+  deleteAccount,
+  applyForHost,
+  isBlacklisted
 };

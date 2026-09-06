@@ -393,6 +393,64 @@ const notifySafetyAlert = async ({ user, message }: any): Promise<void> => {
   }
 };
 
+const notifyListingApproved = async ({ listing, host }: any): Promise<void> => {
+  const content = {
+    listingId: String(listing._id),
+    listingTitle: listing.title,
+    preview: `Your listing "${listing.title}" has been approved`,
+    dedupKey: `listing_approved:${listing._id}`,
+  };
+  await createNotification({
+    userId: String(listing.host),
+    type: "listing_approved",
+    content,
+  });
+};
+
+const notifyListingRejected = async ({ listing, host, reason }: any): Promise<void> => {
+  const content = {
+    listingId: String(listing._id),
+    listingTitle: listing.title,
+    reason,
+    preview: `Your listing "${listing.title}" was rejected`,
+    dedupKey: `listing_rejected:${listing._id}`,
+  };
+  await createNotification({
+    userId: String(listing.host),
+    type: "listing_rejected",
+    content,
+  });
+};
+
+const notifyReviewReceived = async ({ review, host }: any): Promise<void> => {
+  const content = {
+    reviewId: String(review._id),
+    rating: review.rating,
+    preview: `New ${review.rating}-star review received`,
+    dedupKey: `review_received:${review._id}`,
+  };
+  await createNotification({
+    userId: String(host._id || host),
+    type: "review_received",
+    content,
+  });
+};
+
+const notifyPayoutPaid = async ({ payout, host }: any): Promise<void> => {
+  const content = {
+    payoutId: String(payout._id),
+    amount: payout.amount,
+    period: payout.period,
+    preview: `Payout of ${Number(payout.amount).toFixed(2)} has been paid`,
+    dedupKey: `payout_paid:${payout._id}`,
+  };
+  await createNotification({
+    userId: String(payout.host),
+    type: "payout_paid",
+    content,
+  });
+};
+
 // ---------- Exports ----------
 module.exports = {
   createNotification,
@@ -404,7 +462,11 @@ module.exports = {
   notifyRefundProcessed,
   notifyNewMessage,
   notifyPayoutCreated,
+  notifyPayoutPaid,
   notifyReviewReminder,
+  notifyReviewReceived,
+  notifyListingApproved,
+  notifyListingRejected,
   notifySafetyAlert,
   sendTransactionalEmail,
   sendTransactionalSMS,

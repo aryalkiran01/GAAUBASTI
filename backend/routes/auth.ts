@@ -9,9 +9,12 @@ const {
   changePassword,
   verifyEmail,
   refreshToken,
-
   forgotPassword,
-  resetPassword
+  resetPassword,
+  logout,
+  resendVerification,
+  deleteAccount,
+  applyForHost
 } = require('../controllers/authController');
 const { authenticate } = require('../middlewares/auth');
 const {
@@ -24,15 +27,19 @@ const { loginLimiter, passwordLimiter } = require('../middlewares/rateLimiters')
 router.post('/register', validateUserRegistration, register);
 router.get('/verify-email/:token', verifyEmail);
 router.post('/login', loginLimiter, validateUserLogin, login);
-router.post('/forgot-password', passwordLimiter, forgotPassword); 
-router.post('/reset-password', passwordLimiter, resetPassword);   
+router.post('/forgot-password', passwordLimiter, forgotPassword);
+router.post('/reset-password', passwordLimiter, resetPassword);
 
 // Protected routes
-router.use(authenticate); 
+router.use(authenticate);
 router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
 router.post('/change-password', changePassword);
 router.post('/refresh-token', refreshToken);
+router.post('/logout', logout);
+router.post('/resend-verification', resendVerification);
+router.delete('/account', deleteAccount);
+router.post('/apply-host', applyForHost);
 
 module.exports = router;
 

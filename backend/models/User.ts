@@ -85,6 +85,28 @@ const userSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
+  },
+  hostStatus: {
+    type: String,
+    enum: ['none', 'pending', 'approved', 'rejected'],
+    default: 'none'
+  },
+  hostAppliedAt: {
+    type: Date,
+    default: null
+  },
+  hostVerifiedAt: {
+    type: Date,
+    default: null
+  },
+  hostVerifiedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  hostRejectionReason: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true,

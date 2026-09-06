@@ -98,11 +98,13 @@ const overlappingDateWindow = (startA, endA, startB, endB) => {
 
 const getAllowedStatusTransitions = (currentStatus) => {
   const transitions = {
-    pending: ['confirmed', 'cancelled'],
-    confirmed: ['completed', 'cancelled'],
+    pending: ['confirmed', 'cancelled', 'payment_failed'],
+    confirmed: ['completed', 'cancelled', 'no-show'],
     cancelled: [],
     completed: [],
-    refunded: []
+    refunded: [],
+    'no-show': [],
+    'payment_failed': ['pending', 'cancelled']
   };
 
   return transitions[currentStatus] || [];

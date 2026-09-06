@@ -11,6 +11,9 @@ const {
   deleteListing,
   deactivateUser,
   reactivateUser,
+  approveHost,
+  rejectHost,
+  getPendingHosts,
   getFlaggedReviews,
   moderateReview,
   getAnalytics,
@@ -36,6 +39,11 @@ router.get('/users', getAllUsers);
 router.put('/users/:id', validateObjectId('id'), updateUser);
 router.patch('/users/:id/deactivate', validateObjectId('id'), deactivateUser);
 router.patch('/users/:id/reactivate', validateObjectId('id'), reactivateUser);
+
+// Host management
+router.get('/hosts/pending', getPendingHosts);
+router.patch('/hosts/:id/approve', validateObjectId('id'), approveHost);
+router.patch('/hosts/:id/reject', validateObjectId('id'), rejectHost);
 
 // Listing management
 router.get('/listings', getAllListings);
