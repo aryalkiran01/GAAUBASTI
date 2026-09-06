@@ -4,6 +4,7 @@ const Booking = require('../models/Booking');
 const Listing = require('../models/Listing');
 const { moderateContent } = require('../services/moderationService');
 const { notifyReviewReceived } = require('../utils/notifications');
+const { checkReviewAbuse } = require('../services/fraudService');
 
 // Create new review
 const createReview = async (req, res) => {
@@ -43,6 +44,11 @@ const createReview = async (req, res) => {
         success: false,
         message: 'Review already exists for this booking'
       });
+    }
+
+    const reviewFraudCheck = await checkReviewAbuse(req.user._id.toString());
+    if (reviewFraudCheck.flagged) {
+      return res.status(429).json({ success: false, message: reviewFraudCheck.reason });
     }
 
     // Create review

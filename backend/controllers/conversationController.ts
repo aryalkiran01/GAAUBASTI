@@ -4,6 +4,7 @@ const Message = require('../models/Message');
 const Listing = require('../models/Listing');
 const { notifyUsers, notifyNewMessage } = require('../utils/notifications');
 const { moderateContent } = require('../services/moderationService');
+const { checkMessageSpam } = require('../services/fraudService');
 
 const normalizeParticipants = (participants = [], currentUserId) => {
   const ids = participants
@@ -105,6 +106,11 @@ const sendMessage = async (req, res) => {
         });
     }
 
+    const spamCheck = await checkMessageSpam(req.user._id.toString());
+    if (spamCheck.flagged) {
+      return res.status(429).json({ success: false, message: spamCheck.reason });
+    }
+
     const { body, attachments = [] } = req.body;
     if (
       (!body || !String(body).trim()) &&
@@ -184,9 +190,43 @@ const sendMessage = async (req, res) => {
   }
 };
 
+const markMessagesRead = async (req, res) => {
+  try {
+    const conversation = await Conversation.findById(req.params.id);
+    if (!conversation) {
+      return res.status(404).json({ success: false, message: 'Conversation not found' });
+    }
+
+    if (!conversation.participants.some((p) => p.toString() === req.user._id.toString())) {
+      return res.status(403).json({ success: false, message: 'You do not belong to this conversation' });
+    }
+
+    const result = await Message.updateMany(
+      {
+        conversation: conversation._id,
+        sender: { $ne: req.user._id },
+        readBy: { $ne: req.user._id },
+      },
+      { $addToSet: { readBy: req.user._id } },
+    );
+
+    if (global.io) {
+      global.io.to(conversation._id.toString()).emit('messages:read', {
+        conversationId: conversation._id,
+        userId: req.user._id,
+      });
+    }
+
+    res.json({ success: true, message: 'Messages marked as read', data: { modifiedCount: result.modifiedCount } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to mark messages as read', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
+  }
+};
+
 module.exports = {
   getConversations,
   getOrCreateConversation,
   getMessages,
-  sendMessage
+  sendMessage,
+  markMessagesRead,
 };

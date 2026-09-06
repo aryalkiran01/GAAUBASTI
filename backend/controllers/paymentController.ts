@@ -1,6 +1,8 @@
 export {};
 const Booking = require('../models/Booking');
 const Payment = require('../models/Payment');
+const { createPaymentTransaction, createRefundTransaction } = require('../services/earningsService');
+const { logPaymentFailure, logWebhookFailure } = require('../services/monitoringService');
 
 const normalizeAmount = (value) => {
   if (typeof value === 'string') {
@@ -264,6 +266,7 @@ const createPayment = async (req, res) => {
       message: 'No supported payment provider is configured for this environment.'
     });
   } catch (error) {
+    logPaymentFailure(req.user?._id?.toString() || '', bookingId || '', error.message || 'Payment initialization failed').catch(() => {});
     res.status(500).json({
       success: false,
       message: 'Failed to initialize payment',
@@ -367,6 +370,8 @@ const verifyPayment = async (req, res) => {
       host: populatedBooking.host,
       payment
     }).catch(() => {});
+
+    createPaymentTransaction(populatedBooking, payment).catch(() => {});
 
     return res.status(200).json({
       success: true,
@@ -508,6 +513,7 @@ const handleStripeWebhook = async (req, res) => {
 
     return res.status(200).json({ success: true, received: true });
   } catch (error) {
+    logWebhookFailure('stripe_webhook', error.message || 'Webhook verification failed').catch(() => {});
     return res.status(400).json({
       success: false,
       message: 'Stripe webhook verification failed',

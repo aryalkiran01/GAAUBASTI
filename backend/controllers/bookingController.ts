@@ -16,6 +16,8 @@ const {
   notifyBookingCancelled,
   notifyPaymentConfirmed,
 } = require("../utils/notifications");
+const { checkSuspiciousBookingPattern, checkCancellationAbuse } = require("../services/fraudService");
+const { logBookingFailure } = require("../services/monitoringService");
 
 const calculateBookingPrice = (listing, startDate, endDate) => {
   const bookingStart = new Date(startDate);
@@ -87,6 +89,11 @@ const createBooking = async (req, res) => {
         success: false,
         message: "Listing not found or not available",
       });
+    }
+
+    const fraudCheck = await checkSuspiciousBookingPattern(req.user._id.toString(), listingId);
+    if (fraudCheck.flagged) {
+      return res.status(429).json({ success: false, message: fraudCheck.reason });
     }
 
     const guestValidation = validateGuestCount(guests, listing.maxGuests);
@@ -245,6 +252,7 @@ const createBooking = async (req, res) => {
       statusCode === 409
         ? safeErrorMessage || "Selected dates are unavailable"
         : "Failed to create booking";
+    logBookingFailure(req.user._id.toString(), listingId || '', message).catch(() => {});
     res.status(statusCode).json({
       success: false,
       message,
@@ -529,6 +537,11 @@ const cancelBooking = async (req, res) => {
         success: false,
         message: "Booking cannot be cancelled at this time",
       });
+    }
+
+    const cancelFraudCheck = await checkCancellationAbuse(req.user._id.toString());
+    if (cancelFraudCheck.flagged) {
+      return res.status(429).json({ success: false, message: cancelFraudCheck.reason });
     }
 
     const refundAmount = booking.calculateRefund(

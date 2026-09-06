@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Booking = require('../models/Booking');
 const { checkListingAvailability, validateBookingDates, isListingAvailableForDates } = require('../services/bookingAvailability');
 const { moderateContent } = require('../services/moderationService');
+const { checkListingSpam } = require('../services/fraudService');
 const { deleteImage } = require('../utils/cloudinary');
 
 const LISTING_ALLOWED_CREATE_FIELDS = [
@@ -242,6 +243,11 @@ const createListing = async (req, res) => {
 
     if (req.user.role !== 'host' && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Only hosts or admins can create listings' });
+    }
+
+    const listingFraudCheck = await checkListingSpam(req.user._id.toString());
+    if (listingFraudCheck.flagged) {
+      return res.status(429).json({ success: false, message: listingFraudCheck.reason });
     }
 
     const payload = sanitizeListingPayloadForCreate(req.body || {});

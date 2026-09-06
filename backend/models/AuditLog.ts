@@ -23,6 +23,10 @@ const auditLogSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  description: {
+    type: String,
+    trim: true
+  },
   before: {
     type: mongoose.Schema.Types.Mixed,
     default: {}
