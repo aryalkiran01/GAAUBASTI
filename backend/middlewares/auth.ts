@@ -18,7 +18,7 @@ const getJwtSecret = () => {
     throw new Error('JWT_SECRET must be configured in production');
   }
 
-  return 'development-secret-key';
+  throw new Error('JWT_SECRET environment variable is required');
 };
 
 // Verify JWT token

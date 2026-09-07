@@ -18,6 +18,8 @@ const {
 } = require("../utils/notifications");
 const { checkSuspiciousBookingPattern, checkCancellationAbuse } = require("../services/fraudService");
 const { logBookingFailure } = require("../services/monitoringService");
+const { createRefundTransaction } = require("../services/earningsService");
+const Payment = require("../models/Payment");
 
 const calculateBookingPrice = (listing, startDate, endDate) => {
   const bookingStart = new Date(startDate);
@@ -401,7 +403,8 @@ const updateBookingStatus = async (req, res) => {
     const isHost =
       req.user.role === "host" &&
       listing &&
-      listing.host.toString() === req.user._id.toString();
+      listing.host.toString() === req.user._id.toString() &&
+      booking.host && booking.host.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
 
     if (!isHost && !isAdmin) {
@@ -419,6 +422,13 @@ const updateBookingStatus = async (req, res) => {
     }
 
     if (status === "confirmed") {
+      if (booking.paymentStatus !== "paid") {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot confirm a booking that has not been paid for",
+        });
+      }
+
       const availability = await checkListingAvailability({
         listingId: booking.listing,
         startDate: booking.startDate,
@@ -469,7 +479,7 @@ const updateBookingStatus = async (req, res) => {
       }
     }
 
-    if (status === "cancelled" && previousStatus === "confirmed") {
+    if (status === "cancelled") {
       const listingForDates = await Listing.findById(booking.listing);
       if (listingForDates) {
         listingForDates.unavailableDates =
@@ -548,27 +558,61 @@ const cancelBooking = async (req, res) => {
       booking.listing.cancellationPolicy,
     );
 
-    booking.status = "cancelled";
-    booking.cancellationReason = cancellationReason;
-    booking.cancelledAt = new Date();
-    booking.cancelledBy = req.user._id;
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        booking.status = "cancelled";
+        booking.cancellationReason = cancellationReason;
+        booking.cancelledAt = new Date();
+        booking.cancelledBy = req.user._id;
+        await booking.save({ session });
 
-    await booking.save();
+        const listingForDates = await Listing.findById(booking.listing).session(session);
+        if (listingForDates) {
+          listingForDates.unavailableDates =
+            listingForDates.unavailableDates.filter((unavailable) => {
+              const blockStart = new Date(unavailable.startDate);
+              const blockEnd = new Date(unavailable.endDate);
+              const bookingStart = new Date(booking.startDate);
+              const bookingEnd = new Date(booking.endDate);
+              return !(blockStart <= bookingEnd && blockEnd >= bookingStart);
+            });
+          await listingForDates.save({ session });
+        }
 
-    const listingForDates = await Listing.findById(booking.listing);
-    if (listingForDates) {
-      listingForDates.unavailableDates =
-        listingForDates.unavailableDates.filter((unavailable) => {
-          const blockStart = new Date(unavailable.startDate);
-          const blockEnd = new Date(unavailable.endDate);
-          const bookingStart = new Date(booking.startDate);
-          const bookingEnd = new Date(booking.endDate);
-          return !(blockStart <= bookingEnd && blockEnd >= bookingStart);
-        });
-      await listingForDates.save();
+        await releaseBookingNights({ bookingId: booking._id, session });
+      });
+    } finally {
+      session.endSession();
     }
 
-    await releaseBookingNights({ bookingId: booking._id });
+    if (refundAmount > 0 && booking.paymentStatus === "paid") {
+      try {
+        const payment = await Payment.findOne({ booking: booking._id, status: "paid" });
+        if (payment) {
+          const stripeKey = process.env.STRIPE_SECRET_KEY;
+          if (stripeKey) {
+            const stripe = require("stripe")(stripeKey);
+            await stripe.refunds.create({
+              payment_intent: payment.providerPaymentId,
+              amount: Math.round(refundAmount * 100),
+              metadata: {
+                paymentId: payment._id.toString(),
+                bookingId: booking._id.toString(),
+                reason: "guest_cancellation",
+              },
+            }, {
+              idempotencyKey: `refund:${payment._id}:${refundAmount}`,
+            });
+            payment.status = "refunded";
+            await payment.save();
+          }
+          await createRefundTransaction(booking, refundAmount, `refund:${payment._id}:${refundAmount}`);
+        }
+      } catch (err) {
+        console.error("[cancelBooking] Refund failed:", err.message);
+      }
+    }
 
     const populatedForNotif = await Booking.findById(booking._id).populate([
       { path: "listing", select: "title" },

@@ -29,6 +29,7 @@ import errorHandler from './middlewares/errorHandler';
 import Conversation from './models/Conversation';
 
 const app = express();
+app.set('trust proxy', 1);
 
 const getRequiredEnvVars = () => {
   const required = ['JWT_SECRET'];
@@ -57,7 +58,7 @@ const getJwtSecret = () => {
     throw new Error('Missing required environment variable in production: JWT_SECRET');
   }
 
-  return 'development-secret-key';
+  throw new Error('JWT_SECRET environment variable is required');
 };
 
 const requiredEnvVars = getRequiredEnvVars();
@@ -171,8 +172,14 @@ const initializeSocketIO = (httpServer: any) => {
 
     try {
       const decoded = jwt.verify(token, jwtSecret) as any;
-      socket.user = { _id: decoded.userId };
-      return next();
+      const User = require('./models/User').default || require('./models/User');
+      User.findById(decoded.userId).select('-password').then((user: any) => {
+        if (!user || !user.isActive) {
+          return next(new Error('User account is not valid'));
+        }
+        socket.user = { _id: decoded.userId, role: user.role };
+        return next();
+      }).catch(() => next(new Error('Authentication error')));
     } catch {
       return next(new Error('Invalid token'));
     }
