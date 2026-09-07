@@ -266,7 +266,7 @@ const createPayment = async (req, res) => {
       message: 'No supported payment provider is configured for this environment.'
     });
   } catch (error) {
-    logPaymentFailure(req.user?._id?.toString() || '', bookingId || '', error.message || 'Payment initialization failed').catch(() => {});
+    logPaymentFailure(req.user?._id?.toString() || '', req.body?.bookingId || '', error.message || 'Payment initialization failed').catch(() => {});
     res.status(500).json({
       success: false,
       message: 'Failed to initialize payment',

@@ -252,7 +252,7 @@ const createBooking = async (req, res) => {
       statusCode === 409
         ? safeErrorMessage || "Selected dates are unavailable"
         : "Failed to create booking";
-    logBookingFailure(req.user._id.toString(), listingId || '', message).catch(() => {});
+    logBookingFailure(req.user._id.toString(), req.body?.listing || '', message).catch(() => {});
     res.status(statusCode).json({
       success: false,
       message,

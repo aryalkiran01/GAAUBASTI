@@ -42,7 +42,7 @@ const getHostAnalytics = async (req, res) => {
           date: { $gte: startDate, $lte: endDate },
         });
 
-        const daysInPeriod = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+        const daysInPeriod = Math.ceil((Number(endDate) - Number(startDate)) / (1000 * 60 * 60 * 24));
         const totalAvailableNights = listingIds.length * daysInPeriod;
         const occupancyRate = totalAvailableNights > 0 ? Math.round((totalNights / totalAvailableNights) * 100) : 0;
 
