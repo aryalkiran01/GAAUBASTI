@@ -157,6 +157,30 @@ const HostDashboard = () => {
     }
   };
 
+  const handlePublishListing = async (listingId: string) => {
+    try {
+      const response = await listingsAPI.publishListing(listingId);
+      if (response.success) {
+        setListings(listings.map((l) => (l.id === listingId ? { ...l, status: 'pending', isVerified: false } as any : l)));
+        toast({ title: "Listing submitted", description: "Your listing has been submitted for admin approval." });
+      }
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Publish failed", description: error.message || "Failed to publish listing" });
+    }
+  };
+
+  const handleUnpublishListing = async (listingId: string) => {
+    try {
+      const response = await listingsAPI.unpublishListing(listingId);
+      if (response.success) {
+        setListings(listings.map((l) => (l.id === listingId ? { ...l, status: 'draft', isActive: false } as any : l)));
+        toast({ title: "Listing unpublished", description: "Your listing is now offline." });
+      }
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Unpublish failed", description: error.message || "Failed to unpublish listing" });
+    }
+  };
+
   const handleDeleteListing = async (listingId: string) => {
     try {
       const response = await listingsAPI.deleteListing(listingId);
@@ -330,13 +354,13 @@ const HostDashboard = () => {
                         </TableCell>
                         <TableCell className="font-medium">${listing.price}<span className="text-muted-foreground font-normal text-xs">/night</span></TableCell>
                         <TableCell>
-                          <Badge variant={listing.isVerified ? "success" : "warning"}>
-                            {listing.isVerified ? "Verified" : "Pending"}
+                          <Badge variant={listing.isVerified ? "success" : (listing as any).status === 'draft' ? "secondary" : "warning"}>
+                            {(listing as any).status === 'draft' ? "Draft" : listing.isVerified ? "Published" : (listing as any).status === 'pending' ? "In Review" : (listing as any).status === 'rejected' ? "Rejected" : "Pending"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-2 justify-end">
-                            <Dialog open={isEditingOpen} onOpenChange={setIsEditingOpen}>
+                            <Dialog open={isEditingOpen && editingListing?.id === listing.id} onOpenChange={(open) => { if (!open) { setEditingListing(null); setIsEditingOpen(false); } }}>
                               <DialogTrigger asChild>
                                 <Button variant="outline" size="sm" onClick={() => openEditDialog(listing)}>
                                   <Pencil className="h-3.5 w-3.5" />
@@ -393,6 +417,15 @@ const HostDashboard = () => {
                                 )}
                               </DialogContent>
                             </Dialog>
+                            {!(listing as any).status || (listing as any).status === 'draft' ? (
+                              <Button variant="outline" size="sm" onClick={() => handlePublishListing(listing.id)} className="text-gaun-green hover:bg-gaun-green/5">
+                                Publish
+                              </Button>
+                            ) : listing.isVerified ? (
+                              <Button variant="outline" size="sm" onClick={() => handleUnpublishListing(listing.id)}>
+                                Unpublish
+                              </Button>
+                            ) : null}
                             <Button variant="outline" size="sm" onClick={() => handleDeleteListing(listing.id)} className="text-destructive hover:bg-destructive/5">
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>

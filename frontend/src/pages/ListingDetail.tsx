@@ -28,6 +28,7 @@ const ListingDetail = () => {
   const [isAvailable, setIsAvailable] = useState(false);
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
+  const [reviewableBookingId, setReviewableBookingId] = useState<string | undefined>(undefined);
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -38,6 +39,21 @@ const ListingDetail = () => {
       checkStatus([id]);
     }
   }, [user, id, checkStatus]);
+
+  useEffect(() => {
+    if (user && id) {
+      bookingsAPI.getUserBookings({ listing: id }).then((res) => {
+        if (res.success) {
+          const completed = (res.data.bookings || []).find(
+            (b: any) => b.status === 'completed' && (b.listing === id || b.listing?._id === id || b.listing?.id === id)
+          );
+          if (completed) {
+            setReviewableBookingId(completed._id || completed.id);
+          }
+        }
+      }).catch(() => {});
+    }
+  }, [user, id]);
 
   if (loading) {
     return (
@@ -382,7 +398,8 @@ const ListingDetail = () => {
               <ReviewSummary listingId={listing.id} />
               <ReviewSection 
                 listingId={listing.id}
-                canReview={user?.role === 'guest'}
+                canReview={!!reviewableBookingId}
+                bookingId={reviewableBookingId}
               />
             </div>
           </div>

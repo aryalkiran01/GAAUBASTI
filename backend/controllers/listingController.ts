@@ -4,7 +4,6 @@ const User = require('../models/User');
 const Booking = require('../models/Booking');
 const { checkListingAvailability, validateBookingDates, isListingAvailableForDates } = require('../services/bookingAvailability');
 const { moderateContent } = require('../services/moderationService');
-const { checkListingSpam } = require('../services/fraudService');
 const { deleteImage } = require('../utils/cloudinary');
 
 const LISTING_ALLOWED_CREATE_FIELDS = [
@@ -245,11 +244,6 @@ const createListing = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Only hosts or admins can create listings' });
     }
 
-    const listingFraudCheck = await checkListingSpam(req.user._id.toString());
-    if (listingFraudCheck.flagged) {
-      return res.status(429).json({ success: false, message: listingFraudCheck.reason });
-    }
-
     const payload = sanitizeListingPayloadForCreate(req.body || {});
     const normalizedPrice = Number(payload.price);
     const normalizedGuests = Number(payload.maxGuests);
@@ -400,11 +394,15 @@ const deleteListing = async (req, res) => {
         message: 'Listing not found'
       });
     }
-    // Check for active bookings
+    // Check for active or in-progress bookings
+    const now = new Date();
     const activeBookings = await Booking.countDocuments({
       listing: req.params.id,
       status: { $in: ['pending', 'confirmed'] },
-      startDate: { $gte: new Date() }
+      $or: [
+        { startDate: { $gte: now } },
+        { startDate: { $lte: now }, endDate: { $gte: now } },
+      ],
     });
 
     if (activeBookings > 0) {
@@ -551,6 +549,51 @@ const getFeaturedListings = async (req, res) => {
   }
 };
 
+// Publish listing (host submits for admin approval)
+const publishListing = async (req, res) => {
+  try {
+    const listing = req.resource || await Listing.findById(req.params.id);
+    if (!listing) {
+      return res.status(404).json({ success: false, message: 'Listing not found' });
+    }
+    if (listing.status === 'approved') {
+      return res.status(400).json({ success: false, message: 'Listing is already published' });
+    }
+    listing.status = 'pending';
+    listing.isVerified = false;
+    listing.verifiedAt = null;
+    listing.verifiedBy = null;
+    await listing.save();
+    res.json({ success: true, message: 'Listing submitted for admin approval', data: { listing } });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to publish listing',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+// Unpublish listing (host takes it offline)
+const unpublishListing = async (req, res) => {
+  try {
+    const listing = req.resource || await Listing.findById(req.params.id);
+    if (!listing) {
+      return res.status(404).json({ success: false, message: 'Listing not found' });
+    }
+    listing.status = 'draft';
+    listing.isActive = false;
+    await listing.save();
+    res.json({ success: true, message: 'Listing unpublished', data: { listing } });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to unpublish listing',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
 module.exports = {
   getListings,
   getListing,
@@ -560,6 +603,8 @@ module.exports = {
   getHostListings,
   checkAvailability,
   getFeaturedListings,
+  publishListing,
+  unpublishListing,
   sanitizeListingPayloadForCreate,
   sanitizeListingPayloadForUpdate,
   escapeRegex

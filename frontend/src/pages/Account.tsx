@@ -21,8 +21,10 @@ import {
   Loader2,
   AlertCircle,
   Home,
+  User as UserIcon,
+  Lock,
 } from "lucide-react";
-import { listingsAPI, paymentsAPI, bookingsAPI } from "@/lib/api";
+import { listingsAPI, paymentsAPI, bookingsAPI, authAPI } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import {
   Dialog,
@@ -33,6 +35,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import ListingCard from "@/components/ListingCard";
 
 const Account = () => {
@@ -53,6 +57,17 @@ const Account = () => {
   const [cancelBookingId, setCancelBookingId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
+
+  // Profile editing state
+  const [profileName, setProfileName] = useState(user?.name || "");
+  const [profilePhone, setProfilePhone] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -261,6 +276,7 @@ const Account = () => {
                   Favorites ({wishlistItems.length})
                 </TabsTrigger>
                 <TabsTrigger value="payments">Payment History</TabsTrigger>
+                <TabsTrigger value="profile">Profile</TabsTrigger>
                 {user.role === "host" && (
                   <TabsTrigger value="listings">My Listings</TabsTrigger>
                 )}
@@ -560,6 +576,117 @@ const Account = () => {
                     </p>
                   </div>
                 )}
+              </TabsContent>
+
+              <TabsContent value="profile" className="mt-6">
+                <div className="max-w-md space-y-6">
+                  <div className="space-y-4">
+                    <h2 className="text-xl font-medium flex items-center gap-2">
+                      <UserIcon className="h-5 w-5" />
+                      Edit Profile
+                    </h2>
+                    <div className="space-y-2">
+                      <Label htmlFor="profile-name">Full Name</Label>
+                      <Input
+                        id="profile-name"
+                        value={profileName}
+                        onChange={(e) => setProfileName(e.target.value)}
+                        placeholder="Your name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="profile-phone">Phone Number</Label>
+                      <Input
+                        id="profile-phone"
+                        value={profilePhone}
+                        onChange={(e) => setProfilePhone(e.target.value)}
+                        placeholder="+977..."
+                      />
+                    </div>
+                    <Button
+                      onClick={async () => {
+                        setSavingProfile(true);
+                        const res = await authAPI.updateProfile({
+                          name: profileName,
+                          phone: profilePhone || undefined,
+                        });
+                        setSavingProfile(false);
+                        if (res.success) {
+                          toast({ title: "Profile updated", description: "Your changes have been saved." });
+                        } else {
+                          toast({ variant: "destructive", title: "Update failed", description: res.message });
+                        }
+                      }}
+                      disabled={savingProfile}
+                    >
+                      {savingProfile ? (
+                        <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</>
+                      ) : (
+                        "Save Changes"
+                      )}
+                    </Button>
+                  </div>
+
+                  <div className="border-t pt-6 space-y-4">
+                    <h2 className="text-xl font-medium flex items-center gap-2">
+                      <Lock className="h-5 w-5" />
+                      Change Password
+                    </h2>
+                    <div className="space-y-2">
+                      <Label htmlFor="current-pw">Current Password</Label>
+                      <Input
+                        id="current-pw"
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-pw">New Password</Label>
+                      <Input
+                        id="new-pw"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-pw">Confirm New Password</Label>
+                      <Input
+                        id="confirm-pw"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                      />
+                    </div>
+                    {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                      <p className="text-sm text-red-600">Passwords do not match</p>
+                    )}
+                    <Button
+                      variant="outline"
+                      disabled={changingPassword || !currentPassword || !newPassword || newPassword !== confirmPassword}
+                      onClick={async () => {
+                        setChangingPassword(true);
+                        const res = await authAPI.changePassword(currentPassword, newPassword);
+                        setChangingPassword(false);
+                        if (res.success) {
+                          toast({ title: "Password changed", description: "Your password has been updated." });
+                          setCurrentPassword("");
+                          setNewPassword("");
+                          setConfirmPassword("");
+                        } else {
+                          toast({ variant: "destructive", title: "Failed", description: res.message });
+                        }
+                      }}
+                    >
+                      {changingPassword ? (
+                        <><Loader2 className="h-4 w-4 animate-spin" /> Changing...</>
+                      ) : (
+                        "Change Password"
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </TabsContent>
 
               {user.role === "host" && (

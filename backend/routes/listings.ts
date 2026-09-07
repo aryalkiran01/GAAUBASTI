@@ -9,7 +9,9 @@ const {
   deleteListing,
   getHostListings,
   checkAvailability,
-  getFeaturedListings
+  getFeaturedListings,
+  publishListing,
+  unpublishListing
 } = require('../controllers/listingController');
 const Listing = require('../models/Listing');
 
@@ -36,6 +38,7 @@ router.post('/', requireHost, upload.array('images', 10), validateListing, creat
 router.get('/host/my-listings', requireHost, getHostListings);
 router.put('/:id', requireHost, validateObjectId('id'), requireOwnership(Listing, 'host'), upload.array('images', 10), validateListing, updateListing);
 router.delete('/:id', requireHost, validateObjectId('id'), requireOwnership(Listing, 'host'), deleteListing);
-
+router.post('/:id/publish', requireHost, validateObjectId('id'), requireOwnership(Listing, 'host'), publishListing);
+router.post('/:id/unpublish', requireHost, validateObjectId('id'), requireOwnership(Listing, 'host'), unpublishListing);
 
 module.exports = router;

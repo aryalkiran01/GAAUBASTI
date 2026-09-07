@@ -192,6 +192,47 @@ export default function ReviewSection({ listingId, canReview = false, bookingId 
               />
             </div>
 
+            <div>
+              <Label>Detailed Ratings</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                {([
+                  ["cleanliness", "Cleanliness"],
+                  ["communication", "Communication"],
+                  ["checkIn", "Check-in"],
+                  ["accuracy", "Accuracy"],
+                  ["location", "Location"],
+                  ["value", "Value"],
+                ] as const).map(([key, label]) => (
+                  <div key={key} className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-muted-foreground">{label}</span>
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() =>
+                            setNewReview({
+                              ...newReview,
+                              ratings: { ...newReview.ratings, [key]: i + 1 },
+                            })
+                          }
+                          className="p-0.5"
+                        >
+                          <Star
+                            className={`w-4 h-4 ${
+                              i < (newReview.ratings[key] || 0)
+                                ? "text-yellow-500 fill-yellow-500"
+                                : "text-gray-300"
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="flex gap-2">
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Submitting..." : "Submit Review"}

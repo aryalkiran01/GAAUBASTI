@@ -308,6 +308,18 @@ export const listingsAPI = {
     });
   },
 
+  publishListing: async (id: string) => {
+    return await apiRequest(`/listings/${id}/publish`, {
+      method: "POST",
+    });
+  },
+
+  unpublishListing: async (id: string) => {
+    return await apiRequest(`/listings/${id}/unpublish`, {
+      method: "POST",
+    });
+  },
+
   getHostListings: async (params: any = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return await apiRequest(
