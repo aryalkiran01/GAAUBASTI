@@ -187,6 +187,16 @@ const createPayout = async (req, res) => {
       });
     }
 
+    // Validate payout amount against available earnings
+    const { getHostEarningsSummary } = require('../services/earningsService');
+    const summary = await getHostEarningsSummary(hostId);
+    if (payoutAmount > summary.availableEarnings) {
+      return res.status(400).json({
+        success: false,
+        message: `Payout amount ${payoutAmount} exceeds available earnings ${summary.availableEarnings}`
+      });
+    }
+
     // Validate booking IDs if provided
     let validatedBookingIds = [];
     let paymentIds = [];

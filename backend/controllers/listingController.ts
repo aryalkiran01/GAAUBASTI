@@ -203,7 +203,7 @@ const getListing = async (req, res) => {
       _id: req.params.id,
       isActive: true
     })
-      .populate('host', 'name avatar hostProfile phone email')
+      .populate('host', 'name avatar hostProfile.responseRate')
       .populate({
         path: 'reviews',
         populate: {

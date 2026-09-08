@@ -7,6 +7,13 @@ const AuditLog = require("../models/AuditLog");
 const Report = require("../models/Report");
 const { notifyListingApproved, notifyListingRejected } = require("../utils/notifications");
 
+const VALID_ROLES = ["guest", "host", "admin"];
+
+const escapeRegex = (str: any) => {
+  if (typeof str !== "string") return "";
+  return str.replace(/[.*+?^${}()|[\]\\]/g, (m) => "\\" + m);
+};
+
 // Get dashboard statistics
 const getDashboardStats = async (req, res) => {
   try {
@@ -92,11 +99,12 @@ const getAllUsers = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const filter: any = {};
-    if (role) filter.role = role;
+    if (role && VALID_ROLES.includes(String(role))) filter.role = String(role);
     if (search) {
+      const escaped = escapeRegex(String(search));
       filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
+        { name: { $regex: escaped, $options: "i" } },
+        { email: { $regex: escaped, $options: "i" } },
       ];
     }
 
@@ -133,9 +141,23 @@ const updateUser = async (req, res) => {
   try {
     const { name, email, role, isActive, isVerified } = req.body;
 
+    if (role && !VALID_ROLES.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid role. Must be one of: ${VALID_ROLES.join(", ")}`,
+      });
+    }
+
+    const updates: any = {};
+    if (typeof name === "string") updates.name = name;
+    if (typeof email === "string") updates.email = email;
+    if (role && VALID_ROLES.includes(role)) updates.role = role;
+    if (typeof isActive === "boolean") updates.isActive = isActive;
+    if (typeof isVerified === "boolean") updates.isVerified = isVerified;
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { name, email, role, isActive, isVerified },
+      updates,
       { new: true, runValidators: true },
     );
 
@@ -145,6 +167,14 @@ const updateUser = async (req, res) => {
         message: "User not found",
       });
     }
+
+    await AuditLog.create({
+      actor: req.user._id,
+      action: "user_update",
+      targetType: "User",
+      targetId: user._id,
+      description: `Admin updated user ${user.email} (role: ${user.role})`,
+    });
 
     res.json({
       success: true,
@@ -171,9 +201,10 @@ const getAllListings = async (req, res) => {
     if (status === "verified") filter.isVerified = true;
     if (status === "inactive") filter.isActive = false;
     if (search) {
+      const escaped = escapeRegex(String(search));
       filter.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { "location.city": { $regex: search, $options: "i" } },
+        { title: { $regex: escaped, $options: "i" } },
+        { "location.city": { $regex: escaped, $options: "i" } },
       ];
     }
 
@@ -272,7 +303,8 @@ const getAllBookings = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const filter: any = {};
-    if (status) filter.status = status;
+    const validStatuses = ["pending", "confirmed", "completed", "cancelled", "payment_failed", "no_show", "refunded"];
+    if (status && validStatuses.includes(String(status))) filter.status = String(status);
 
     const [bookings, total] = await Promise.all([
       Booking.find(filter)

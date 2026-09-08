@@ -15,6 +15,9 @@ const calculateHostEarnings = (booking: any): { grossRevenue: number; commission
 const createPaymentTransaction = async (booking: any, payment: any): Promise<void> => {
   const { grossRevenue, commissionAmount, hostEarnings } = calculateHostEarnings(booking);
 
+  const existingTxn = await Transaction.findOne({ type: 'payment', payment: payment._id });
+  if (existingTxn) return;
+
   await Transaction.create({
     type: 'payment',
     booking: booking._id,

@@ -573,13 +573,11 @@ const processRefund = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Payment not found' });
     }
 
-    const isOwner = payment.payer && payment.payer.toString() === req.user._id.toString();
-    const isBookingGuest = payment.booking && payment.booking.guest && payment.booking.guest.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
     const isHost = payment.booking && payment.booking.host && payment.booking.host.toString() === req.user._id.toString();
 
-    if (!isOwner && !isBookingGuest && !isAdmin && !isHost) {
-      return res.status(403).json({ success: false, message: 'You are not authorized to refund this payment' });
+    if (!isAdmin && !isHost) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to process refunds' });
     }
 
     if (payment.status === 'refunded') {
@@ -626,7 +624,7 @@ const processRefund = async (req, res) => {
       idempotencyKey
     });
 
-    payment.status = 'refunded';
+    payment.status = refundAmount >= payment.amount ? 'refunded' : 'partially_refunded';
     await payment.save();
 
     const booking = payment.booking;

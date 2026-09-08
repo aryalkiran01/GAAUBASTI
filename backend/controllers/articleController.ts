@@ -1,6 +1,11 @@
 export {};
 const Article = require('../models/Article');
 
+const escapeRegex = (str: any) => {
+  if (typeof str !== 'string') return '';
+  return str.replace(/[.*+?^${}()|[\]\\]/g, (m) => "\\" + m);
+};
+
 const getArticles = async (req, res) => {
   try {
     const { category, search, published } = req.query;
@@ -9,9 +14,10 @@ const getArticles = async (req, res) => {
     if (category) filter.category = category;
     if (published !== undefined) filter.published = String(published) === 'true';
     if (search) {
+      const escaped = escapeRegex(String(search));
       filter.$or = [
-        { title: { $regex: String(search), $options: 'i' } },
-        { content: { $regex: String(search), $options: 'i' } }
+        { title: { $regex: escaped, $options: 'i' } },
+        { content: { $regex: escaped, $options: 'i' } }
       ];
     }
 
