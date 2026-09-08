@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useListing } from "@/hooks/useListings";
 import { bookingsAPI, conversationsAPI } from "@/lib/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
@@ -14,7 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import AvailabilityChecker from "@/components/AvailabilityChecker";
 import ReviewSection from "@/components/ReviewSection";
 import ReviewSummary from "@/components/ai/ReviewSummary";
-import ReportDialog from "@/components/ReportDialog";
+import SEO from "@/components/SEO";
+import { Heart, Share2, MessageCircle, Star, Minus, Plus } from "lucide-react";
+import { useWishlist } from "@/hooks/useWishlist";
 
 const ListingDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -24,9 +26,34 @@ const ListingDetail = () => {
   const [nights, setNights] = useState(1);
   const [isBooking, setIsBooking] = useState(false);
   const [isAvailable, setIsAvailable] = useState(false);
+  const [adults, setAdults] = useState(1);
+  const [children, setChildren] = useState(0);
+  const [reviewableBookingId, setReviewableBookingId] = useState<string | undefined>(undefined);
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toggle, isSaved, checkStatus, loading: wishlistLoading } = useWishlist();
+
+  useEffect(() => {
+    if (user && id) {
+      checkStatus([id]);
+    }
+  }, [user, id, checkStatus]);
+
+  useEffect(() => {
+    if (user && id) {
+      bookingsAPI.getUserBookings({ listing: id }).then((res) => {
+        if (res.success) {
+          const completed = (res.data.bookings || []).find(
+            (b: any) => b.status === 'completed' && (b.listing === id || b.listing?._id === id || b.listing?.id === id)
+          );
+          if (completed) {
+            setReviewableBookingId(completed._id || completed.id);
+          }
+        }
+      }).catch(() => {});
+    }
+  }, [user, id]);
 
   if (loading) {
     return (
@@ -75,8 +102,9 @@ const ListingDetail = () => {
   const calculateTotalPrice = () => {
     const basePrice = listing!.price * nights;
     const cleaningFee = 25;
-    const serviceFee = 15;
-    return basePrice + cleaningFee + serviceFee;
+    const serviceFee = Math.round(basePrice * 0.1);
+    const taxes = Math.round(basePrice * 0.05);
+    return basePrice + cleaningFee + serviceFee + taxes;
   };
 
   const handleAvailabilityCheck = (available: boolean, startDate: Date, checkEndDate: Date) => {
@@ -167,8 +195,7 @@ const ListingDetail = () => {
         listing: listing.id,
         startDate: selectedDate.toISOString(),
         endDate: endDate.toISOString(),
-        guests: { adults: 1, children: 0 },
-        totalPrice: calculateTotalPrice()
+        guests: { adults, children },
       };
 
       const response = await bookingsAPI.createBooking(bookingData);
@@ -211,52 +238,82 @@ const ListingDetail = () => {
     }
   };
 
+  const saved = isSaved(listing.id);
+
+  const handleToggleWishlist = async () => {
+    if (!user) {
+      toast({ title: "Please log in", description: "You need to be logged in to save listings.", variant: "destructive" });
+      navigate("/login");
+      return;
+    }
+    const response = await toggle(listing.id);
+    if (response.success) {
+      toast({ title: response.data?.saved ? "Saved to wishlist" : "Removed from wishlist" });
+    } else {
+      toast({ title: "Action failed", description: response.message, variant: "destructive" });
+    }
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: listing.title, url: window.location.href });
+      } catch { /* user cancelled */ }
+    } else {
+      navigator.clipboard?.writeText(window.location.href);
+      toast({ title: "Link copied" });
+    }
+  };
+
+  const locationString = typeof listing.location === "string"
+    ? listing.location
+    : `${listing.location.address}, ${listing.location.city}${listing.location.state ? `, ${listing.location.state}` : ""}, ${listing.location.country}`;
+
   return (
     <div className="min-h-screen py-12">
+      <SEO
+        title={listing.title}
+        description={`${listing.title} - ${locationString}. ${listing.description?.slice(0, 140) || ""}`}
+        canonicalPath={`/listing/${listing.id}`}
+        image={typeof listing.images[0] === "string" ? listing.images[0] : listing.images[0]?.url}
+        type="article"
+      />
       <div className="container">
         {/* Listing Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-serif font-bold mb-2">{listing.title}</h1>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="w-4 h-4 text-yellow-500"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                 <span className="ml-1 font-medium">{listing.rating}</span>
               </div>
-              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground" aria-hidden="true">·</span>
               <span className="text-muted-foreground">{listing.reviewCount} reviews</span>
-              <span className="text-muted-foreground">·</span>
-              <span>
-                {typeof listing.location === "string"
-                  ? listing.location
-                  : `${listing.location.address}, ${listing.location.city}${listing.location.state ? `, ${listing.location.state}` : ""}, ${listing.location.country}`}
-              </span>
+              <span className="text-muted-foreground" aria-hidden="true">·</span>
+              <span>{locationString}</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm">
-                Share
+              <Button variant="outline" size="sm" onClick={handleShare} aria-label="Share this listing">
+                <Share2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Share</span>
               </Button>
-              <Button variant="outline" size="sm">
-                Save
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleToggleWishlist}
+                disabled={wishlistLoading}
+                aria-label={saved ? "Remove from wishlist" : "Save to wishlist"}
+                aria-pressed={saved}
+              >
+                <Heart className={`h-4 w-4 ${saved ? "fill-red-500 text-red-500" : ""}`} />
+                <span className="hidden sm:inline">{saved ? "Saved" : "Save"}</span>
               </Button>
               {user && (
                 <Button variant="outline" size="sm" onClick={handleMessageHost}>
-                  Message host
+                  <MessageCircle className="h-4 w-4" />
+                  <span className="hidden sm:inline">Message host</span>
                 </Button>
-              )}
-              {user && (
-                <ReportDialog entityType="listing" entityId={listing.id} />
               )}
             </div>
           </div>
@@ -267,7 +324,8 @@ const ListingDetail = () => {
           <div className="aspect-square overflow-hidden rounded-lg">
             <img
               src={typeof listing.images[0] === "string" ? listing.images[0] : listing.images[0]?.url}
-              alt={listing.title}
+              alt={`${listing.title} - main view`}
+              loading="lazy"
               className="h-full w-full object-cover"
             />
           </div>
@@ -281,7 +339,8 @@ const ListingDetail = () => {
                       ? listing.images[0]
                       : listing.images[0]?.url)
               }
-              alt={listing.title}
+              alt={`${listing.title} - second view`}
+              loading="lazy"
               className="h-full w-full object-cover"
             />
           </div>
@@ -339,7 +398,8 @@ const ListingDetail = () => {
               <ReviewSummary listingId={listing.id} />
               <ReviewSection 
                 listingId={listing.id}
-                canReview={user?.role === 'guest'}
+                canReview={!!reviewableBookingId}
+                bookingId={reviewableBookingId}
               />
             </div>
           </div>
@@ -374,6 +434,73 @@ const ListingDetail = () => {
                 />
               </div>
 
+              {/* Guest Selector */}
+              <div className="border-t pt-4 mb-4">
+                <h4 className="text-sm font-medium mb-3">Guests</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-medium">Adults</span>
+                      <p className="text-xs text-muted-foreground">Age 13+</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        aria-label="Decrease adults"
+                        className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-40 transition-colors"
+                        onClick={() => setAdults(Math.max(1, adults - 1))}
+                        disabled={adults <= 1}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="w-6 text-center text-sm font-medium">{adults}</span>
+                      <button
+                        type="button"
+                        aria-label="Increase adults"
+                        className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-40 transition-colors"
+                        onClick={() => {
+                          if (adults + children < (listing?.maxGuests || 1)) setAdults(adults + 1);
+                        }}
+                        disabled={adults + children >= (listing?.maxGuests || 1)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-medium">Children</span>
+                      <p className="text-xs text-muted-foreground">Age 2-12</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        aria-label="Decrease children"
+                        className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-40 transition-colors"
+                        onClick={() => setChildren(Math.max(0, children - 1))}
+                        disabled={children <= 0}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="w-6 text-center text-sm font-medium">{children}</span>
+                      <button
+                        type="button"
+                        aria-label="Increase children"
+                        className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-40 transition-colors"
+                        onClick={() => {
+                          if (adults + children < (listing?.maxGuests || 1)) setChildren(children + 1);
+                        }}
+                        disabled={adults + children >= (listing?.maxGuests || 1)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Max {listing?.maxGuests} guests</p>
+                </div>
+              </div>
+
+              {/* Price Breakdown */}
               {selectedDate && endDate && (
                 <div className="border-t pt-4 mb-4">
                   <div className="flex justify-between mb-2">
@@ -390,33 +517,16 @@ const ListingDetail = () => {
                   </div>
                   <div className="flex justify-between mb-2">
                     <span>Service fee</span>
-                    <span>$15</span>
+                    <span>${Math.round(listing!.price * nights * 0.1)}</span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span>Taxes</span>
+                    <span>${Math.round(listing!.price * nights * 0.05)}</span>
                   </div>
                   <div className="border-t pt-4 mt-4 flex justify-between font-bold">
                     <span>Total</span>
                     <span>${calculateTotalPrice()}</span>
                   </div>
-                </div>
-              )}
-
-              {(!selectedDate || !endDate) &&(
-                <div className="border-t pt-4 mb-4">
-                <div className="flex justify-between mb-2">
-                  <span>${listing!.price} x {nights} nights</span>
-                  <span>${listing!.price * nights}</span>
-                </div>
-                <div className="flex justify-between mb-2">
-                  <span>Cleaning fee</span>
-                  <span>$25</span>
-                </div>
-                <div className="flex justify-between mb-2">
-                  <span>Service fee</span>
-                  <span>$15</span>
-                </div>
-                <div className="border-t pt-4 mt-4 flex justify-between font-bold">
-                  <span>Total</span>
-                  <span>${calculateTotalPrice()}</span>
-                </div>
                 </div>
               )}
 

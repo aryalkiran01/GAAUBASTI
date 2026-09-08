@@ -3,33 +3,33 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
-import jwt from 'jsonwebtoken';
-import authRoutes from './routes/auth.js';
-import userRoutes from './routes/users.js';
-import listingRoutes from './routes/listings.js';
-import bookingRoutes from './routes/bookings.js';
-import reviewRoutes from './routes/reviews.js';
-import adminRoutes from './routes/admin.js';
-import paymentRoutes from './routes/payments.js';
-import conversationRoutes from './routes/conversations.js';
-import notificationRoutes from './routes/notifications.js';
-import articleRoutes from './routes/articles.js';
-import reportRoutes from './routes/reports.js';
-import wishlistRoutes from './routes/wishlist.js';
-import payoutRoutes from './routes/payouts.js';
-import supportTicketRoutes from './routes/supportTickets.js';
-import disputeRoutes from './routes/disputes.js';
-import errorHandler from './middlewares/errorHandler.js';
 import { Server } from 'socket.io';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+dotenv.config();
 import { globalLimiter } from './middlewares/rateLimiters.js';
 
-
-import 'dotenv/config';
-
 // Import routes and middleware
+import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
+import listingRoutes from './routes/listings';
+import bookingRoutes from './routes/bookings';
+import reviewRoutes from './routes/reviews';
+import adminRoutes from './routes/admin';
+import paymentRoutes from './routes/payments';
+import conversationRoutes from './routes/conversations';
+import notificationRoutes from './routes/notifications';
+import articleRoutes from './routes/articles';
+import reportRoutes from './routes/reports';
+import wishlistRoutes from './routes/wishlist';
+import payoutRoutes from './routes/payouts';
+import aiRoutes from './routes/ai';
+import savedSearchRoutes from './routes/savedSearches';
+import errorHandler from './middlewares/errorHandler';
+import Conversation from './models/Conversation';
 
 const app = express();
+app.set('trust proxy', 1);
 
 const getRequiredEnvVars = () => {
   const required = ['JWT_SECRET'];
@@ -58,7 +58,7 @@ const getJwtSecret = () => {
     throw new Error('Missing required environment variable in production: JWT_SECRET');
   }
 
-  return 'development-secret-key';
+  throw new Error('JWT_SECRET environment variable is required');
 };
 
 const requiredEnvVars = getRequiredEnvVars();
@@ -83,10 +83,10 @@ const allowedOrigins = [
   'https://gaaubasti-19rzg9sr5-aryalkiran01s-projects.vercel.app',
   'https://gaaubasti.vercel.app',
   process.env.FRONTEND_URL
-].filter(Boolean);
+].filter(Boolean) as string[];
 
 const corsOptions = {
-  origin: function (origin, callback) {
+  origin: function (origin: string | undefined, callback: (err: Error | null, ok?: boolean) => void) {
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.indexOf(origin) === -1) {
@@ -127,11 +127,11 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/payouts', payoutRoutes);
-app.use('/api/support-tickets', supportTicketRoutes);
-app.use('/api/disputes', disputeRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/saved-searches', savedSearchRoutes);
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({
     status: 'OK',
     message: 'Gaunbasti API is running',
@@ -140,7 +140,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use('*', (_req, res) => {
   res.status(404).json({
     success: false,
     message: 'API endpoint not found'
@@ -151,9 +151,9 @@ app.use('*', (req, res) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
-let server;
+let server: any;
 
-const initializeSocketIO = (httpServer) => {
+const initializeSocketIO = (httpServer: any) => {
   const io = new Server(httpServer, {
     cors: {
       origin: allowedOrigins,
@@ -161,7 +161,7 @@ const initializeSocketIO = (httpServer) => {
     }
   });
 
-  global.io = io;
+  (global as any).io = io;
 
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
@@ -171,22 +171,39 @@ const initializeSocketIO = (httpServer) => {
     }
 
     try {
-      const decoded = jwt.verify(token, jwtSecret);
-      socket.user = { _id: decoded.userId };
-      return next();
-    } catch (error) {
+      const decoded = jwt.verify(token, jwtSecret) as any;
+      const User = require('./models/User').default || require('./models/User');
+      User.findById(decoded.userId).select('-password').then((user: any) => {
+        if (!user || !user.isActive) {
+          return next(new Error('User account is not valid'));
+        }
+        socket.user = { _id: decoded.userId, role: user.role };
+        return next();
+      }).catch(() => next(new Error('Authentication error')));
+    } catch {
       return next(new Error('Invalid token'));
     }
   });
 
   io.on('connection', (socket) => {
-    socket.on('joinConversation', (conversationId) => {
-      if (conversationId) {
+    socket.join(`user:${socket.user._id}`);
+
+    socket.on('joinConversation', async (conversationId: string) => {
+      if (!conversationId) return;
+      try {
+        const conversation = await Conversation.findById(conversationId).lean();
+        if (!conversation) return;
+        const isParticipant = conversation.participants.some(
+          (p: any) => (typeof p === 'object' ? p._id?.toString() : p.toString()) === socket.user._id
+        );
+        if (!isParticipant) return;
         socket.join(String(conversationId));
+      } catch {
+        // silently ignore — do not join
       }
     });
 
-    socket.on('typing:start', (payload) => {
+    socket.on('typing:start', (payload: any) => {
       if (payload?.conversationId) {
         socket.to(payload.conversationId).emit('typing:start', {
           userId: socket.user?._id,
@@ -195,7 +212,7 @@ const initializeSocketIO = (httpServer) => {
       }
     });
 
-    socket.on('typing:stop', (payload) => {
+    socket.on('typing:stop', (payload: any) => {
       if (payload?.conversationId) {
         socket.to(payload.conversationId).emit('typing:stop', {
           userId: socket.user?._id,
@@ -219,7 +236,22 @@ const startServer = async () => {
     });
 
     initializeSocketIO(server);
-  } catch (error) {
+
+    // Start booking auto-completion job (runs every hour)
+    const { autoCompleteBookings } = require('./controllers/bookingController');
+    const BOOKING_COMPLETION_INTERVAL_MS = 60 * 60 * 1000;
+    const bookingCompletionTimer = setInterval(async () => {
+      try {
+        await autoCompleteBookings();
+      } catch (err) {
+        console.error('[bookingCompletionJob] Error:', err.message);
+      }
+    }, BOOKING_COMPLETION_INTERVAL_MS);
+    bookingCompletionTimer.unref();
+
+    process.on('SIGINT', () => clearInterval(bookingCompletionTimer));
+    process.on('SIGTERM', () => clearInterval(bookingCompletionTimer));
+  } catch {
     console.error('Failed to start server');
     process.exitCode = 1;
   }

@@ -1,7 +1,10 @@
-import Review from '../models/Review.js';
-import Booking from '../models/Booking.js';
-import Listing from '../models/Listing.js';
-
+export {};
+const Review = require('../models/Review');
+const Booking = require('../models/Booking');
+const Listing = require('../models/Listing');
+const { moderateContent } = require('../services/moderationService');
+const { notifyReviewReceived } = require('../utils/notifications');
+const { checkReviewAbuse } = require('../services/fraudService');
 
 // Create new review
 const createReview = async (req, res) => {
@@ -43,6 +46,11 @@ const createReview = async (req, res) => {
       });
     }
 
+    const reviewFraudCheck = await checkReviewAbuse(req.user._id.toString());
+    if (reviewFraudCheck.flagged) {
+      return res.status(429).json({ success: false, message: reviewFraudCheck.reason });
+    }
+
     // Create review
     const review = new Review({
       listing: booking.listing._id,
@@ -54,6 +62,28 @@ const createReview = async (req, res) => {
     });
 
     await review.save();
+
+    // Notify host about new review
+    const Listing = require('../models/Listing');
+    const listingForHost = await Listing.findById(booking.listing._id).select('host');
+    if (listingForHost) {
+      notifyReviewReceived({ review, host: listingForHost.host }).catch(() => {});
+    }
+
+    // Non-blocking AI moderation
+    moderateContent({
+      contentType: 'review',
+      content: comment || '',
+      actorId: req.user._id,
+      targetType: 'Review',
+      targetId: review._id,
+    }).then((result) => {
+      if (result && result.flagged) {
+        review.isFlagged = true;
+        review.flagReason = result.reason;
+        review.save().catch(() => {});
+      }
+    }).catch(() => {});
 
     // Populate review details
     await review.populate([
@@ -221,7 +251,12 @@ const deleteReview = async (req, res) => {
       });
     }
 
-    await Review.findByIdAndDelete(req.params.id);
+    const listingId = review.listing;
+    await Review.deleteOne({ _id: review._id });
+
+    // Manually recalculate listing rating since deleteOne bypasses post('remove') hook
+    const Review2 = require('../models/Review');
+    await Review2.updateListingRating(listingId);
 
     res.json({
       success: true,
@@ -258,7 +293,7 @@ const respondToReview = async (req, res) => {
     }
 
     // Check if host has already responded
-    if (review.hostResponse.comment) {
+    if (review.hostResponse && review.hostResponse.comment) {
       return res.status(400).json({
         success: false,
         message: 'Host has already responded to this review'
@@ -329,4 +364,12 @@ const flagReview = async (req, res) => {
   }
 };
 
-export { createReview, getListingReviews, getUserReviews, updateReview, deleteReview, respondToReview, flagReview };
+module.exports = {
+  createReview,
+  getListingReviews,
+  getUserReviews,
+  updateReview,
+  deleteReview,
+  respondToReview,
+  flagReview
+};

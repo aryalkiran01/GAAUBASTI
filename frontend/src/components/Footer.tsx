@@ -49,7 +49,7 @@ export default function Footer() {
           {/* Quick Links */}
           <div>
             <h3 className="text-sm font-semibold text-background mb-4">Explore</h3>
-            <ul className="space-y-3 text-sm">
+            <ul className="space-y-3 text-sm" role="navigation" aria-label="Explore links">
               <li>
                 <Link to="/" className="text-background/60 hover:text-background transition-colors">
                   Home
@@ -76,7 +76,7 @@ export default function Footer() {
           {/* Support */}
           <div>
             <h3 className="text-sm font-semibold text-background mb-4">Support</h3>
-            <ul className="space-y-3 text-sm">
+            <ul className="space-y-3 text-sm" role="navigation" aria-label="Support links">
               <li>
                 <a href="#" className="text-background/60 hover:text-background transition-colors">
                   Help Center
@@ -103,7 +103,7 @@ export default function Footer() {
           {/* Contact */}
           <div>
             <h3 className="text-sm font-semibold text-background mb-4">Get in Touch</h3>
-            <ul className="space-y-3 text-sm">
+            <ul className="space-y-3 text-sm" role="navigation" aria-label="Contact information">
               <li className="flex items-center gap-2 text-background/60">
                 <Phone className="h-4 w-4 shrink-0" />
                 <span>+977 98 275 142 82</span>

@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-
+export {};
+const mongoose = require('mongoose');
 
 const paymentSchema = new mongoose.Schema({
   booking: {
@@ -65,5 +65,5 @@ paymentSchema.index(
   }
 );
 
-export default mongoose.model('Payment', paymentSchema);
+module.exports = mongoose.model('Payment', paymentSchema);
 

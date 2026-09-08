@@ -1,30 +1,34 @@
-import mongoose from 'mongoose';
+export {};
+const mongoose = require("mongoose");
 
-
-const notificationSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true
+const notificationSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+    type: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    content: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    message: { type: String, default: "" },
+    read: {
+      type: Boolean,
+      default: false,
+    },
   },
-  type: {
-    type: String,
-    required: true,
-    trim: true
+  {
+    timestamps: true,
   },
-  content: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {}
-  },
-  read: {
-    type: Boolean,
-    default: false
-  }
-}, {
-  timestamps: true
-});
+);
 
 notificationSchema.index({ user: 1, createdAt: -1 });
 
-export default mongoose.model('Notification', notificationSchema);
+module.exports = mongoose.model("Notification", notificationSchema);

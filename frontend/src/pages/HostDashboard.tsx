@@ -34,10 +34,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/EmptyState";
-import { Home, CalendarCheck, DollarSign, Plus, Pencil, Trash2, MessageSquare, UserCheck, Loader2 } from "lucide-react";
+import { Home, CalendarCheck, DollarSign, Plus, Pencil, Trash2, MessageSquare } from "lucide-react";
 import ListingDescriptionGenerator from "@/components/ai/ListingDescriptionGenerator";
 import PricingRecommendation from "@/components/ai/PricingRecommendation";
-import { hostVerificationAPI } from "@/lib/api";
 
 const HostDashboard = () => {
   const { user } = useAuth();
@@ -54,18 +53,6 @@ const HostDashboard = () => {
   const [isEditingOpen, setIsEditingOpen] = useState(false);
 
   const [isCreatingListing, setIsCreatingListing] = useState(false);
-  const [noShowBookingId, setNoShowBookingId] = useState<string | null>(null);
-  const [noShowReason, setNoShowReason] = useState("");
-  const [markingNoShow, setMarkingNoShow] = useState(false);
-  const [verificationOpen, setVerificationOpen] = useState(false);
-  const [verificationForm, setVerificationForm] = useState({
-    fullName: "",
-    idType: "citizenship",
-    idNumber: "",
-    address: "",
-    phoneNumber: "",
-  });
-  const [submittingVerification, setSubmittingVerification] = useState(false);
   const [newListing, setNewListing] = useState({
     title: "",
     description: "",
@@ -170,6 +157,30 @@ const HostDashboard = () => {
     }
   };
 
+  const handlePublishListing = async (listingId: string) => {
+    try {
+      const response = await listingsAPI.publishListing(listingId);
+      if (response.success) {
+        setListings(listings.map((l) => (l.id === listingId ? { ...l, status: 'pending', isVerified: false } as any : l)));
+        toast({ title: "Listing submitted", description: "Your listing has been submitted for admin approval." });
+      }
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Publish failed", description: error.message || "Failed to publish listing" });
+    }
+  };
+
+  const handleUnpublishListing = async (listingId: string) => {
+    try {
+      const response = await listingsAPI.unpublishListing(listingId);
+      if (response.success) {
+        setListings(listings.map((l) => (l.id === listingId ? { ...l, status: 'draft', isActive: false } as any : l)));
+        toast({ title: "Listing unpublished", description: "Your listing is now offline." });
+      }
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Unpublish failed", description: error.message || "Failed to unpublish listing" });
+    }
+  };
+
   const handleDeleteListing = async (listingId: string) => {
     try {
       const response = await listingsAPI.deleteListing(listingId);
@@ -185,46 +196,6 @@ const HostDashboard = () => {
   const openEditDialog = (listing: Listing) => {
     setEditingListing({ ...listing });
     setIsEditingOpen(true);
-  };
-
-  const handleMarkNoShow = async () => {
-    if (!noShowBookingId) return;
-    setMarkingNoShow(true);
-    try {
-      const res = await bookingsAPI.markNoShow(noShowBookingId, noShowReason);
-      if (res.success) {
-        toast({ title: "Guest marked as no-show", description: "The booking has been updated." });
-        setNoShowBookingId(null);
-        setNoShowReason("");
-        const bookingsResponse = await bookingsAPI.getHostBookings();
-        if (bookingsResponse.success) setBookings(bookingsResponse.data.bookings);
-      } else {
-        toast({ variant: "destructive", title: "Failed", description: res.message });
-      }
-    } catch {
-      toast({ variant: "destructive", title: "Failed", description: "Please try again." });
-    } finally {
-      setMarkingNoShow(false);
-    }
-  };
-
-  const handleSubmitVerification = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmittingVerification(true);
-    try {
-      const res = await hostVerificationAPI.submitVerification(verificationForm);
-      if (res.success) {
-        toast({ title: "Verification submitted", description: "Our team will review your request within 2-3 business days." });
-        setVerificationOpen(false);
-        setVerificationForm({ fullName: "", idType: "citizenship", idNumber: "", address: "", phoneNumber: "" });
-      } else {
-        toast({ variant: "destructive", title: "Failed", description: res.message });
-      }
-    } catch {
-      toast({ variant: "destructive", title: "Failed", description: "Please try again." });
-    } finally {
-      setSubmittingVerification(false);
-    }
   };
 
   const stats = [
@@ -252,7 +223,7 @@ const HostDashboard = () => {
                 <DialogDescription>Add a new homestay to your portfolio</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateListing} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="title">Title</Label>
                     <Input id="title" value={newListing.title} onChange={(e) => setNewListing({ ...newListing, title: e.target.value })} required className="mt-1.5" />
@@ -278,7 +249,7 @@ const HostDashboard = () => {
                   }}
                   onApply={(data) => setNewListing((prev) => ({ ...prev, title: data.title, description: data.description }))}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="city">City</Label>
                     <Input id="city" value={newListing.location.city} onChange={(e) => setNewListing({ ...newListing, location: { ...newListing.location, city: e.target.value } })} required className="mt-1.5" />
@@ -288,7 +259,7 @@ const HostDashboard = () => {
                     <Input id="address" value={newListing.location.address} onChange={(e) => setNewListing({ ...newListing, location: { ...newListing.location, address: e.target.value } })} required className="mt-1.5" />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="maxGuests">Max Guests</Label>
                     <Input id="maxGuests" type="number" min="1" value={newListing.maxGuests} onChange={(e) => setNewListing({ ...newListing, maxGuests: Number(e.target.value) })} required className="mt-1.5" />
@@ -328,7 +299,7 @@ const HostDashboard = () => {
         </div>
 
         <Tabs defaultValue="listings" className="w-full">
-          <TabsList>
+          <TabsList className="flex flex-wrap h-auto">
             <TabsTrigger value="listings">My Listings</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
@@ -336,7 +307,7 @@ const HostDashboard = () => {
 
           {/* Listings Tab */}
           <TabsContent value="listings" className="mt-6">
-            <div className="bg-white rounded-2xl border border-border overflow-hidden">
+            <div className="bg-white rounded-2xl border border-border overflow-x-auto">
               {loading ? (
                 <div className="p-6 space-y-4">
                   {Array.from({ length: 3 }).map((_, index) => (
@@ -383,13 +354,13 @@ const HostDashboard = () => {
                         </TableCell>
                         <TableCell className="font-medium">${listing.price}<span className="text-muted-foreground font-normal text-xs">/night</span></TableCell>
                         <TableCell>
-                          <Badge variant={listing.isVerified ? "success" : "warning"}>
-                            {listing.isVerified ? "Verified" : "Pending"}
+                          <Badge variant={listing.isVerified ? "success" : (listing as any).status === 'draft' ? "secondary" : "warning"}>
+                            {(listing as any).status === 'draft' ? "Draft" : listing.isVerified ? "Published" : (listing as any).status === 'pending' ? "In Review" : (listing as any).status === 'rejected' ? "Rejected" : "Pending"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-2 justify-end">
-                            <Dialog open={isEditingOpen} onOpenChange={setIsEditingOpen}>
+                            <Dialog open={isEditingOpen && editingListing?.id === listing.id} onOpenChange={(open) => { if (!open) { setEditingListing(null); setIsEditingOpen(false); } }}>
                               <DialogTrigger asChild>
                                 <Button variant="outline" size="sm" onClick={() => openEditDialog(listing)}>
                                   <Pencil className="h-3.5 w-3.5" />
@@ -411,7 +382,7 @@ const HostDashboard = () => {
                                       <Label htmlFor="edit-description">Description</Label>
                                       <Textarea id="edit-description" value={editingListing.description} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, description: e.target.value } : null))} required rows={3} className="mt-1.5" />
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                       <div>
                                         <Label htmlFor="edit-city">City</Label>
                                         <Input id="edit-city" value={typeof editingListing.location === "string" ? "" : editingListing.location.city} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, location: typeof prev.location === "string" ? { address: "", city: e.target.value, state: "", country: "Nepal" } : { ...prev.location, city: e.target.value } } : null))} required className="mt-1.5" />
@@ -421,7 +392,7 @@ const HostDashboard = () => {
                                         <Input id="edit-address" value={typeof editingListing.location === "string" ? "" : editingListing.location.address} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, location: typeof prev.location === "string" ? { address: e.target.value, city: "", state: "", country: "Nepal" } : { ...prev.location, address: e.target.value } } : null))} required className="mt-1.5" />
                                       </div>
                                     </div>
-                                    <div className="grid grid-cols-4 gap-4">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                       <div>
                                         <Label htmlFor="edit-maxGuests">Guests</Label>
                                         <Input id="edit-maxGuests" type="number" min="1" value={editingListing.maxGuests} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, maxGuests: Number(e.target.value) } : null))} required className="mt-1.5" />
@@ -446,6 +417,15 @@ const HostDashboard = () => {
                                 )}
                               </DialogContent>
                             </Dialog>
+                            {!(listing as any).status || (listing as any).status === 'draft' ? (
+                              <Button variant="outline" size="sm" onClick={() => handlePublishListing(listing.id)} className="text-gaun-green hover:bg-gaun-green/5">
+                                Publish
+                              </Button>
+                            ) : listing.isVerified ? (
+                              <Button variant="outline" size="sm" onClick={() => handleUnpublishListing(listing.id)}>
+                                Unpublish
+                              </Button>
+                            ) : null}
                             <Button variant="outline" size="sm" onClick={() => handleDeleteListing(listing.id)} className="text-destructive hover:bg-destructive/5">
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
@@ -463,7 +443,7 @@ const HostDashboard = () => {
 
           {/* Bookings Tab */}
           <TabsContent value="bookings" className="mt-6">
-            <div className="bg-white rounded-2xl border border-border overflow-hidden">
+            <div className="bg-white rounded-2xl border border-border">
               {loading ? (
                 <div className="p-6 space-y-4">
                   {Array.from({ length: 5 }).map((_, index) => (
@@ -542,16 +522,6 @@ const HostDashboard = () => {
                                 </DialogFooter>
                               </DialogContent>
                             </Dialog>
-                            {booking.status === "confirmed" && new Date(booking.startDate) <= new Date() && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-amber-700 hover:bg-amber-50"
-                                onClick={() => setNoShowBookingId(booking.id)}
-                              >
-                                No-show
-                              </Button>
-                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -577,94 +547,6 @@ const HostDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* No-show Dialog */}
-      <Dialog open={!!noShowBookingId} onOpenChange={(open) => { if (!open) { setNoShowBookingId(null); setNoShowReason(""); } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="font-display">Mark guest as no-show</DialogTitle>
-            <DialogDescription>
-              This will mark the booking as completed with a no-show note. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="noshow-reason">Reason (optional)</Label>
-              <Textarea
-                id="noshow-reason"
-                value={noShowReason}
-                onChange={(e) => setNoShowReason(e.target.value)}
-                placeholder="e.g. Guest did not arrive, no communication..."
-                rows={3}
-                className="mt-1.5"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNoShowBookingId(null)}>Cancel</Button>
-            <Button onClick={handleMarkNoShow} disabled={markingNoShow} className="bg-amber-600 hover:bg-amber-700">
-              {markingNoShow ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
-              Confirm No-show
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Host Verification Dialog */}
-      <Dialog open={verificationOpen} onOpenChange={setVerificationOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" className="fixed bottom-6 right-6 shadow-lg z-50">
-            <UserCheck className="h-4 w-4 mr-1.5" />
-            Get Verified
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="font-display">Host Verification</DialogTitle>
-            <DialogDescription>
-              Submit your details to become a verified host. Verified hosts get a badge and higher booking trust.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmitVerification} className="space-y-4">
-            <div>
-              <Label htmlFor="vf-name">Full legal name</Label>
-              <Input id="vf-name" value={verificationForm.fullName} onChange={(e) => setVerificationForm({ ...verificationForm, fullName: e.target.value })} required className="mt-1.5" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>ID type</Label>
-                <Select value={verificationForm.idType} onValueChange={(v) => setVerificationForm({ ...verificationForm, idType: v })}>
-                  <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="citizenship">Citizenship</SelectItem>
-                    <SelectItem value="passport">Passport</SelectItem>
-                    <SelectItem value="drivers_license">Driver's License</SelectItem>
-                    <SelectItem value="national_id">National ID</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="vf-idnum">ID number</Label>
-                <Input id="vf-idnum" value={verificationForm.idNumber} onChange={(e) => setVerificationForm({ ...verificationForm, idNumber: e.target.value })} required className="mt-1.5" />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="vf-address">Address</Label>
-              <Input id="vf-address" value={verificationForm.address} onChange={(e) => setVerificationForm({ ...verificationForm, address: e.target.value })} required className="mt-1.5" />
-            </div>
-            <div>
-              <Label htmlFor="vf-phone">Phone number</Label>
-              <Input id="vf-phone" value={verificationForm.phoneNumber} onChange={(e) => setVerificationForm({ ...verificationForm, phoneNumber: e.target.value })} required className="mt-1.5" />
-            </div>
-            <DialogFooter>
-              <Button type="submit" disabled={submittingVerification}>
-                {submittingVerification ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
-                Submit for Verification
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

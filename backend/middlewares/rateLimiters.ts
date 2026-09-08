@@ -1,5 +1,5 @@
-import rateLimit from 'express-rate-limit';
-
+export {};
+const rateLimit = require('express-rate-limit');
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -40,4 +40,25 @@ const bookingCreateLimiter = rateLimit({
   message: 'Too many booking creation requests. Please try again later.'
 });
 
-export { globalLimiter, loginLimiter, passwordLimiter, bookingCreateLimiter };
+const aiLimiter = rateLimit({
+  windowMs: parseInt(process.env.AI_RATE_LIMIT_WINDOW_MS || '60000', 10) || 60000,
+  max: parseInt(process.env.AI_RATE_LIMIT_MAX || '10', 10) || 10,
+  keyGenerator: (req) => {
+    const authHeader = req.headers.authorization || '';
+    if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      return authHeader.replace('Bearer ', '');
+    }
+    return req.ip || 'anonymous';
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many AI requests. Please try again later.'
+});
+
+module.exports = {
+  globalLimiter,
+  loginLimiter,
+  passwordLimiter,
+  bookingCreateLimiter,
+  aiLimiter
+};

@@ -1,6 +1,7 @@
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
-
+export {};
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const { isBlacklisted } = require('../controllers/authController');
 
 const toUserId = (value) => {
   if (!value) return null;
@@ -17,7 +18,7 @@ const getJwtSecret = () => {
     throw new Error('JWT_SECRET must be configured in production');
   }
 
-  return 'development-secret-key';
+  throw new Error('JWT_SECRET environment variable is required');
 };
 
 // Verify JWT token
@@ -29,6 +30,13 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'Access denied. No token provided.'
+      });
+    }
+
+    if (isBlacklisted(token)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token has been invalidated. Please log in again.'
       });
     }
 
@@ -128,4 +136,10 @@ const requireOwnershipOrAdmin = (resourceField = 'user') => {
   };
 };
 
-export { authenticate, authorize, requireAdmin, requireHost, requireOwnershipOrAdmin };
+module.exports = {
+  authenticate,
+  authorize,
+  requireAdmin,
+  requireHost,
+  requireOwnershipOrAdmin
+};

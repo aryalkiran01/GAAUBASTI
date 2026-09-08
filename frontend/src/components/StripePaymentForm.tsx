@@ -6,7 +6,7 @@ import { bookingsAPI } from "@/lib/api";
 
 interface StripePaymentFormProps {
   paymentId: string;
-  providerPaymentId: string;
+  clientSecret: string;
   amount: number;
   bookingId?: string;
   onSuccess: () => void;
@@ -14,7 +14,7 @@ interface StripePaymentFormProps {
 
 export default function StripePaymentForm({
   paymentId,
-  providerPaymentId,
+  clientSecret,
   amount,
   bookingId,
   onSuccess,
@@ -43,9 +43,9 @@ export default function StripePaymentForm({
         return;
       }
 
-      const { error: confirmError } = await stripe.confirmPayment({
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
         elements,
-        clientSecret: providerPaymentId,
+        clientSecret,
         confirmParams: {
           return_url: window.location.origin + "/payment-success",
         },
@@ -58,9 +58,15 @@ export default function StripePaymentForm({
         return;
       }
 
+      if (!paymentIntent || paymentIntent.status !== "succeeded") {
+        setErrorMessage("Payment was not completed. Please try again.");
+        setIsProcessing(false);
+        return;
+      }
+
       const verificationResponse = await bookingsAPI.verifyPayment(
         paymentId,
-        providerPaymentId
+        paymentIntent.id
       );
 
       if (!verificationResponse.success) {

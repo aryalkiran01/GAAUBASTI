@@ -1,10 +1,16 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Users, Heart, Globe, ArrowRight } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const About = () => {
   return (
     <div className="min-h-screen">
+      <SEO
+        title="About Us"
+        description="Learn about Gau Basti's mission to connect travelers with authentic Nepali homestay experiences while supporting rural communities across Nepal."
+        canonicalPath="/about"
+      />
       {/* Hero */}
       <section
         className="relative py-24 md:py-32 flex items-center"

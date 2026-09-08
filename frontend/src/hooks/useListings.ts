@@ -10,6 +10,8 @@ interface UseListingsParams {
   rating?: number;
   category?: string;
   amenities?: string[];
+  sortBy?: string;
+  sortOrder?: string;
   page?: number;
   limit?: number;
 }

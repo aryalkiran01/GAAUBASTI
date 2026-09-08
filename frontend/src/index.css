@@ -120,6 +120,17 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Keyboard focus visibility */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Remove outline for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* Listing card hover effect */
 .listing-card {
   @apply transition-all duration-200;

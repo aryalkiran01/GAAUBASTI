@@ -16,4 +16,6 @@ const webhookLogSchema = new mongoose.Schema({
   timestamps: true
 });
 
+webhookLogSchema.index({ createdAt: 1 }, { expiresAfterSeconds: 86400 * 30 });
+
 module.exports = mongoose.model('WebhookLog', webhookLogSchema);

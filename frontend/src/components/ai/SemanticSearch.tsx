@@ -7,7 +7,6 @@ import { Loader2, Search, Sparkles } from "lucide-react";
 import { aiAPI } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import ListingCard from "@/components/ListingCard";
-import type { Listing } from "@/types";
 
 const SemanticSearch = () => {
   const { user } = useAuth();
@@ -15,8 +14,8 @@ const SemanticSearch = () => {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<Listing[]>([]);
-  const [filters, setFilters] = useState<Record<string, string | string[]> | null>(null);
+  const [results, setResults] = useState<any[]>([]);
+  const [filters, setFilters] = useState<any>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
   if (!user) return null;
@@ -30,13 +29,13 @@ const SemanticSearch = () => {
     try {
       const response = await aiAPI.semanticSearch(query);
       if (response.success) {
-        setResults((response.data.listings || []) as Listing[]);
+        setResults(response.data.listings || []);
         setFilters(response.data.filters);
       } else {
         setError(response.message || "Search failed");
       }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -84,8 +83,8 @@ const SemanticSearch = () => {
 
         {results.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {results.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
+            {results.map((listing: any) => (
+              <ListingCard key={listing._id || listing.id} listing={listing} />
             ))}
           </div>
         )}

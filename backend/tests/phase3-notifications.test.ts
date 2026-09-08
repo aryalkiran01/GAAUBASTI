@@ -96,7 +96,7 @@ test('refund idempotency: processRefund rejects already-refunded payment', async
 
   try {
     const res = createRes();
-    await processRefund({ params: { paymentId: 'payment_1' }, user: { _id: { toString: () => 'guest_1' }, role: 'guest' }, body: {} }, res);
+    await processRefund({ params: { paymentId: 'payment_1' }, user: { _id: { toString: () => 'host_1' }, role: 'host' }, body: {} }, res);
     assert.equal(res.statusCode, 409);
     assert.match(res.payload.message, /already been refunded/i);
   } finally {
@@ -113,7 +113,7 @@ test('refund idempotency: processRefund rejects non-paid payment', async () => {
     populate: async () => ({
       _id: 'payment_2',
       payer: { toString: () => 'guest_2' },
-      booking: { _id: 'booking_2', guest: { toString: () => 'guest_2' } },
+      booking: { _id: 'booking_2', guest: { toString: () => 'guest_2' }, host: { toString: () => 'guest_2' } },
       amount: 200,
       currency: 'USD',
       status: 'pending',
@@ -132,7 +132,7 @@ test('refund idempotency: processRefund rejects non-paid payment', async () => {
 
   try {
     const res = createRes();
-    await processRefund({ params: { paymentId: 'payment_2' }, user: { _id: { toString: () => 'guest_2' }, role: 'guest' }, body: {} }, res);
+    await processRefund({ params: { paymentId: 'payment_2' }, user: { _id: { toString: () => 'guest_2' }, role: 'host' }, body: {} }, res);
     assert.equal(res.statusCode, 400);
     assert.match(res.payload.message, /only paid payments/i);
   } finally {

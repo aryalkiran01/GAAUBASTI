@@ -9,7 +9,6 @@ import { useNavigate } from "react-router-dom";
 import { User } from "../types";
 import { authAPI, getAuthToken, removeAuthToken } from "../lib/api";
 import { useToast } from "@/components/ui/use-toast";
-import { useSocket } from "../hooks/useSocket";
 
 interface AuthContextType {
   user: User | null;
@@ -42,7 +41,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
-  useSocket(!!user, user?.id);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -102,13 +100,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Login failed",
         description: response.message || "Invalid email or password",
       });
-    } catch (error: unknown) {
+    } catch (error: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       removeAuthToken();
       setUser(null);
       toast({
         variant: "destructive",
         title: "Login failed",
-        description: error instanceof Error ? error.message : "An error occurred during login",
+        description: error.message || "An error occurred during login",
       });
     } finally {
       setIsLoading(false);
@@ -131,11 +130,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           description: "Your password was updated successfully.",
         });
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       toast({
         variant: "destructive",
         title: "Change Password Failed",
-        description: error instanceof Error ? error.message : "An error occurred",
+        description: error.message || "An error occurred",
       });
     } finally {
       setIsLoading(false);
@@ -153,11 +153,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
       return response;
-    } catch (error: unknown) {
+    } catch (error: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       toast({
         variant: "destructive",
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to send OTP",
+        description: error.message || "Failed to send OTP",
       });
       throw error;
     } finally {
@@ -180,11 +181,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
       return response;
-    } catch (error: unknown) {
+    } catch (error: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       toast({
         variant: "destructive",
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to reset password",
+        description: error.message || "Failed to reset password",
       });
       throw error;
     } finally {
@@ -240,13 +242,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description:
           response.message || "An error occurred during registration",
       });
-    } catch (error: unknown) {
+    } catch (error: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       removeAuthToken();
       setUser(null);
       toast({
         variant: "destructive",
         title: "Registration failed",
-        description: error instanceof Error ? error.message : "An error occurred during registration",
+        description: error.message || "An error occurred during registration",
       });
     } finally {
       setIsLoading(false);

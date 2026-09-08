@@ -4,6 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { PaymentDetails } from "@/types";
 import { format } from "date-fns";
 import { CircleCheck as CheckCircle2, Calendar, Hop as Home, ArrowRight } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const PaymentSuccess = () => {
   const location = useLocation();
@@ -29,6 +30,7 @@ const PaymentSuccess = () => {
 
   return (
     <div className="container py-16 md:py-24">
+      <SEO title="Booking Confirmed" description="Your booking and payment have been confirmed successfully." canonicalPath="/payment-success" noindex />
       <div className="max-w-md mx-auto text-center">
         <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-6">
           <CheckCircle2 className="h-8 w-8 text-success" />

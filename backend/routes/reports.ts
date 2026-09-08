@@ -1,10 +1,10 @@
-import express from 'express';
-import { authenticate } from '../middlewares/auth.js';
-import { createReport } from '../controllers/reportController.js';
-
+export {};
+const express = require('express');
 const router = express.Router();
+const { authenticate } = require('../middlewares/auth');
+const { createReport } = require('../controllers/reportController');
 
 router.use(authenticate);
 router.post('/', createReport);
 
-export default router;
+module.exports = router;
