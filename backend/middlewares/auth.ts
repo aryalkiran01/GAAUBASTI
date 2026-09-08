@@ -1,4 +1,3 @@
-export {};
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { isBlacklisted } = require('../controllers/authController');
@@ -136,7 +135,7 @@ const requireOwnershipOrAdmin = (resourceField = 'user') => {
   };
 };
 
-module.exports = {
+export {
   authenticate,
   authorize,
   requireAdmin,

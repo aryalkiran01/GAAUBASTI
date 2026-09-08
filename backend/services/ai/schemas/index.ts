@@ -1,5 +1,3 @@
-export {};
-
 const HEALTH_CHECK_SCHEMA = {
   type: 'object',
   properties: {
@@ -113,7 +111,7 @@ const TRANSLATION_SCHEMA = {
   additionalProperties: false,
 };
 
-module.exports = {
+export {
   HEALTH_CHECK_SCHEMA,
   LISTING_GENERATION_SCHEMA,
   HELP_ASSISTANT_SCHEMA,

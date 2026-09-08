@@ -1,4 +1,3 @@
-export {};
 const { body, param, query, validationResult } = require('express-validator');
 
 // Handle validation errors
@@ -233,7 +232,7 @@ const validateListingQuery = [
   handleValidationErrors
 ];
 
-module.exports = {
+export {
   handleValidationErrors,
   validateUserRegistration,
   validateUserLogin,

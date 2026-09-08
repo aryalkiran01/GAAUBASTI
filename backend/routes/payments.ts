@@ -1,4 +1,3 @@
-export {};
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middlewares/auth');
@@ -20,4 +19,4 @@ router.post('/:paymentId/verify', verifyPayment);
 router.post('/:paymentId/refund', processRefund);
 router.get('/:paymentId', getPaymentStatus);
 
-module.exports = router;
+export default router;

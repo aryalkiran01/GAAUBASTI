@@ -1,4 +1,3 @@
-export {};
 const express = require('express');
 const router = express.Router();
 const {
@@ -41,5 +40,5 @@ router.post('/resend-verification', resendVerification);
 router.delete('/account', deleteAccount);
 router.post('/apply-host', applyForHost);
 
-module.exports = router;
+export default router;
 

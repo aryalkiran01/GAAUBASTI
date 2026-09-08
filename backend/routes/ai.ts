@@ -1,4 +1,3 @@
-export {};
 const express = require('express');
 const router = express.Router();
 const {
@@ -37,4 +36,4 @@ router.post('/listing-description', aiLimiter, requireHost, generateListingDescr
 router.post('/pricing-recommendation', aiLimiter, requireHost, pricingRecommendation);
 router.post('/moderate', aiLimiter, requireHost, moderateContent);
 
-module.exports = router;
+export default router;

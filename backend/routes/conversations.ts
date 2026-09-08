@@ -1,4 +1,3 @@
-export {};
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middlewares/auth');
@@ -11,4 +10,4 @@ router.get('/:id/messages', getMessages);
 router.post('/:id/messages', sendMessage);
 router.patch('/:id/messages/read', markMessagesRead);
 
-module.exports = router;
+export default router;

@@ -1,4 +1,3 @@
-export {};
 const express = require('express');
 const router = express.Router();
 const {
@@ -32,4 +31,4 @@ router.post('/:id/flag', requireTraveler, validateObjectId('id'), flagReview);
 // Host routes
 router.post('/:id/respond', requireHost, validateObjectId('id'), respondToReview);
 
-module.exports = router;
+export default router;

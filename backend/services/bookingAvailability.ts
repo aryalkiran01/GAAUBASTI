@@ -115,7 +115,7 @@ const canTransitionStatus = (currentStatus, nextStatus) => {
 };
 
 const findConflictingBooking = async ({ listingId, startDate, endDate, excludeBookingId = null, session = null }) => {
-  const query = {
+  const query: any = {
     listing: listingId,
     status: { $in: BLOCKING_BOOKING_STATUSES },
     startDate: { $lt: new Date(endDate) },
@@ -217,7 +217,7 @@ const checkListingAvailability = async ({ listingId, startDate, endDate, exclude
 };
 
 const generateNights = (startDate, endDate) => {
-  const nights = [];
+  const nights: Date[] = [];
   const cursor = new Date(startDate);
   cursor.setHours(0, 0, 0, 0);
 

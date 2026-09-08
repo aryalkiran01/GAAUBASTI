@@ -1,4 +1,3 @@
-export {};
 const express = require('express');
 const router = express.Router();
 const {
@@ -41,4 +40,4 @@ router.delete('/:id', requireHost, validateObjectId('id'), requireOwnership(List
 router.post('/:id/publish', requireHost, validateObjectId('id'), requireOwnership(Listing, 'host'), publishListing);
 router.post('/:id/unpublish', requireHost, validateObjectId('id'), requireOwnership(Listing, 'host'), unpublishListing);
 
-module.exports = router;
+export default router;

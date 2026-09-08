@@ -1,4 +1,3 @@
-export {};
 const mongoose = require('mongoose');
 
 const reviewSchema = new mongoose.Schema({
@@ -136,4 +135,4 @@ reviewSchema.methods.canBeEdited = function(this: any, userId: any) {
   return this.guest.toString() === userId.toString() && daysSinceCreated <= 30;
 };
 
-module.exports = mongoose.model('Review', reviewSchema);
+export = mongoose.model('Review', reviewSchema);

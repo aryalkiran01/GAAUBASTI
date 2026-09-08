@@ -31,7 +31,7 @@ const runFallbackModeration = (content) => {
     return { flagged: false, severity: 'none', categories: [], reason: 'Empty content', suggestedAction: 'allow' };
   }
 
-  const matchedCategories = [];
+  const matchedCategories: string[] = [];
   let maxSeverity = 'none';
 
   for (const pattern of PROHIBITED_PATTERNS) {

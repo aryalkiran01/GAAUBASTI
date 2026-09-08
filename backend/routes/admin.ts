@@ -1,4 +1,3 @@
-export {};
 const express = require('express');
 const router = express.Router();
 const {
@@ -57,4 +56,4 @@ router.patch('/reviews/:id/moderate', validateObjectId('id'), moderateReview);
 router.get('/reports', getReportsForAdmin);
 router.patch('/reports/:id/status', validateObjectId('id'), updateReportStatus);
 
-module.exports = router;
+export default router;

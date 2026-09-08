@@ -1,4 +1,3 @@
-export {};
 const {
   getAIProvider,
   isFallbackEnabled,
@@ -240,7 +239,7 @@ const getConfig = (): any => {
   };
 };
 
-module.exports = {
+const aiService = {
   generate,
   checkHealth,
   testGeneration,
@@ -251,3 +250,17 @@ module.exports = {
   sanitizeUserContent,
   sanitizeMessages,
 };
+
+export {
+  generate,
+  checkHealth,
+  testGeneration,
+  getConfig,
+  validateJsonResponse,
+  getProvider,
+  isAIConfigured,
+  sanitizeUserContent,
+  sanitizeMessages,
+};
+
+export default aiService;

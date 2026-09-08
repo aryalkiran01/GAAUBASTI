@@ -7,7 +7,7 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 dotenv.config();
-import { globalLimiter } from './middlewares/rateLimiters.js';
+import { globalLimiter } from './middlewares/rateLimiters';
 
 // Import routes and middleware
 import authRoutes from './routes/auth';
@@ -177,7 +177,7 @@ const initializeSocketIO = (httpServer: any) => {
         if (!user || !user.isActive) {
           return next(new Error('User account is not valid'));
         }
-        socket.user = { _id: decoded.userId, role: user.role };
+        (socket as any).user = { _id: decoded.userId, role: user.role };
         return next();
       }).catch(() => next(new Error('Authentication error')));
     } catch {
@@ -186,7 +186,7 @@ const initializeSocketIO = (httpServer: any) => {
   });
 
   io.on('connection', (socket) => {
-    socket.join(`user:${socket.user._id}`);
+    socket.join(`user:${(socket as any).user._id}`);
 
     socket.on('joinConversation', async (conversationId: string) => {
       if (!conversationId) return;
@@ -194,7 +194,7 @@ const initializeSocketIO = (httpServer: any) => {
         const conversation = await Conversation.findById(conversationId).lean();
         if (!conversation) return;
         const isParticipant = conversation.participants.some(
-          (p: any) => (typeof p === 'object' ? p._id?.toString() : p.toString()) === socket.user._id
+          (p: any) => (typeof p === 'object' ? p._id?.toString() : p.toString()) === (socket as any).user._id
         );
         if (!isParticipant) return;
         socket.join(String(conversationId));
@@ -206,7 +206,7 @@ const initializeSocketIO = (httpServer: any) => {
     socket.on('typing:start', (payload: any) => {
       if (payload?.conversationId) {
         socket.to(payload.conversationId).emit('typing:start', {
-          userId: socket.user?._id,
+          userId: (socket as any).user?._id,
           conversationId: payload.conversationId
         });
       }
@@ -215,7 +215,7 @@ const initializeSocketIO = (httpServer: any) => {
     socket.on('typing:stop', (payload: any) => {
       if (payload?.conversationId) {
         socket.to(payload.conversationId).emit('typing:stop', {
-          userId: socket.user?._id,
+          userId: (socket as any).user?._id,
           conversationId: payload.conversationId
         });
       }

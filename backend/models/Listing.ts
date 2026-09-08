@@ -1,4 +1,3 @@
-export {};
 const mongoose = require('mongoose');
 
 const listingSchema = new mongoose.Schema({
@@ -211,4 +210,4 @@ listingSchema.methods.updateRating = async function() {
   return this.save();
 };
 
-module.exports = mongoose.model('Listing', listingSchema);
+export = mongoose.model('Listing', listingSchema);

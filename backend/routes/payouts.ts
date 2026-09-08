@@ -1,4 +1,3 @@
-export {};
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middlewares/auth');
@@ -26,4 +25,4 @@ router.patch('/admin/:id/approve', requireAdmin, validateObjectId('id'), approve
 router.patch('/admin/:id/mark-paid', requireAdmin, validateObjectId('id'), markPayoutPaid);
 router.patch('/admin/:id/cancel', requireAdmin, validateObjectId('id'), cancelPayout);
 
-module.exports = router;
+export default router;

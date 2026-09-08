@@ -1,5 +1,3 @@
-export {};
-
 const BASE_SYSTEM_PROMPT =
   'You are an AI assistant for Gau Basti, a platform for authentic Nepali homestays, cottages, and unique stays in rural Nepal. ' +
   'Always respond in a helpful, professional, and culturally respectful manner. ' +
@@ -58,7 +56,7 @@ const translationPrompt = (data: any) => ({
   user: `Translate the following text from ${data.from} to ${data.to}. Return JSON with "translated" (the translated text) and "original" (the original text unchanged).\n\nText to translate:\n${data.text}`,
 });
 
-module.exports = {
+export {
   BASE_SYSTEM_PROMPT,
   HEALTH_CHECK_PROMPT,
   listingDescriptionPrompt,

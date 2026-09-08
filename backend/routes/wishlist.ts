@@ -1,4 +1,3 @@
-export {};
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middlewares/auth');
@@ -16,4 +15,4 @@ router.post('/check', checkWishlistStatus);
 router.get('/', getWishlist);
 router.delete('/:listingId', validateObjectId('listingId'), removeWishlistItem);
 
-module.exports = router;
+export default router;

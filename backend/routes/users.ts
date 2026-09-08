@@ -1,4 +1,3 @@
-export {};
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
@@ -81,4 +80,4 @@ router.put('/:id', validateObjectId('id'), requireOwnershipOrAdmin('user'), asyn
   }
 });
 
-module.exports = router;
+export default router;

@@ -1,4 +1,3 @@
-export {};
 const mongoose = require('mongoose');
 
 const articleSchema = new mongoose.Schema({
@@ -37,4 +36,4 @@ const articleSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Article', articleSchema);
+export = mongoose.model('Article', articleSchema);

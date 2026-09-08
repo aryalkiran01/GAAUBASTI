@@ -1,4 +1,3 @@
-export {};
 const rateLimit = require('express-rate-limit');
 
 const globalLimiter = rateLimit({
@@ -55,7 +54,7 @@ const aiLimiter = rateLimit({
   message: 'Too many AI requests. Please try again later.'
 });
 
-module.exports = {
+export {
   globalLimiter,
   loginLimiter,
   passwordLimiter,

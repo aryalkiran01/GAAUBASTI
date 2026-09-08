@@ -1,4 +1,3 @@
-export {};
 const mongoose = require('mongoose');
 
 const conversationSchema = new mongoose.Schema({
@@ -26,4 +25,4 @@ const conversationSchema = new mongoose.Schema({
 conversationSchema.index({ participants: 1, listing: 1, booking: 1 });
 conversationSchema.index({ lastMessageAt: -1 });
 
-module.exports = mongoose.model('Conversation', conversationSchema);
+export = mongoose.model('Conversation', conversationSchema);
