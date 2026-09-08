@@ -1,30 +1,12 @@
 export {};
-const aiService = require('../services/ai/aiService');
-const {
-  listingDescriptionPrompt,
-  helpAssistantPrompt,
-  pricingPrompt,
-  messageReplyPrompt,
-  moderationPrompt,
-  reviewSummaryPrompt,
-  semanticSearchPrompt,
-  translationPrompt,
-} = require('../services/ai/prompts/index');
-const {
-  LISTING_GENERATION_SCHEMA,
-  HELP_ASSISTANT_SCHEMA,
-  PRICING_SCHEMA,
-  MESSAGE_REPLY_SCHEMA,
-  MODERATION_SCHEMA,
-  REVIEW_SUMMARY_SCHEMA,
-  SEMANTIC_SEARCH_SCHEMA,
-  TRANSLATION_SCHEMA,
-} = require('../services/ai/schemas/index');
-const Listing = require('../models/Listing');
-const Article = require('../models/Article');
-const Review = require('../models/Review');
-const Message = require('../models/Message');
-const Conversation = require('../models/Conversation');
+  import aiService from '../services/ai/aiService';
+import { listingDescriptionPrompt, helpAssistantPrompt, pricingPrompt, messageReplyPrompt, moderationPrompt, reviewSummaryPrompt, semanticSearchPrompt, translationPrompt } from '../services/ai/prompts/index';
+import { LISTING_GENERATION_SCHEMA, HELP_ASSISTANT_SCHEMA, PRICING_SCHEMA, MESSAGE_REPLY_SCHEMA, MODERATION_SCHEMA, REVIEW_SUMMARY_SCHEMA, SEMANTIC_SEARCH_SCHEMA, TRANSLATION_SCHEMA } from '../services/ai/schemas/index';
+import Listing from '../models/Listing';
+import Article from '../models/Article';
+import Review from '../models/Review';
+import Message from '../models/Message';
+import Conversation from '../models/Conversation';
 
 const handleAIError = (res, error, defaultMessage) => {
   const message = error.message || defaultMessage;
