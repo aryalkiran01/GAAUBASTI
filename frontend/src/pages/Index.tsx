@@ -19,33 +19,30 @@ const Index = () => {
       />
       {/* Hero Section */}
       <section
-        className="relative min-h-[90vh] flex items-end pb-12 md:pb-20"
+        className="relative min-h-[85vh] lg:min-h-[90vh] flex flex-col justify-end pt-24 pb-12 md:pb-16 lg:pb-20"
         style={{
           backgroundImage:
-            "linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.5) 100%), url('https://images.pexels.com/photos/32225790/pexels-photo-32225790.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1280')",
+            "linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.55) 100%), url('https://images.pexels.com/photos/32225790/pexels-photo-32225790.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1280')",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       >
-        <div className="container">
-          <div className="max-w-3xl space-y-6 animate-fade-in-up">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-display font-semibold text-white leading-[1.05] tracking-tight text-balance">
+        <div className="container flex flex-col justify-end flex-1 gap-8 md:gap-10 lg:gap-12">
+          <div className="max-w-3xl space-y-4 md:space-y-6 animate-fade-in-up">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-semibold text-white leading-[1.05] tracking-tight text-balance">
               Stay somewhere
               <br />
               worth remembering.
             </h1>
-            <p className="text-lg md:text-xl text-white/85 max-w-xl leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl text-white/90 max-w-xl leading-relaxed">
               Discover authentic homestays, cottages, and unique stays in the
               heart of Nepal's scenic villages.
             </p>
           </div>
-        </div>
-      </section>
 
-      {/* Floating Search */}
-      <section className="relative -mt-20 md:-mt-24 z-10">
-        <div className="container">
-          <SearchForm />
+          <div className="w-full z-10">
+            <SearchForm />
+          </div>
         </div>
       </section>
 
