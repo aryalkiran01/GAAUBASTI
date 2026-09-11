@@ -117,6 +117,29 @@ const userSchema = new mongoose.Schema({
   hostRejectionReason: {
     type: String,
     default: null
+  },
+  notificationPreferences: {
+    email: {
+      bookings: { type: Boolean, default: true },
+      payments: { type: Boolean, default: true },
+      messages: { type: Boolean, default: true },
+      reviews: { type: Boolean, default: true },
+      hostEvents: { type: Boolean, default: true },
+      marketing: { type: Boolean, default: false }
+    },
+    sms: {
+      bookings: { type: Boolean, default: true },
+      payments: { type: Boolean, default: true },
+      security: { type: Boolean, default: true },
+      messages: { type: Boolean, default: false }
+    },
+    inApp: {
+      bookings: { type: Boolean, default: true },
+      payments: { type: Boolean, default: true },
+      messages: { type: Boolean, default: true },
+      reviews: { type: Boolean, default: true },
+      hostEvents: { type: Boolean, default: true }
+    }
   }
 }, {
   timestamps: true,

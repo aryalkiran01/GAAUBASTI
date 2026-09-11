@@ -1,3 +1,4 @@
+const { logger } = require('../utils/logger');
 
 const getSafeErrorPayload = (err: any) => {
   const statusCode = err?.statusCode || err?.status || 500;
@@ -61,12 +62,13 @@ const getSafeErrorPayload = (err: any) => {
 const errorHandler = (err: any, req: any, res: any, next: any) => {
   const payload = getSafeErrorPayload(err);
 
-  if (process.env.NODE_ENV === 'development' && process.env.DEBUG_ERRORS === 'true') {
-    console.error('Request error:', {
-      name: err?.name,
-      code: err?.code,
-      message: err?.message,
-      statusCode: payload.statusCode
+  // Structured production logger
+  if (payload.statusCode >= 500) {
+    logger.logApiError(req, err, payload.statusCode);
+  } else if (process.env.NODE_ENV === 'development') {
+    logger.debug(`Client Request Error [${payload.statusCode}]: ${payload.message}`, {
+      url: req.originalUrl || req.url,
+      method: req.method
     });
   }
 

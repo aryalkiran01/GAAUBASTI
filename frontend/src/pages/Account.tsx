@@ -23,8 +23,11 @@ import {
   Home,
   User as UserIcon,
   Lock,
+  Bell,
+  Shield,
+  Check,
 } from "lucide-react";
-import { listingsAPI, paymentsAPI, bookingsAPI, authAPI } from "@/lib/api";
+import { listingsAPI, paymentsAPI, bookingsAPI, authAPI, usersAPI } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import {
   Dialog,
@@ -37,6 +40,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import ListingCard from "@/components/ListingCard";
 
 const Account = () => {
@@ -68,6 +72,15 @@ const Account = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
+
+  // Notification preferences state
+  const [prefs, setPrefs] = useState<any>({
+    email: { bookings: true, payments: true, messages: true, reviews: true, hostEvents: true, marketing: false },
+    sms: { bookings: true, payments: true, security: true, messages: false },
+    inApp: { bookings: true, payments: true, messages: true, reviews: true, hostEvents: true },
+  });
+  const [prefsLoading, setPrefsLoading] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -110,12 +123,29 @@ const Account = () => {
     }
   }, []);
 
+  const fetchPrefs = useCallback(async () => {
+    try {
+      setPrefsLoading(true);
+      const res = await usersAPI.getNotificationPreferences();
+      if (res.success && res.data?.notificationPreferences) {
+        setPrefs(res.data.notificationPreferences);
+      }
+    } catch (err: any) {
+      // Keep defaults
+    } finally {
+      setPrefsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (user) {
+      setProfileName(user.name || "");
+      setProfilePhone((user as any).phone || "");
       fetchWishlist();
       fetchPayments();
+      fetchPrefs();
     }
-  }, [user, fetchWishlist, fetchPayments]);
+  }, [user, fetchWishlist, fetchPayments, fetchPrefs]);
 
   if (!user) {
     return null;
@@ -277,6 +307,10 @@ const Account = () => {
                 </TabsTrigger>
                 <TabsTrigger value="payments">Payment History</TabsTrigger>
                 <TabsTrigger value="profile">Profile</TabsTrigger>
+                <TabsTrigger value="notifications">
+                  <Bell className="h-3.5 w-3.5 mr-1.5" />
+                  Notifications
+                </TabsTrigger>
                 {user.role === "host" && (
                   <TabsTrigger value="listings">My Listings</TabsTrigger>
                 )}
@@ -686,6 +720,209 @@ const Account = () => {
                       )}
                     </Button>
                   </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="notifications" className="mt-6">
+                <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-6">
+                  <div>
+                    <h2 className="text-xl font-display font-semibold">Notification Preferences</h2>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Control how and where you receive notifications. Critical security and financial confirmations are always delivered.
+                    </p>
+                  </div>
+
+                  {prefsLoading ? (
+                    <div className="space-y-3 py-4">
+                      <Skeleton className="h-6 w-1/3" />
+                      <Skeleton className="h-20 w-full" />
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Email Preferences */}
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                          <span>Email Notifications</span>
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className="flex items-center space-x-2.5 p-3 rounded-xl border border-border bg-secondary/20">
+                            <Checkbox
+                              checked={prefs.email?.bookings}
+                              onCheckedChange={(c) =>
+                                setPrefs({
+                                  ...prefs,
+                                  email: { ...prefs.email, bookings: Boolean(c) },
+                                })
+                              }
+                            />
+                            <div>
+                              <div className="text-xs font-medium">Booking Updates</div>
+                              <div className="text-[10px] text-muted-foreground">Reservations and stay confirmations</div>
+                            </div>
+                          </label>
+
+                          <label className="flex items-center space-x-2.5 p-3 rounded-xl border border-border bg-secondary/40 opacity-90 cursor-not-allowed">
+                            <Checkbox checked={true} disabled />
+                            <div>
+                              <div className="text-xs font-medium flex items-center gap-1">
+                                Payment Receipts
+                                <Shield className="h-3 w-3 text-gaun-green" />
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">Always active for financial safety</div>
+                            </div>
+                          </label>
+
+                          <label className="flex items-center space-x-2.5 p-3 rounded-xl border border-border bg-secondary/20">
+                            <Checkbox
+                              checked={prefs.email?.messages}
+                              onCheckedChange={(c) =>
+                                setPrefs({
+                                  ...prefs,
+                                  email: { ...prefs.email, messages: Boolean(c) },
+                                })
+                              }
+                            />
+                            <div>
+                              <div className="text-xs font-medium">Direct Messages</div>
+                              <div className="text-[10px] text-muted-foreground">New traveler/host chats</div>
+                            </div>
+                          </label>
+
+                          <label className="flex items-center space-x-2.5 p-3 rounded-xl border border-border bg-secondary/20">
+                            <Checkbox
+                              checked={prefs.email?.reviews}
+                              onCheckedChange={(c) =>
+                                setPrefs({
+                                  ...prefs,
+                                  email: { ...prefs.email, reviews: Boolean(c) },
+                                })
+                              }
+                            />
+                            <div>
+                              <div className="text-xs font-medium">Reviews & Reminders</div>
+                              <div className="text-[10px] text-muted-foreground">Post-stay feedback notices</div>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* In-App Notifications */}
+                      <div className="space-y-3 border-t border-border pt-5">
+                        <h3 className="text-sm font-semibold text-foreground">In-App Live Alerts</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className="flex items-center space-x-2.5 p-3 rounded-xl border border-border bg-secondary/20">
+                            <Checkbox
+                              checked={prefs.inApp?.bookings}
+                              onCheckedChange={(c) =>
+                                setPrefs({
+                                  ...prefs,
+                                  inApp: { ...prefs.inApp, bookings: Boolean(c) },
+                                })
+                              }
+                            />
+                            <div>
+                              <div className="text-xs font-medium">Booking Alerts</div>
+                              <div className="text-[10px] text-muted-foreground">Status updates in navigation bar</div>
+                            </div>
+                          </label>
+
+                          <label className="flex items-center space-x-2.5 p-3 rounded-xl border border-border bg-secondary/20">
+                            <Checkbox
+                              checked={prefs.inApp?.messages}
+                              onCheckedChange={(c) =>
+                                setPrefs({
+                                  ...prefs,
+                                  inApp: { ...prefs.inApp, messages: Boolean(c) },
+                                })
+                              }
+                            />
+                            <div>
+                              <div className="text-xs font-medium">Real-time Chat Badges</div>
+                              <div className="text-[10px] text-muted-foreground">Incoming messages badge counter</div>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* SMS Preferences */}
+                      <div className="space-y-3 border-t border-border pt-5">
+                        <h3 className="text-sm font-semibold text-foreground">SMS Notifications</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className="flex items-center space-x-2.5 p-3 rounded-xl border border-border bg-secondary/40 opacity-90 cursor-not-allowed">
+                            <Checkbox checked={true} disabled />
+                            <div>
+                              <div className="text-xs font-medium flex items-center gap-1">
+                                Security & Emergency Alerts
+                                <Shield className="h-3 w-3 text-gaun-green" />
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">Always active for account security</div>
+                            </div>
+                          </label>
+
+                          <label className="flex items-center space-x-2.5 p-3 rounded-xl border border-border bg-secondary/20">
+                            <Checkbox
+                              checked={prefs.sms?.bookings}
+                              onCheckedChange={(c) =>
+                                setPrefs({
+                                  ...prefs,
+                                  sms: { ...prefs.sms, bookings: Boolean(c) },
+                                })
+                              }
+                            />
+                            <div>
+                              <div className="text-xs font-medium">Urgent Check-in SMS</div>
+                              <div className="text-[10px] text-muted-foreground">Directions and check-in codes</div>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="pt-2">
+                        <Button
+                          className="bg-gaun-green hover:bg-gaun-light-green text-white font-semibold min-h-[44px]"
+                          disabled={savingPrefs}
+                          onClick={async () => {
+                            setSavingPrefs(true);
+                            try {
+                              const res = await usersAPI.updateNotificationPreferences(prefs);
+                              if (res.success) {
+                                toast({
+                                  title: "Preferences Saved",
+                                  description: "Your notification settings have been updated.",
+                                });
+                              } else {
+                                toast({
+                                  title: "Update Failed",
+                                  description: res.message || "Failed to update preferences",
+                                  variant: "destructive",
+                                });
+                              }
+                            } catch (err: any) {
+                              toast({
+                                title: "Error saving preferences",
+                                description: err.message,
+                                variant: "destructive",
+                              });
+                            } finally {
+                              setSavingPrefs(false);
+                            }
+                          }}
+                        >
+                          {savingPrefs ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Check className="h-4 w-4 mr-1.5" />
+                              Save Notification Preferences
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 

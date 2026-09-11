@@ -3,11 +3,10 @@ const mongoose = require('mongoose');
 const Payout = require('../models/Payout');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
-const Payment = require('../models/Payment');
-const { notifyPayoutCreated } = require('../utils/notifications');
+const { notifyPayoutCreated, notifyPayoutPaid } = require('../utils/notifications');
 
 // Host-facing: get own payouts + summary
-const getMyPayouts = async (req, res) => {
+const getMyPayouts = async (req: any, res: any) => {
   try {
     const payouts = await Payout.find({ host: req.user._id }).sort({ createdAt: -1 });
     const summary = await Payout.aggregate([
@@ -15,17 +14,30 @@ const getMyPayouts = async (req, res) => {
       {
         $group: {
           _id: null,
-          totalEarnings: { $sum: { $cond: [{ $eq: ['$status', 'paid'] }, '$amount', 0] } },
-          pending: { $sum: { $cond: [{ $in: ['$status', ['pending', 'approved']] }, '$amount', 0] } }
+          totalEarnings: {
+            $sum: {
+              $cond: [{ $in: ['$status', ['paid', 'completed']] }, '$amount', 0]
+            }
+          },
+          pending: {
+            $sum: {
+              $cond: [{ $in: ['$status', ['pending', 'processing', 'approved']] }, '$amount', 0]
+            }
+          },
+          failed: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'failed'] }, '$amount', 0]
+            }
+          }
         }
       }
     ]);
 
     res.json({
       success: true,
-      data: { payouts, summary: summary[0] || { totalEarnings: 0, pending: 0 } }
+      data: { payouts, summary: summary[0] || { totalEarnings: 0, pending: 0, failed: 0 } }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch payouts',
@@ -35,7 +47,7 @@ const getMyPayouts = async (req, res) => {
 };
 
 // Admin: get all payouts with optional status filter
-const getAllPayouts = async (req, res) => {
+const getAllPayouts = async (req: any, res: any) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -64,7 +76,7 @@ const getAllPayouts = async (req, res) => {
         }
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch payouts',
@@ -74,7 +86,7 @@ const getAllPayouts = async (req, res) => {
 };
 
 // Admin: get eligible host earnings (completed bookings with paid payments, not yet paid out)
-const getEligibleEarnings = async (req, res) => {
+const getEligibleEarnings = async (req: any, res: any) => {
   try {
     const { hostId } = req.query;
 
@@ -117,7 +129,7 @@ const getEligibleEarnings = async (req, res) => {
 
     // Exclude earnings already covered by existing non-cancelled payouts
     const existingPayouts = await Payout.find({
-      status: { $in: ['pending', 'approved', 'paid'] }
+      status: { $in: ['pending', 'processing', 'approved', 'paid', 'completed'] }
     }).select('host bookings');
 
     const paidOutBookingIds = new Set();
@@ -127,9 +139,9 @@ const getEligibleEarnings = async (req, res) => {
       }
     }
 
-    const adjusted = earnings.map((entry) => {
+    const adjusted = earnings.map((entry: any) => {
       const unpaidBookings = entry.bookingIds.filter(
-        (bid) => !paidOutBookingIds.has(bid.toString())
+        (bid: any) => !paidOutBookingIds.has(bid.toString())
       );
       return {
         ...entry,
@@ -139,10 +151,10 @@ const getEligibleEarnings = async (req, res) => {
           ? Math.round((entry.totalEarnings / entry.bookingCount) * unpaidBookings.length * 100) / 100
           : 0
       };
-    }).filter((entry) => entry.unpaidBookingCount > 0);
+    }).filter((entry: any) => entry.unpaidBookingCount > 0);
 
     res.json({ success: true, data: { eligibleEarnings: adjusted } });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch eligible earnings',
@@ -151,10 +163,21 @@ const getEligibleEarnings = async (req, res) => {
   }
 };
 
-// Admin: create a payout record for a host
-const createPayout = async (req, res) => {
+// Admin or Host: create a payout record
+const createPayout = async (req: any, res: any) => {
   try {
-    const { hostId, amount, period, bookingIds, payoutMethod = 'manual', reference, notes } = req.body;
+    const {
+      hostId: reqHostId,
+      amount,
+      period,
+      bookingIds,
+      payoutMethod = 'manual',
+      payoutMethodDetails,
+      reference,
+      notes
+    } = req.body;
+
+    const hostId = req.user.role === 'admin' ? reqHostId : req.user._id;
 
     if (!hostId || !amount || !period) {
       return res.status(400).json({
@@ -177,7 +200,7 @@ const createPayout = async (req, res) => {
     const existingPayout = await Payout.findOne({
       host: hostId,
       period,
-      status: { $in: ['pending', 'approved', 'paid'] }
+      status: { $in: ['pending', 'processing', 'approved', 'paid', 'completed'] }
     });
 
     if (existingPayout) {
@@ -198,8 +221,8 @@ const createPayout = async (req, res) => {
     }
 
     // Validate booking IDs if provided
-    let validatedBookingIds = [];
-    let paymentIds = [];
+    let validatedBookingIds: any[] = [];
+    let paymentIds: any[] = [];
 
     if (Array.isArray(bookingIds) && bookingIds.length > 0) {
       const bookings = await Booking.find({
@@ -209,14 +232,13 @@ const createPayout = async (req, res) => {
         paymentStatus: 'paid'
       }).select('_id paymentId');
 
-      validatedBookingIds = bookings.map((b) => b._id);
+      validatedBookingIds = bookings.map((b: any) => b._id);
       paymentIds = bookings
-        .map((b) => b.paymentId)
-        .filter((id) => id != null);
+        .map((b: any) => b.paymentId)
+        .filter((id: any) => id != null);
 
-      // Verify these bookings aren't already in another payout
       const conflictingPayouts = await Payout.find({
-        status: { $in: ['pending', 'approved', 'paid'] },
+        status: { $in: ['pending', 'processing', 'approved', 'paid', 'completed'] },
         bookings: { $in: validatedBookingIds }
       });
 
@@ -235,6 +257,7 @@ const createPayout = async (req, res) => {
       bookings: validatedBookingIds,
       payments: paymentIds,
       payoutMethod,
+      payoutMethodDetails,
       reference,
       notes,
       status: 'pending'
@@ -244,10 +267,10 @@ const createPayout = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Payout created successfully. Fund transfer is manual — mark as paid after completing the transfer.',
+      message: 'Payout created successfully. Transfer status tracked under payout history.',
       data: { payout }
     });
-  } catch (error) {
+  } catch (error: any) {
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
@@ -263,7 +286,7 @@ const createPayout = async (req, res) => {
 };
 
 // Admin: approve a payout (transition pending -> approved)
-const approvePayout = async (req, res) => {
+const approvePayout = async (req: any, res: any) => {
   try {
     const payout = await Payout.findById(req.params.id);
     if (!payout) {
@@ -280,7 +303,7 @@ const approvePayout = async (req, res) => {
     await payout.save();
 
     res.json({ success: true, message: 'Payout approved', data: { payout } });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to approve payout',
@@ -289,8 +312,8 @@ const approvePayout = async (req, res) => {
   }
 };
 
-// Admin: mark payout as paid (transition approved -> paid)
-const markPayoutPaid = async (req, res) => {
+// Admin: mark payout as paid (transition approved/pending/processing -> paid or completed)
+const markPayoutPaid = async (req: any, res: any) => {
   try {
     const { reference, notes } = req.body || {};
     const payout = await Payout.findById(req.params.id);
@@ -298,18 +321,24 @@ const markPayoutPaid = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Payout not found' });
     }
 
-    if (payout.status !== 'approved') {
+    if (!['approved', 'processing', 'pending'].includes(payout.status)) {
       return res.status(400).json({ success: false, message: `Cannot mark as paid a payout with status ${payout.status}` });
     }
 
     payout.status = 'paid';
     payout.paidAt = new Date();
+    payout.completedAt = new Date();
     if (reference) payout.reference = reference;
     if (notes) payout.notes = notes;
     await payout.save();
 
+    const host = await User.findById(payout.host);
+    if (host) {
+      notifyPayoutPaid({ payout, host }).catch(() => {});
+    }
+
     res.json({ success: true, message: 'Payout marked as paid', data: { payout } });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to mark payout as paid',
@@ -318,8 +347,57 @@ const markPayoutPaid = async (req, res) => {
   }
 };
 
-// Admin: cancel a payout (only if pending or approved)
-const cancelPayout = async (req, res) => {
+// Admin: reconcile payout status (completed or failed with reason)
+const reconcilePayout = async (req: any, res: any) => {
+  try {
+    const { status, reference, failureReason, notes } = req.body;
+    const payout = await Payout.findById(req.params.id);
+
+    if (!payout) {
+      return res.status(404).json({ success: false, message: 'Payout not found' });
+    }
+
+    if (!['completed', 'paid', 'failed', 'processing'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid reconciliation status. Must be completed, paid, failed, or processing.'
+      });
+    }
+
+    payout.status = status === 'paid' ? 'completed' : status;
+    if (reference) payout.reference = reference;
+    if (notes) payout.notes = notes;
+    if (failureReason) payout.failureReason = failureReason;
+
+    if (status === 'completed' || status === 'paid') {
+      payout.completedAt = new Date();
+      payout.paidAt = new Date();
+      payout.failureReason = null;
+
+      const host = await User.findById(payout.host);
+      if (host) {
+        notifyPayoutPaid({ payout, host }).catch(() => {});
+      }
+    }
+
+    await payout.save();
+
+    res.json({
+      success: true,
+      message: `Payout reconciled to status: ${payout.status}`,
+      data: { payout }
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reconcile payout',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Admin or Host: cancel a payout (only if pending or approved)
+const cancelPayout = async (req: any, res: any) => {
   try {
     const payout = await Payout.findById(req.params.id);
     if (!payout) {
@@ -334,7 +412,7 @@ const cancelPayout = async (req, res) => {
     await payout.save();
 
     res.json({ success: true, message: 'Payout cancelled', data: { payout } });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to cancel payout',
@@ -350,5 +428,6 @@ module.exports = {
   createPayout,
   approvePayout,
   markPayoutPaid,
+  reconcilePayout,
   cancelPayout
 };

@@ -1,10 +1,11 @@
 export {};
 const Booking = require('../models/Booking');
 const Payment = require('../models/Payment');
-const { createPaymentTransaction, createRefundTransaction } = require('../services/earningsService');
+const { createPaymentTransaction } = require('../services/earningsService');
 const { logPaymentFailure, logWebhookFailure } = require('../services/monitoringService');
+const { getPaymentProvider, isSupportedProvider, convertToNpr } = require('../services/paymentProviders');
 
-const normalizeAmount = (value) => {
+const normalizeAmount = (value: any): number | null => {
   if (typeof value === 'string') {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : null;
@@ -13,25 +14,28 @@ const normalizeAmount = (value) => {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 };
 
-const getConfiguredPaymentProvider = () => {
-  const provider = (process.env.PAYMENT_PROVIDER || '').trim().toLowerCase();
+const getConfiguredPaymentProvider = (requestedProvider?: string): string => {
+  if (requestedProvider && isSupportedProvider(requestedProvider)) {
+    return requestedProvider.toLowerCase().trim();
+  }
 
-  if (!provider) {
+  const envProvider = (process.env.PAYMENT_PROVIDER || '').trim().toLowerCase();
+
+  if (!envProvider) {
     if (process.env.NODE_ENV === 'production') {
-      throw new Error('PAYMENT_PROVIDER is required in production. Configure a real payment provider such as Stripe.');
+      throw new Error('PAYMENT_PROVIDER is required in production environment');
     }
-
     return 'stripe';
   }
 
-  if (provider !== 'stripe') {
-    throw new Error(`Unsupported payment provider: ${provider}. Only Stripe is allowed in production.`);
+  if (!isSupportedProvider(envProvider)) {
+    throw new Error(`Unsupported payment provider: "${envProvider}". Supported providers: stripe, esewa, khalti.`);
   }
 
-  return provider;
+  return envProvider;
 };
 
-const ensureBookingIsPayable = async ({ bookingId, userId, listingId, amount }) => {
+const ensureBookingIsPayable = async ({ bookingId, userId, listingId, amount }: any) => {
   const booking = await Booking.findById(bookingId).populate('listing');
 
   if (!booking) {
@@ -60,7 +64,7 @@ const ensureBookingIsPayable = async ({ bookingId, userId, listingId, amount }) 
   return { booking };
 };
 
-const verifyPaymentOwnership = async ({ paymentId, userId, userRole, providerPaymentId, amount }) => {
+const verifyPaymentOwnership = async ({ paymentId, userId, userRole, providerPaymentId, amount }: any) => {
   const payment = await Payment.findById(paymentId).populate('booking');
 
   if (!payment) {
@@ -77,7 +81,7 @@ const verifyPaymentOwnership = async ({ paymentId, userId, userRole, providerPay
     return { status: 403, error: 'You cannot verify this booking payment' };
   }
 
-  if (amount !== null && payment.amount !== undefined && Math.abs(Number(payment.amount) - Number(amount)) > 0.01) {
+  if (amount !== null && amount !== undefined && payment.amount !== undefined && Math.abs(Number(payment.amount) - Number(amount)) > 0.01) {
     return { status: 400, error: 'Payment verification amount does not match the stored booking payment' };
   }
 
@@ -88,9 +92,9 @@ const verifyPaymentOwnership = async ({ paymentId, userId, userRole, providerPay
   return { payment };
 };
 
-const createPayment = async (req, res) => {
+const createPayment = async (req: any, res: any) => {
   try {
-    const { bookingId, listingId, currency = 'USD', idempotencyKey } = req.body;
+    const { bookingId, listingId, currency, provider: reqProvider, idempotencyKey, returnUrl } = req.body;
 
     const validation = await ensureBookingIsPayable({
       bookingId,
@@ -108,24 +112,33 @@ const createPayment = async (req, res) => {
 
     const { booking } = validation;
 
-    const authoritativeAmount = Number(booking.totalPrice);
-    if (!Number.isFinite(authoritativeAmount) || authoritativeAmount < 0) {
+    const authoritativeUsdAmount = Number(booking.totalPrice);
+    if (!Number.isFinite(authoritativeUsdAmount) || authoritativeUsdAmount < 0) {
       return res.status(500).json({
         success: false,
         message: 'Booking total price is not available. Cannot initialize payment.'
       });
     }
 
-    let provider;
+    let providerName: string;
     try {
-      provider = getConfiguredPaymentProvider();
-    } catch (error) {
+      providerName = getConfiguredPaymentProvider(reqProvider);
+    } catch (error: any) {
       return res.status(500).json({
         success: false,
         message: error.message
       });
     }
 
+    const targetCurrency = providerName === 'esewa' || providerName === 'khalti'
+      ? 'NPR'
+      : (currency ? String(currency).toUpperCase() : 'USD');
+
+    const authoritativeAmount = targetCurrency === 'NPR'
+      ? convertToNpr(authoritativeUsdAmount)
+      : authoritativeUsdAmount;
+
+    // Check existing active payment for same booking and payer
     const activePayment = await Payment.findOne({
       booking: booking._id,
       payer: req.user._id,
@@ -148,42 +161,26 @@ const createPayment = async (req, res) => {
         });
       }
 
-      return res.status(200).json({
-        success: true,
-        message: 'Payment already initialized for this booking',
-        data: {
-          paymentId: activePayment._id,
-          provider: activePayment.provider,
-          status: activePayment.status,
-          amount: activePayment.amount,
-          currency: activePayment.currency,
-          providerPaymentId: activePayment.providerPaymentId
-        }
-      });
+      if (activePayment.provider === providerName) {
+        return res.status(200).json({
+          success: true,
+          message: 'Payment already initialized for this booking',
+          data: {
+            paymentId: activePayment._id,
+            provider: activePayment.provider,
+            status: activePayment.status,
+            amount: activePayment.amount,
+            currency: activePayment.currency,
+            providerPaymentId: activePayment.providerPaymentId,
+            clientSecret: activePayment.metadata?.get ? activePayment.metadata.get('clientSecret') : activePayment.metadata?.clientSecret
+          }
+        });
+      }
     }
 
-    const key = typeof idempotencyKey === 'string' && idempotencyKey.trim() ? idempotencyKey.trim() : `${booking._id.toString()}:${Date.now()}`;
-    const existingIdempotentPayment = await Payment.findOne({
-      booking: booking._id,
-      payer: req.user._id,
-      idempotencyKey: key
-    });
-
-    if (existingIdempotentPayment) {
-      return res.status(200).json({
-        success: true,
-        message: 'Payment already initialized for this booking',
-        data: {
-          paymentId: existingIdempotentPayment._id,
-          provider: existingIdempotentPayment.provider,
-          status: existingIdempotentPayment.status,
-          amount: existingIdempotentPayment.amount,
-          currency: existingIdempotentPayment.currency,
-          providerPaymentId: existingIdempotentPayment.providerPaymentId,
-          clientSecret: existingIdempotentPayment.provider === 'stripe' ? existingIdempotentPayment.metadata?.clientSecret || undefined : undefined
-        }
-      });
-    }
+    const key = typeof idempotencyKey === 'string' && idempotencyKey.trim()
+      ? idempotencyKey.trim()
+      : `${booking._id.toString()}:${providerName}:${Date.now()}`;
 
     const newPayment = await Payment.findOneAndUpdate(
       { booking: booking._id, idempotencyKey: key },
@@ -192,80 +189,50 @@ const createPayment = async (req, res) => {
         listing: booking.listing._id,
         payer: req.user._id,
         amount: authoritativeAmount,
-        currency,
-        provider,
+        currency: targetCurrency,
+        provider: providerName,
         idempotencyKey: key,
         status: 'pending',
         metadata: {
           bookingId: booking._id.toString(),
           listingId: booking.listing._id.toString(),
-          userId: req.user._id.toString()
+          userId: req.user._id.toString(),
+          authoritativeUsdAmount: String(authoritativeUsdAmount)
         }
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    if (provider === 'stripe') {
-      const stripeKey = process.env.STRIPE_SECRET_KEY;
-      if (!stripeKey) {
-        return res.status(500).json({
-          success: false,
-          message: 'Stripe is configured as the payment provider but the STRIPE_SECRET_KEY is missing.'
-        });
-      }
-
-      let stripe;
-      try {
-        stripe = require('stripe')(stripeKey);
-      } catch (providerError) {
-        return res.status(500).json({
-          success: false,
-          message: 'Stripe integration is not installed in this environment.'
-        });
-      }
-
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(authoritativeAmount * 100),
-        currency: String(currency || 'usd').toLowerCase(),
-        metadata: {
-          bookingId: booking._id.toString(),
-          listingId: booking.listing._id.toString(),
-          userId: req.user._id.toString(),
-          paymentId: newPayment._id.toString()
-        },
-        automatic_payment_methods: { enabled: true }
-      });
-
-      await Payment.findByIdAndUpdate(newPayment._id, {
-        providerPaymentId: paymentIntent.id,
-        status: 'processing',
-        metadata: {
-          ...newPayment.metadata?.toObject ? newPayment.metadata.toObject() : (newPayment.metadata || {}),
-          clientSecret: paymentIntent.client_secret
-        }
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: 'Payment intent created',
-        data: {
-          paymentId: newPayment._id,
-          provider: 'stripe',
-          status: 'processing',
-          providerPaymentId: paymentIntent.id,
-          clientSecret: paymentIntent.client_secret,
-          amount: authoritativeAmount,
-          currency: String(currency || 'USD').toUpperCase(),
-          priceBreakdown: booking.priceBreakdown
-        }
-      });
-    }
-
-    return res.status(501).json({
-      success: false,
-      message: 'No supported payment provider is configured for this environment.'
+    const providerAdapter = getPaymentProvider(providerName);
+    const initResult = await providerAdapter.initializePayment({
+      payment: newPayment,
+      booking,
+      user: req.user,
+      amount: authoritativeAmount,
+      currency: targetCurrency,
+      returnUrl
     });
-  } catch (error) {
+
+    await Payment.findByIdAndUpdate(newPayment._id, {
+      providerPaymentId: initResult.providerPaymentId,
+      status: initResult.status,
+      metadata: {
+        ...(newPayment.metadata?.toObject ? newPayment.metadata.toObject() : (newPayment.metadata || {})),
+        clientSecret: initResult.clientSecret || undefined,
+        paymentUrl: initResult.paymentUrl || undefined
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Payment initialized successfully',
+      data: {
+        ...initResult,
+        paymentId: newPayment._id.toString(),
+        authoritativeUsdAmount
+      }
+    });
+  } catch (error: any) {
     logPaymentFailure(req.user?._id?.toString() || '', req.body?.bookingId || '', error.message || 'Payment initialization failed').catch(() => {});
     res.status(500).json({
       success: false,
@@ -275,17 +242,17 @@ const createPayment = async (req, res) => {
   }
 };
 
-const verifyPayment = async (req, res) => {
+const verifyPayment = async (req: any, res: any) => {
   try {
     const { paymentId } = req.params;
-    const { providerPaymentId } = req.body || {};
+    const { providerPaymentId, data, pidx, transaction_uuid } = req.body || {};
     const normalizedAmount = normalizeAmount(req.body?.amount ?? null);
 
     const ownershipCheck = await verifyPaymentOwnership({
       paymentId,
       userId: req.user._id,
       userRole: req.user.role,
-      providerPaymentId,
+      providerPaymentId: providerPaymentId || pidx || transaction_uuid,
       amount: normalizedAmount
     });
 
@@ -304,52 +271,32 @@ const verifyPayment = async (req, res) => {
         message: 'Payment already verified',
         data: {
           paymentId: payment._id,
-          bookingId: payment.booking._id,
+          bookingId: payment.booking?._id || payment.booking,
           status: 'paid'
         }
       });
     }
 
-    if (payment.provider !== 'stripe') {
-      return res.status(501).json({
-        success: false,
-        message: 'This payment provider is not supported. Configure Stripe for production-safe verification.'
-      });
-    }
+    const providerAdapter = getPaymentProvider(payment.provider);
+    const verifyResult = await providerAdapter.verifyPayment({
+      payment,
+      providerPaymentId: providerPaymentId || pidx || transaction_uuid,
+      queryOrBody: req.body,
+      amount: normalizedAmount ?? payment.amount
+    });
 
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
-    if (!stripeKey) {
-      return res.status(500).json({
-        success: false,
-        message: 'Stripe is configured as the payment provider but the STRIPE_SECRET_KEY is missing.'
-      });
-    }
-
-    let stripe;
-    try {
-      stripe = require('stripe')(stripeKey);
-    } catch (providerError) {
-      return res.status(500).json({
-        success: false,
-        message: 'Stripe integration is not installed in this environment.'
-      });
-    }
-
-    const intent = await stripe.paymentIntents.retrieve(providerPaymentId || payment.providerPaymentId);
-    const amountMatches = Number(intent.amount) === Math.round(Number(payment.amount) * 100);
-
-    if (intent.status !== 'succeeded' || !amountMatches) {
+    if (!verifyResult.success || verifyResult.status !== 'paid') {
       return res.status(400).json({
         success: false,
-        message: 'Payment verification failed'
+        message: verifyResult.error || 'Payment verification failed'
       });
     }
 
     payment.status = 'paid';
-    payment.providerPaymentId = providerPaymentId || payment.providerPaymentId;
+    payment.providerPaymentId = verifyResult.providerPaymentId || payment.providerPaymentId;
     await payment.save();
 
-    const booking = payment.booking;
+    const booking = await Booking.findById(payment.booking?._id || payment.booking);
     if (booking && booking.status !== 'confirmed') {
       booking.status = 'confirmed';
       booking.paymentStatus = 'paid';
@@ -379,10 +326,13 @@ const verifyPayment = async (req, res) => {
       data: {
         paymentId: payment._id,
         bookingId: booking._id,
-        status: 'paid'
+        status: 'paid',
+        provider: payment.provider,
+        amount: payment.amount,
+        currency: payment.currency
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to verify payment',
@@ -391,7 +341,7 @@ const verifyPayment = async (req, res) => {
   }
 };
 
-const isDuplicateWebhook = async (eventId) => {
+const isDuplicateWebhook = async (eventId: string): Promise<boolean> => {
   if (!eventId) return false;
   const WebhookLog = require('../models/WebhookLog');
   try {
@@ -400,7 +350,6 @@ const isDuplicateWebhook = async (eventId) => {
     await WebhookLog.create({ eventId, processedAt: new Date() });
     return false;
   } catch (err: any) {
-    // If running in disconnected test environment where buffering times out
     if (err?.name === 'MongooseError' && err?.message?.includes('buffering')) {
       return false;
     }
@@ -408,129 +357,79 @@ const isDuplicateWebhook = async (eventId) => {
   }
 };
 
-const handleStripeWebhook = async (req, res) => {
+const handleStripeWebhook = async (req: any, res: any) => {
+  return handleUniversalWebhook('stripe', req, res);
+};
+
+const handleUniversalWebhook = async (providerName: string, req: any, res: any) => {
   try {
-    const stripeSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    const providerAdapter = getPaymentProvider(providerName);
+    const webhookResult = await providerAdapter.handleWebhook({
+      headers: req.headers,
+      rawBody: req.body,
+      body: req.body
+    });
 
-    if (!stripeKey || !stripeSecret) {
-      return res.status(500).json({
-        success: false,
-        message: 'Stripe webhook configuration is missing'
-      });
+    if (!webhookResult.handled) {
+      return res.status(400).json({ success: false, message: webhookResult.error || 'Webhook not handled' });
     }
 
-    const configuredProvider = getConfiguredPaymentProvider();
-    if (configuredProvider !== 'stripe') {
-      return res.status(501).json({
-        success: false,
-        message: 'Stripe payment provider is not configured for this environment.'
-      });
-    }
-
-    const signature = req.headers['stripe-signature'];
-    if (!signature) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing Stripe signature'
-      });
-    }
-
-    const stripe = require('stripe')(stripeKey);
-    const event = stripe.webhooks.constructEvent(req.body, signature, stripeSecret);
-
-    if (await isDuplicateWebhook(event.id)) {
+    if (webhookResult.eventId && (await isDuplicateWebhook(webhookResult.eventId))) {
       return res.status(200).json({ success: true, received: true, duplicate: true });
     }
 
-    const eventObject = event.data && event.data.object ? event.data.object : null;
-
-    if (!eventObject) {
-      return res.status(400).json({ success: false, message: 'Invalid Stripe event payload' });
-    }
-
-    const paymentIntentId = eventObject.payment_intent || eventObject.id;
-    if (paymentIntentId) {
-      const payment = await Payment.findOne({ providerPaymentId: paymentIntentId });
+    if (webhookResult.providerPaymentId) {
+      const payment = await Payment.findOne({
+        providerPaymentId: webhookResult.providerPaymentId
+      });
 
       if (payment) {
-        if (event.type === 'payment_intent.succeeded') {
-          if (payment.status !== 'paid') {
-            payment.status = 'paid';
-            await payment.save();
+        if (webhookResult.status === 'paid' && payment.status !== 'paid') {
+          payment.status = 'paid';
+          await payment.save();
 
-            const booking = await Booking.findById(payment.booking);
-            if (booking && booking.status !== 'confirmed') {
-              booking.paymentStatus = 'paid';
-              booking.status = 'confirmed';
-              booking.paymentId = payment._id.toString();
-              await booking.save();
-            }
+          const booking = await Booking.findById(payment.booking);
+          if (booking && booking.status !== 'confirmed') {
+            booking.paymentStatus = 'paid';
+            booking.status = 'confirmed';
+            booking.paymentId = payment._id.toString();
+            await booking.save();
           }
-        }
+        } else if (webhookResult.status === 'failed' && payment.status !== 'failed') {
+          payment.status = 'failed';
+          await payment.save();
 
-        if (event.type === 'payment_intent.payment_failed') {
-          if (payment.status !== 'failed') {
-            payment.status = 'failed';
-            await payment.save();
-
-            const booking = await Booking.findById(payment.booking);
-            if (booking) {
-              booking.paymentStatus = 'failed';
-              await booking.save();
-            }
+          const booking = await Booking.findById(payment.booking);
+          if (booking) {
+            booking.paymentStatus = 'failed';
+            await booking.save();
           }
-        }
+        } else if (webhookResult.status === 'refunded' && payment.status !== 'refunded') {
+          payment.status = 'refunded';
+          await payment.save();
 
-        if (event.type === 'charge.refunded') {
-          if (payment.status !== 'refunded') {
-            payment.status = 'refunded';
-            await payment.save();
-
-            const booking = await Booking.findById(payment.booking);
-            if (booking && booking.status !== 'refunded') {
-              booking.paymentStatus = 'refunded';
-              booking.status = 'refunded';
-              await booking.save();
-            }
-
-            const Transaction = require('../models/Transaction');
-            const existingRefundTx = await Transaction.findOne({
-              type: 'refund',
-              payment: payment._id,
-              reference: event.id
-            });
-            if (!existingRefundTx) {
-              await Transaction.create({
-                type: 'refund',
-                booking: booking ? booking._id : undefined,
-                payment: payment._id,
-                user: payment.payer,
-                amount: payment.amount,
-                currency: payment.currency,
-                direction: 'credit',
-                status: 'completed',
-                description: 'Stripe webhook refund',
-                reference: event.id
-              });
-            }
+          const booking = await Booking.findById(payment.booking);
+          if (booking && booking.status !== 'refunded') {
+            booking.paymentStatus = 'refunded';
+            booking.status = 'refunded';
+            await booking.save();
           }
         }
       }
     }
 
     return res.status(200).json({ success: true, received: true });
-  } catch (error) {
-    logWebhookFailure('stripe_webhook', error.message || 'Webhook verification failed').catch(() => {});
+  } catch (error: any) {
+    logWebhookFailure(`${providerName}_webhook`, error.message || 'Webhook processing failed').catch(() => {});
     return res.status(400).json({
       success: false,
-      message: 'Stripe webhook verification failed',
-      error: process.env.NODE_ENV === 'development' && process.env.DEBUG_ERRORS === 'true' ? error.message : undefined
+      message: `${providerName} webhook processing failed`,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
 
-const getPaymentStatus = async (req, res) => {
+const getPaymentStatus = async (req: any, res: any) => {
   try {
     const payment = await Payment.findById(req.params.paymentId).populate('booking');
 
@@ -562,7 +461,7 @@ const getPaymentStatus = async (req, res) => {
         currency: payment.currency
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch payment status',
@@ -571,7 +470,7 @@ const getPaymentStatus = async (req, res) => {
   }
 };
 
-const processRefund = async (req, res) => {
+const processRefund = async (req: any, res: any) => {
   try {
     const { paymentId } = req.params;
     const { amount, reason } = req.body || {};
@@ -608,37 +507,21 @@ const processRefund = async (req, res) => {
       return res.status(409).json({ success: false, message: 'Refund already processed for this payment' });
     }
 
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
-    if (!stripeKey) {
-      return res.status(500).json({ success: false, message: 'Stripe is not configured' });
-    }
-
-    let stripe;
+    const providerAdapter = getPaymentProvider(payment.provider);
+    let refundResult;
     try {
-      stripe = require('stripe')(stripeKey);
-    } catch (providerError) {
-      return res.status(500).json({ success: false, message: 'Stripe integration is not installed' });
-    }
-
-    let refund;
-    try {
-      refund = await stripe.refunds.create({
-        payment_intent: payment.providerPaymentId,
-        amount: Math.round(refundAmount * 100),
-        metadata: {
-          paymentId: payment._id.toString(),
-          bookingId: payment.booking ? payment.booking._id.toString() : '',
-          reason: reason || 'cancellation'
-        }
-      }, {
+      refundResult = await providerAdapter.processRefund({
+        payment,
+        amount: refundAmount,
+        reason: reason || 'cancellation',
         idempotencyKey
       });
-    } catch (stripeError: any) {
+    } catch (err: any) {
       payment.status = 'refund_failed';
-      payment.notes = `Stripe refund failed: ${stripeError.message}`;
+      payment.notes = `Refund failed: ${err.message}`;
       await payment.save();
 
-      logPaymentFailure('stripe_refund_error', stripeError.message || 'Stripe refund call failed', {
+      logPaymentFailure('refund_error', err.message || 'Refund call failed', {
         paymentId: payment._id.toString(),
         refundAmount
       }).catch(() => {});
@@ -646,7 +529,7 @@ const processRefund = async (req, res) => {
       return res.status(502).json({
         success: false,
         message: 'Payment processor failed to issue the refund. The failure has been logged for manual reconciliation.',
-        error: process.env.NODE_ENV === 'development' ? stripeError.message : undefined
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined
       });
     }
 
@@ -671,13 +554,13 @@ const processRefund = async (req, res) => {
       direction: 'credit',
       status: 'completed',
       description: reason || 'Refund processed',
-      reference: refund.id || idempotencyKey
+      reference: refundResult.refundId || idempotencyKey
     });
 
     return res.status(200).json({
       success: true,
       message: 'Refund processed successfully',
-      data: { refundId: refund.id, amount: refundAmount, paymentId: payment._id }
+      data: { refundId: refundResult.refundId, amount: refundAmount, paymentId: payment._id }
     });
   } catch (error: any) {
     res.status(500).json({
@@ -688,7 +571,7 @@ const processRefund = async (req, res) => {
   }
 };
 
-const getPaymentHistory = async (req, res) => {
+const getPaymentHistory = async (req: any, res: any) => {
   try {
     const { page = 1, limit = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -716,7 +599,7 @@ const getPaymentHistory = async (req, res) => {
         }
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch payment history',
@@ -729,6 +612,7 @@ module.exports = {
   createPayment,
   verifyPayment,
   handleStripeWebhook,
+  handleUniversalWebhook,
   getPaymentStatus,
   getPaymentHistory,
   processRefund,

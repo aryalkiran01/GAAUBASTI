@@ -348,10 +348,13 @@ export const bookingsAPI = {
     });
   },
 
-  verifyPayment: async (paymentId: string, providerPaymentId?: string) => {
+  verifyPayment: async (paymentId: string, verificationData?: any) => {
+    const body = typeof verificationData === 'string'
+      ? { providerPaymentId: verificationData }
+      : (verificationData || {});
     return await apiRequest(`/payments/${paymentId}/verify`, {
       method: "POST",
-      body: JSON.stringify({ providerPaymentId }),
+      body: JSON.stringify(body),
     });
   },
 
@@ -548,20 +551,6 @@ export const adminAPI = {
   },
 };
 
-// Users API calls
-export const usersAPI = {
-  getUser: async (id: string) => {
-    return await apiRequest(`/users/${id}`, {}, false);
-  },
-
-  updateUser: async (id: string, userData: any) => {
-    return await apiRequest(`/users/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(userData),
-    });
-  },
-};
-
 // AI API calls
 export const aiAPI = {
   getHealth: async () => {
@@ -707,6 +696,31 @@ export const articlesAPI = {
   deleteArticle: async (id: string) => {
     return await apiRequest(`/articles/${id}`, {
       method: "DELETE",
+    });
+  },
+};
+
+// Users API calls
+export const usersAPI = {
+  getUser: async (id: string) => {
+    return await apiRequest(`/users/${id}`, {}, false);
+  },
+
+  updateUser: async (id: string, userData: any) => {
+    return await apiRequest(`/users/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(userData),
+    });
+  },
+
+  getNotificationPreferences: async () => {
+    return await apiRequest("/users/notification-preferences");
+  },
+
+  updateNotificationPreferences: async (preferences: any) => {
+    return await apiRequest("/users/notification-preferences", {
+      method: "PATCH",
+      body: JSON.stringify(preferences),
     });
   },
 };

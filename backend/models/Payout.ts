@@ -13,6 +13,10 @@ const payoutSchema = new mongoose.Schema({
     required: true,
     min: [0, 'Amount cannot be negative']
   },
+  currency: {
+    type: String,
+    default: 'USD'
+  },
   period: {
     type: String,
     required: true,
@@ -20,15 +24,28 @@ const payoutSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'paid', 'cancelled'],
-    default: 'pending'
+    enum: ['pending', 'processing', 'completed', 'paid', 'failed', 'approved', 'cancelled'],
+    default: 'pending',
+    index: true
   },
   payoutMethod: {
     type: String,
-    enum: ['manual', 'stripe_connect'],
+    enum: ['manual', 'bank_transfer', 'esewa', 'khalti', 'stripe_connect'],
     default: 'manual'
   },
+  payoutMethodDetails: {
+    bankName: { type: String, trim: true },
+    accountNumber: { type: String, trim: true },
+    accountHolderName: { type: String, trim: true },
+    branchName: { type: String, trim: true },
+    esewaId: { type: String, trim: true },
+    khaltiId: { type: String, trim: true }
+  },
   reference: {
+    type: String,
+    trim: true
+  },
+  failureReason: {
     type: String,
     trim: true
   },
@@ -50,6 +67,9 @@ const payoutSchema = new mongoose.Schema({
   paidAt: {
     type: Date
   },
+  completedAt: {
+    type: Date
+  },
   notes: {
     type: String,
     trim: true,
@@ -63,7 +83,7 @@ payoutSchema.index({ host: 1, createdAt: -1 });
 payoutSchema.index({ status: 1, createdAt: -1 });
 payoutSchema.index(
   { host: 1, period: 1 },
-  { unique: true, partialFilterExpression: { status: { $in: ['pending', 'approved', 'paid'] } } }
+  { unique: true, partialFilterExpression: { status: { $in: ['pending', 'processing', 'approved', 'paid', 'completed'] } } }
 );
 
 module.exports = mongoose.model('Payout', payoutSchema);

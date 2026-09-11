@@ -17,6 +17,23 @@ interface NotificationParams {
 }
 
 // ---------- Helpers ----------
+const shouldSendNotification = (
+  user: any,
+  channel: "email" | "sms" | "inApp",
+  category: "bookings" | "payments" | "messages" | "reviews" | "hostEvents" | "security" | "marketing",
+): boolean => {
+  // Critical security and payment alerts must NEVER be disabled
+  if (category === "payments" || category === "security") return true;
+
+  if (!user || !user.notificationPreferences) return true;
+
+  const prefs = user.notificationPreferences;
+  const channelPrefs = prefs[channel];
+  if (!channelPrefs) return true;
+
+  return channelPrefs[category] !== false;
+};
+
 const emitToUser = (userId: string, event: string, payload: any): void => {
   if (global.io) {
     global.io.to(`user:${String(userId)}`).emit(event, payload);
@@ -24,15 +41,28 @@ const emitToUser = (userId: string, event: string, payload: any): void => {
 };
 
 /**
- * Creates a single notification with deduplication.
+ * Creates a single notification with deduplication and preference check.
  */
 const createNotification = async ({
   userId,
   type,
   content = {},
   message = undefined,
-}: NotificationParams): Promise<any> => {
+  userDoc = undefined,
+}: NotificationParams & { userDoc?: any }): Promise<any> => {
   if (!userId) return null;
+
+  // Category mapping
+  let category: "bookings" | "payments" | "messages" | "reviews" | "hostEvents" | "security" = "bookings";
+  if (type.includes("payment") || type.includes("refund")) category = "payments";
+  else if (type.includes("message")) category = "messages";
+  else if (type.includes("review")) category = "reviews";
+  else if (type.includes("payout") || type.includes("listing")) category = "hostEvents";
+  else if (type.includes("safety") || type.includes("security")) category = "security";
+
+  if (userDoc && !shouldSendNotification(userDoc, "inApp", category)) {
+    return null;
+  }
 
   const dedupKey = content?.dedupKey || `${type}:${String(userId)}`;
 
@@ -468,6 +498,7 @@ module.exports = {
   notifyListingApproved,
   notifyListingRejected,
   notifySafetyAlert,
+  shouldSendNotification,
   sendTransactionalEmail,
   sendTransactionalSMS,
 };
