@@ -1,0 +1,96 @@
+name: Gaun Basti CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  ci:
+    name: Build, Lint & Test Pipeline
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      JWT_SECRET: ci-test-jwt-secret-very-secure-random-bytes-for-testing-only-12345
+      MONGODB_URI: mongodb://localhost:27017/gaunbasti_test
+      PORT: 3000
+      FRONTEND_URL: http://localhost:8080
+      ALLOWED_ORIGINS: http://localhost:8080,http://localhost:5173
+      PAYMENT_PROVIDER: mock
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      # 1. Install dependencies
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # 2. TypeScript Typecheck
+      - name: Backend TypeScript Check
+        working-directory: backend
+        run: npm run typecheck
+
+      - name: Frontend TypeScript Check
+        working-directory: frontend
+        run: npm run typecheck
+
+      # 3. Linting
+      - name: Backend Lint
+        working-directory: backend
+        run: npm run lint
+
+      - name: Frontend Lint
+        working-directory: frontend
+        run: npm run lint
+
+      # 4. Backend Tests
+      - name: Run Backend Tests
+        working-directory: backend
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci-test-jwt-secret-very-secure-random-bytes-for-testing-only-12345
+          MONGODB_URI: mongodb://localhost:27017/gaunbasti_test
+          PAYMENT_PROVIDER: mock
+        run: npm test
+
+      # 5. Frontend Tests
+      - name: Run Frontend Tests
+        working-directory: frontend
+        run: npm test
+
+      # 6. Production Builds
+      - name: Backend Production Build
+        working-directory: backend
+        run: npm run build
+
+      - name: Frontend Production Build
+        working-directory: frontend
+        run: npm run build

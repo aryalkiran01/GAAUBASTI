@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Star, MapPin, Compass, CalendarCheck, Heart, ArrowRight } from "lucide-react";
-import SEO from "@/components/SEO";
+import SEO, { getWebsiteSchema } from "@/components/SEO";
 
 const Index = () => {
   const { listings: featuredListings, loading } = useFeaturedListings();
@@ -16,6 +16,7 @@ const Index = () => {
         title="Gau Basti - Authentic Nepali Homestays & Unique Stays"
         description="Discover and book authentic Nepali homestays, cottages, villas, and unique stays in the heart of rural Nepal. Experience real village life with local hosts."
         canonicalPath="/"
+        schema={getWebsiteSchema()}
       />
       {/* Hero Section */}
       <section

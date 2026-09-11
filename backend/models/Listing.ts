@@ -158,6 +158,37 @@ const listingSchema = new mongoose.Schema({
     type: String,
     enum: ['draft', 'pending', 'approved', 'rejected'],
     default: 'draft'
+  },
+  safetyAndEmergency: {
+    emergencyContactName: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    emergencyContactPhone: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    nearbyHospital: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    policeStationContact: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    safetyNotes: [{
+      type: String,
+      trim: true
+    }],
+    importantLocationNotes: {
+      type: String,
+      trim: true,
+      default: ''
+    }
   }
 }, {
   timestamps: true,

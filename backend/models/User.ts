@@ -70,11 +70,13 @@ const userSchema = new mongoose.Schema({
   },
   failedLoginAttempts: {
     type: Number,
-    default: 0
+    default: 0,
+    select: false
   },
   lockUntil: {
     type: Date,
-    default: null
+    default: null,
+    select: false
   },
   lastLogin: {
     type: Date,
@@ -162,6 +164,10 @@ userSchema.methods.comparePassword = async function(this: any, candidatePassword
 userSchema.methods.toJSON = function(this: any) {
   const userObject = this.toObject();
   delete userObject.password;
+  delete userObject.failedLoginAttempts;
+  delete userObject.lockUntil;
+  delete userObject.verificationToken;
+  delete userObject.verificationTokenExpires;
   delete userObject.__v;
   return userObject;
 };

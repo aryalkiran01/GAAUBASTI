@@ -439,7 +439,7 @@ export default function HostDashboard() {
           {/* TAB 2: BOOKINGS & CALENDAR */}
           <TabsContent value="bookings" className="space-y-4">
             {bookings.length > 0 ? (
-              <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
+              <div className="border border-border rounded-2xl overflow-x-auto bg-card shadow-sm">
                 <Table>
                   <TableHeader>
                     <TableRow>

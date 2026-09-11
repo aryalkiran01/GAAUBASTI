@@ -14,7 +14,7 @@ import AvailabilityChecker from "@/components/AvailabilityChecker";
 import ReviewSection from "@/components/ReviewSection";
 import ReviewSummary from "@/components/ai/ReviewSummary";
 import MapView from "@/components/MapView";
-import SEO from "@/components/SEO";
+import SEO, { getLodgingSchema } from "@/components/SEO";
 import {
   Heart,
   Share2,
@@ -310,6 +310,22 @@ export default function ListingDetail() {
         description={`${listing.title} in ${locationString}. ${listing.description?.slice(0, 150) || ""}`}
         canonicalPath={`/listing/${listing.id}`}
         image={imagesList[0]}
+        schema={getLodgingSchema({
+          id: listing.id,
+          title: listing.title,
+          description: listing.description,
+          price: listing.price,
+          images: imagesList,
+          location: typeof listing.location === 'object' ? listing.location : undefined,
+          rating: listing.rating,
+          reviewCount: listing.reviewCount,
+          amenities: listing.amenities
+        })}
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Listings", url: "/listings" },
+          { name: listing.title, url: `/listing/${listing.id}` }
+        ]}
       />
 
       {/* Header Container */}
@@ -501,13 +517,33 @@ export default function ListingDetail() {
             <div className="p-5 border border-border rounded-2xl bg-card space-y-2">
               <h4 className="text-sm font-semibold flex items-center gap-1.5">
                 <ShieldCheck className="h-4 w-4 text-gaun-green" />
-                Safety & Health Care
+                Safety & Emergency Info
               </h4>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                <li>• First aid supplies available with host family</li>
-                <li>• Community health post accessible in village</li>
-                <li>• Emergency police contact: 100</li>
-                <li>• Filtered / boiled drinking water served</li>
+              <ul className="text-xs text-muted-foreground space-y-1.5">
+                {listing.safetyAndEmergency?.nearbyHospital && (
+                  <li>• <strong className="text-foreground">Hospital/Clinic:</strong> {listing.safetyAndEmergency.nearbyHospital}</li>
+                )}
+                {listing.safetyAndEmergency?.policeStationContact && (
+                  <li>• <strong className="text-foreground">Local Police:</strong> {listing.safetyAndEmergency.policeStationContact}</li>
+                )}
+                {listing.safetyAndEmergency?.emergencyContactPhone && (
+                  <li>• <strong className="text-foreground">Emergency Line:</strong> {listing.safetyAndEmergency.emergencyContactPhone}</li>
+                )}
+                {listing.safetyAndEmergency?.importantLocationNotes && (
+                  <li>• <strong className="text-foreground">Location Advisory:</strong> {listing.safetyAndEmergency.importantLocationNotes}</li>
+                )}
+                {listing.safetyAndEmergency?.safetyNotes && listing.safetyAndEmergency.safetyNotes.length > 0 ? (
+                  listing.safetyAndEmergency.safetyNotes.map((note, idx) => (
+                    <li key={idx}>• {note}</li>
+                  ))
+                ) : (
+                  <>
+                    <li>• First aid supplies available with host family</li>
+                    <li>• Community health post accessible in village</li>
+                    <li>• Emergency police contact: 100 / Ambulance: 102</li>
+                    <li>• Filtered / boiled drinking water served</li>
+                  </>
+                )}
               </ul>
             </div>
           </div>

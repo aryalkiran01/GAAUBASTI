@@ -7,7 +7,7 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import { User } from "../types";
-import { authAPI, getAuthToken, removeAuthToken } from "../lib/api";
+import { authAPI } from "../lib/api";
 import { useToast } from "@/components/ui/use-toast";
 
 interface AuthContextType {
@@ -45,22 +45,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const token = getAuthToken();
-
-        if (!token) {
-          setUser(null);
-          return;
-        }
-
         const response = await authAPI.getProfile();
         if (response.success && response.data && response.data.user) {
           setUser(response.data.user);
         } else {
-          removeAuthToken();
           setUser(null);
         }
       } catch {
-        removeAuthToken();
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -93,7 +84,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      removeAuthToken();
       setUser(null);
       toast({
         variant: "destructive",
@@ -102,7 +92,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
     } catch (error: any) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      removeAuthToken();
       setUser(null);
       toast({
         variant: "destructive",
@@ -234,7 +223,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      removeAuthToken();
       setUser(null);
       toast({
         variant: "destructive",
@@ -244,7 +232,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
     } catch (error: any) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      removeAuthToken();
       setUser(null);
       toast({
         variant: "destructive",

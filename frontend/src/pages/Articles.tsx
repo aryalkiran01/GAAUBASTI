@@ -99,6 +99,10 @@ export default function Articles() {
         title="Stories & Cultural Journal | Gaun Basti"
         description="Discover authentic stories of Nepali village life, Himalayan heritage, organic mountain cuisine, and sustainable travel guides."
         canonicalPath="/articles"
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Stories & Journal", url: "/articles" }
+        ]}
       />
 
       {/* Hero Section */}

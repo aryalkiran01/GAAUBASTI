@@ -7,7 +7,9 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 dotenv.config();
+import cookieParser from 'cookie-parser';
 import { globalLimiter } from './middlewares/rateLimiters';
+import { startJob, stopAllJobs } from './services/jobRunner';
 
 // Import routes and middleware
 import authRoutes from './routes/auth';
@@ -26,6 +28,7 @@ import payoutRoutes from './routes/payouts';
 import aiRoutes from './routes/ai';
 import savedSearchRoutes from './routes/savedSearches';
 import villageRoutes from './routes/villages';
+import sitemapRoutes from './routes/sitemap';
 import errorHandler from './middlewares/errorHandler';
 import Conversation from './models/Conversation';
 
@@ -79,18 +82,38 @@ if (!process.env.JWT_SECRET && process.env.NODE_ENV !== 'production') {
 }
 
 // Configure CORS
-const allowedOrigins = [
-  'http://localhost:8080',
-  'https://gaaubasti-19rzg9sr5-aryalkiran01s-projects.vercel.app',
-  'https://gaaubasti.vercel.app',
-  process.env.FRONTEND_URL
-].filter(Boolean) as string[];
+const getAllowedOrigins = (): string[] => {
+  const origins = new Set<string>();
+  if (process.env.FRONTEND_URL) {
+    process.env.FRONTEND_URL.split(',').forEach((url) => {
+      const trimmed = url.trim();
+      if (trimmed) origins.add(trimmed);
+    });
+  }
+  if (process.env.ALLOWED_ORIGINS) {
+    process.env.ALLOWED_ORIGINS.split(',').forEach((url) => {
+      const trimmed = url.trim();
+      if (trimmed) origins.add(trimmed);
+    });
+  }
+  if (process.env.NODE_ENV !== 'production') {
+    origins.add('http://localhost:8080');
+    origins.add('http://localhost:5173');
+    origins.add('http://localhost:3000');
+    origins.add('http://127.0.0.1:8080');
+    origins.add('http://127.0.0.1:5173');
+  }
+  return Array.from(origins);
+};
+
+const allowedOrigins = getAllowedOrigins();
 
 const corsOptions = {
   origin: function (origin: string | undefined, callback: (err: Error | null, ok?: boolean) => void) {
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.indexOf(origin) === -1) {
+    const currentAllowed = getAllowedOrigins();
+    if (currentAllowed.indexOf(origin) === -1) {
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
       return callback(new Error(msg), false);
     }
@@ -105,6 +128,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(helmet());
 app.use(compression());
+app.use(cookieParser());
 
 app.use('/api/', globalLimiter);
 
@@ -131,6 +155,7 @@ app.use('/api/payouts', payoutRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/saved-searches', savedSearchRoutes);
 app.use('/api/villages', villageRoutes);
+app.use(sitemapRoutes);
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {
@@ -239,20 +264,12 @@ const startServer = async () => {
 
     initializeSocketIO(server);
 
-    // Start booking auto-completion job (runs every hour)
+    // Start scalable booking auto-completion distributed job (runs every hour)
     const { autoCompleteBookings } = require('./controllers/bookingController');
     const BOOKING_COMPLETION_INTERVAL_MS = 60 * 60 * 1000;
-    const bookingCompletionTimer = setInterval(async () => {
-      try {
-        await autoCompleteBookings();
-      } catch (err) {
-        console.error('[bookingCompletionJob] Error:', err.message);
-      }
-    }, BOOKING_COMPLETION_INTERVAL_MS);
-    bookingCompletionTimer.unref();
-
-    process.on('SIGINT', () => clearInterval(bookingCompletionTimer));
-    process.on('SIGTERM', () => clearInterval(bookingCompletionTimer));
+    startJob('autoCompleteBookings', BOOKING_COMPLETION_INTERVAL_MS, async () => {
+      return await autoCompleteBookings();
+    });
   } catch (err: any) {
     console.error('Failed to start server:', err?.message || err);
     if (err?.stack) {
@@ -267,6 +284,7 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 process.on('SIGINT', async () => {
+  stopAllJobs();
   if (server) {
     server.close(async () => {
       await mongoose.disconnect();
@@ -279,6 +297,7 @@ process.on('SIGINT', async () => {
 });
 
 process.on('SIGTERM', async () => {
+  stopAllJobs();
   if (server) {
     server.close(async () => {
       await mongoose.disconnect();

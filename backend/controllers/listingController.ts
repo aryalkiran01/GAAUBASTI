@@ -9,13 +9,13 @@ const { deleteImage } = require('../utils/cloudinary');
 const LISTING_ALLOWED_CREATE_FIELDS = [
   'title', 'description', 'location', 'price', 'images', 'amenities', 'maxGuests',
   'bedrooms', 'bathrooms', 'category', 'houseRules', 'checkInTime', 'checkOutTime',
-  'cancellationPolicy'
+  'cancellationPolicy', 'safetyAndEmergency'
 ];
 
 const LISTING_ALLOWED_UPDATE_FIELDS = [
   'title', 'description', 'location', 'price', 'images', 'amenities', 'maxGuests',
   'bedrooms', 'bathrooms', 'category', 'houseRules', 'checkInTime', 'checkOutTime',
-  'cancellationPolicy', 'isActive'
+  'cancellationPolicy', 'isActive', 'safetyAndEmergency'
 ];
 
 const escapeRegex = (str) => {
@@ -36,6 +36,22 @@ const buildAllowedListingPayload = (payload = {}, allowedFields = LISTING_ALLOWE
   return safePayload;
 };
 
+const sanitizeSafetyAndEmergency = (safetyObj: any) => {
+  if (!safetyObj || typeof safetyObj !== 'object') return undefined;
+  const cleaned: any = {};
+  if (typeof safetyObj.emergencyContactName === 'string') cleaned.emergencyContactName = safetyObj.emergencyContactName.trim();
+  if (typeof safetyObj.emergencyContactPhone === 'string') cleaned.emergencyContactPhone = safetyObj.emergencyContactPhone.trim();
+  if (typeof safetyObj.nearbyHospital === 'string') cleaned.nearbyHospital = safetyObj.nearbyHospital.trim();
+  if (typeof safetyObj.policeStationContact === 'string') cleaned.policeStationContact = safetyObj.policeStationContact.trim();
+  if (Array.isArray(safetyObj.safetyNotes)) {
+    cleaned.safetyNotes = safetyObj.safetyNotes.filter((n: any) => typeof n === 'string' && n.trim().length > 0).map((n: string) => n.trim());
+  } else if (typeof safetyObj.safetyNotes === 'string' && safetyObj.safetyNotes.trim()) {
+    cleaned.safetyNotes = [safetyObj.safetyNotes.trim()];
+  }
+  if (typeof safetyObj.importantLocationNotes === 'string') cleaned.importantLocationNotes = safetyObj.importantLocationNotes.trim();
+  return cleaned;
+};
+
 const sanitizeListingPayloadForCreate = (payload = {}) => {
   const safePayload = buildAllowedListingPayload(payload, LISTING_ALLOWED_CREATE_FIELDS);
 
@@ -54,6 +70,10 @@ const sanitizeListingPayloadForCreate = (payload = {}) => {
     if (location.geoJSON) cleanedLocation.geoJSON = location.geoJSON;
 
     safePayload.location = cleanedLocation;
+  }
+
+  if (safePayload.safetyAndEmergency) {
+    safePayload.safetyAndEmergency = sanitizeSafetyAndEmergency(safePayload.safetyAndEmergency);
   }
 
   return safePayload;
@@ -77,6 +97,10 @@ const sanitizeListingPayloadForUpdate = (payload = {}) => {
     if (location.geoJSON) cleanedLocation.geoJSON = location.geoJSON;
 
     safePayload.location = cleanedLocation;
+  }
+
+  if (safePayload.safetyAndEmergency) {
+    safePayload.safetyAndEmergency = sanitizeSafetyAndEmergency(safePayload.safetyAndEmergency);
   }
 
   return safePayload;

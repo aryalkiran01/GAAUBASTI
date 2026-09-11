@@ -1,25 +1,29 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
+# Gaun Basti — Rural Tourism Platform
 User-agent: *
 Allow: /
-Disallow: /account
+Allow: /listings
+Allow: /listings/*
+Allow: /villages
+Allow: /villages/*
+Allow: /articles
+Allow: /articles/*
+Allow: /about
+Allow: /contact
+
+# Disallow private user & administrative paths
 Disallow: /admin
+Disallow: /admin/*
 Disallow: /host
+Disallow: /host/*
+Disallow: /account
+Disallow: /account/*
 Disallow: /messages
-Disallow: /wishlist
+Disallow: /messages/*
 Disallow: /payment
+Disallow: /payment/*
 Disallow: /payment-success
-Disallow: /forgot-password
 Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /verify-email/*
 
 Sitemap: https://gaunbasti.com/sitemap.xml

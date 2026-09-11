@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { villageAPI } from "@/lib/api";
 import { Village, Listing } from "@/types";
-import SEO from "@/components/SEO";
+import SEO, { getVillageSchema } from "@/components/SEO";
 import ListingCard from "@/components/ListingCard";
 import MapView from "@/components/MapView";
 import { Button } from "@/components/ui/button";
@@ -111,6 +111,23 @@ export default function VillageDetail() {
           `Explore ${village.name} in ${village.district}, Nepal. Experience authentic village life, local food, and community homestays.`
         }
         canonicalPath={`/villages/${village.slug}`}
+        image={village.heroImage}
+        schema={getVillageSchema({
+          id: village.id || (village as any)._id,
+          slug: village.slug,
+          name: village.name,
+          tagline: village.tagline,
+          description: village.description,
+          heroImage: village.heroImage,
+          district: village.district,
+          province: village.province,
+          location: village.location
+        })}
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Villages", url: "/villages" },
+          { name: village.name, url: `/villages/${village.slug}` }
+        ]}
       />
 
       {/* Back Button & Breadcrumbs */}

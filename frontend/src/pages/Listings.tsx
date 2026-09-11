@@ -310,6 +310,10 @@ export default function Listings() {
         title="Find Authentic Homestays & Stays | Gaun Basti"
         description="Search, filter, and discover homestays, cottages, and heritage stays across Nepal with interactive map view, price filters, and village discovery."
         canonicalPath="/listings"
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Listings", url: "/listings" }
+        ]}
       />
 
       {/* Header Search Banner */}

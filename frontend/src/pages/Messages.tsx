@@ -139,17 +139,21 @@ const Messages = () => {
         </Link>
       </div>
 
-      <div className="grid min-h-[720px] grid-cols-1 gap-4 rounded-xl border bg-card md:grid-cols-[320px_1fr]">
-        <aside className="border-b border-r bg-muted/20 md:border-b-0">
-          <div className="border-b p-4 font-medium">Conversations</div>
+      <div className="grid min-h-[600px] md:min-h-[720px] grid-cols-1 rounded-xl border bg-card md:grid-cols-[320px_1fr] overflow-hidden">
+        {/* Conversation List Sidebar */}
+        <aside className={`border-r bg-muted/20 ${selectedConversationId ? "hidden md:block" : "block"}`}>
+          <div className="border-b p-4 font-medium flex items-center justify-between">
+            <span>Conversations</span>
+            <span className="text-xs text-muted-foreground">{conversations.length}</span>
+          </div>
 
-          <div className="space-y-2 p-3">
+          <div className="space-y-2 p-3 overflow-y-auto max-h-[70vh] md:max-h-none">
             {loading ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground p-2">
                 Loading conversations…
               </p>
             ) : conversations.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground p-2">
                 No conversations yet.
               </p>
             ) : (
@@ -167,14 +171,14 @@ const Messages = () => {
                     onClick={() => handleSelectConversation(conversationId)}
                     className={`w-full rounded-lg border p-3 text-left transition ${
                       selectedConversationId === conversationId
-                        ? "border-gaun-green bg-green-50"
+                        ? "border-gaun-green bg-green-50 dark:bg-green-950/30"
                         : "bg-background hover:bg-muted"
                     }`}
                   >
                     <div className="font-medium">
                       {otherParticipant?.name || "Conversation"}
                     </div>
-                    <div className="mt-1 text-xs text-muted-foreground">
+                    <div className="mt-1 text-xs text-muted-foreground truncate">
                       {conversation.listing &&
                       typeof conversation.listing === "object" &&
                       "title" in conversation.listing
@@ -188,30 +192,41 @@ const Messages = () => {
           </div>
         </aside>
 
-        <main className="flex flex-col">
+        {/* Active Chat Main Area */}
+        <main className={`flex flex-col ${!selectedConversationId ? "hidden md:flex" : "flex"}`}>
           {selectedConversation ? (
             <>
               <div className="flex items-center justify-between border-b p-4">
-                <div>
-                  {(selectedConversation.participants || []).map(
-                    (participant: any) => {
-                      const participantId = getUserId(participant);
-                      if (participantId === getUserId(user)) {
-                        return null;
-                      }
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="md:hidden h-8 px-2 text-xs"
+                    onClick={() => setSelectedConversationId(null)}
+                  >
+                    ← Back
+                  </Button>
+                  <div>
+                    {(selectedConversation.participants || []).map(
+                      (participant: any) => {
+                        const participantId = getUserId(participant);
+                        if (participantId === getUserId(user)) {
+                          return null;
+                        }
 
-                      return (
-                        <div
-                          key={
-                            participantId || participant.email || "participant"
-                          }
-                          className="font-medium"
-                        >
-                          {participant.name || "Host"}
-                        </div>
-                      );
-                    },
-                  )}
+                        return (
+                          <div
+                            key={
+                              participantId || participant.email || "participant"
+                            }
+                            className="font-medium"
+                          >
+                            {participant.name || "Host"}
+                          </div>
+                        );
+                      },
+                    )}
+                  </div>
                 </div>
               </div>
 

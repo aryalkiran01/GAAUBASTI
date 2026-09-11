@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { articlesAPI, villageAPI } from "@/lib/api";
 import { Article, Village } from "@/types";
-import SEO from "@/components/SEO";
+import SEO, { getArticleSchema } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
@@ -127,6 +127,23 @@ export default function ArticleDetail() {
           "Read authentic stories and guides on Nepal village homestays and culture."
         }
         canonicalPath={`/articles/${article.slug}`}
+        image={article.coverImage}
+        type="article"
+        schema={getArticleSchema({
+          id: article.id || (article as any)._id,
+          slug: article.slug,
+          title: article.title,
+          excerpt: article.summary,
+          coverImage: article.coverImage,
+          author: article.author,
+          createdAt: article.createdAt,
+          updatedAt: (article as any).updatedAt
+        })}
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Stories & Journal", url: "/articles" },
+          { name: article.title, url: `/articles/${article.slug}` }
+        ]}
       />
 
       {/* Back Button */}

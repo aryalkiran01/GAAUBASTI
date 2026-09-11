@@ -95,6 +95,10 @@ export default function Villages() {
         title="Explore Nepal's Heritage Villages | Gaun Basti"
         description="Discover authentic rural villages of Nepal. Experience local culture, organic Himalayan cuisine, age-old traditions, and authentic community homestays."
         canonicalPath="/villages"
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Villages", url: "/villages" }
+        ]}
       />
 
       {/* Hero Section */}

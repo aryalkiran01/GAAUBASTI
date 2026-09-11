@@ -184,11 +184,12 @@ const BookingConfirmation = () => {
 
         <Card className="bg-blue-50 border-blue-200">
           <CardContent className="pt-6">
-            <h3 className="font-semibold text-blue-900 mb-2">Important Information</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>Save your booking reference for future correspondence.</li>
-              <li>Contact your host if you have special requests or need to arrange check-in.</li>
-              <li>Review the cancellation policy before your stay.</li>
+            <h3 className="font-semibold text-blue-900 mb-2">Important Information & Safety Brief</h3>
+            <ul className="text-sm text-blue-800 space-y-1.5">
+              <li>• Save your booking reference for future correspondence.</li>
+              <li>• Contact your host if you have special requests or need to arrange check-in.</li>
+              <li>• In case of emergency during your stay: Police 100, Tourist Police 1144, Ambulance 102.</li>
+              <li>• Follow local village cultural guidelines and respect natural surroundings.</li>
             </ul>
           </CardContent>
         </Card>

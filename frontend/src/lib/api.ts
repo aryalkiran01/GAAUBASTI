@@ -3,35 +3,16 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
-// Get auth token from localStorage
-const getAuthToken = (): string | null => {
-  return localStorage.getItem("authToken");
-};
+/// Authentication token helpers (retained as no-ops for API compatibility)
+const getAuthToken = (): string | null => null;
+const setAuthToken = (_token: string): void => {};
+const removeAuthToken = (): void => {};
 
-// Set auth token in localStorage
-const setAuthToken = (token: string): void => {
-  localStorage.setItem("authToken", token);
-};
-
-// Remove auth token from localStorage
-const removeAuthToken = (): void => {
-  localStorage.removeItem("authToken");
-};
-
-// Create headers with auth token
-const createHeaders = (includeAuth: boolean = true): HeadersInit => {
+// Create standard API headers (credentials: 'include' handles cookie authentication)
+const createHeaders = (_includeAuth: boolean = true): HeadersInit => {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
   };
-
-  if (includeAuth) {
-    const token = getAuthToken();
-
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-  }
-
   return headers;
 };
 
@@ -121,7 +102,7 @@ const apiRequest = async (
 // Authentication API calls
 export const authAPI = {
   login: async (email: string, password: string) => {
-    const data = await apiRequest(
+    return await apiRequest(
       "/auth/login",
       {
         method: "POST",
@@ -129,12 +110,6 @@ export const authAPI = {
       },
       false,
     );
-
-    if (data.success && data.data.token) {
-      setAuthToken(data.data.token);
-    }
-
-    return data;
   },
 
   register: async (
@@ -144,7 +119,7 @@ export const authAPI = {
     password: string,
     role: string = "guest",
   ) => {
-    const data = await apiRequest(
+    return await apiRequest(
       "/auth/register",
       {
         method: "POST",
@@ -152,18 +127,10 @@ export const authAPI = {
       },
       false,
     );
-
-    if (data.success && data.data.token) {
-      setAuthToken(data.data.token);
-    }
-
-    return data;
   },
 
   logout: async () => {
-    const result = await apiRequest("/auth/logout", { method: "POST" });
-    removeAuthToken();
-    return result;
+    return await apiRequest("/auth/logout", { method: "POST" });
   },
 
   verifyEmail: async (token: string) => {
@@ -175,9 +142,7 @@ export const authAPI = {
   },
 
   deleteAccount: async () => {
-    const result = await apiRequest("/auth/account", { method: "DELETE" });
-    removeAuthToken();
-    return result;
+    return await apiRequest("/auth/account", { method: "DELETE" });
   },
 
   applyForHost: async (data?: { bio?: string; languages?: string[] }) => {
@@ -188,19 +153,7 @@ export const authAPI = {
   },
 
   getProfile: async () => {
-    const token = getAuthToken();
-    if (!token) {
-      // Return empty response if no token
-      return { success: false, message: "No authentication token" };
-    }
-
-    const response = await apiRequest("/auth/profile");
-
-    if (response.status === 401 || response.status === 403) {
-      removeAuthToken();
-    }
-
-    return response;
+    return await apiRequest("/auth/profile");
   },
 
   // NEW: Forgot Password

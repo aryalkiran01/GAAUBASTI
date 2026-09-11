@@ -285,7 +285,7 @@ const Admin = () => {
           </TabsList>
           
           <TabsContent value="users" className="mt-6">
-            <div className="bg-white rounded-md border">
+            <div className="bg-white rounded-md border overflow-x-auto">
               {loading ? (
                 <div className="p-6 space-y-4">
                   {Array.from({ length: 5 }).map((_, index) => (
@@ -355,9 +355,9 @@ const Admin = () => {
           </TabsContent>
           
           <TabsContent value="listings" className="mt-6">
-            <div className="bg-white rounded-md border">
+            <div className="bg-white rounded-md border overflow-x-auto">
               {/* Listing Filter Controls */}
-              <div className="p-4 border-b">
+              <div className="p-4 border-b min-w-[600px]">
                 <div className="flex space-x-2">
                   <Button
                     variant={listingFilter === 'all' ? 'default' : 'outline'}
@@ -402,16 +402,16 @@ const Admin = () => {
                     <TableRow key={listing.id}>
                       <TableCell className="font-mono text-sm">{listing.id}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 min-w-[150px]">
                           <img
                             src={typeof listing.images[0] === "string" ? listing.images[0] : listing.images[0]?.url}
                             alt={listing.title}
                             className="h-6 w-6 rounded object-cover"
                           />
-                          {listing.title}
+                          <span className="truncate">{listing.title}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="min-w-[180px]">
                         {typeof listing.location === "string"
                           ? listing.location
                           : listing.location
@@ -448,24 +448,24 @@ const Admin = () => {
                       <TableCell>
                         <div className="flex space-x-2">
                           {!listing.isVerified && (
-                            <>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => handleApproveListing(listing.id)}
-                                className="bg-green-100 text-green-800 hover:bg-green-200"
-                              >
-                                Approve
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => handleRejectListing(listing.id)}
-                                className="bg-red-100 text-red-800 hover:bg-red-200"
-                              >
-                                Reject
-                              </Button>
-                            </>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => handleVerifyListing(listing.id)}
+                            >
+                              Verify
+                            </Button>
+                          )}
+                          {listing.isVerified && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              onClick={() => handleRejectListing(listing.id)}
+                            >
+                              Reject
+                            </Button>
                           )}
                           <Button 
                             variant="ghost" 
@@ -484,7 +484,7 @@ const Admin = () => {
           </TabsContent>
           
           <TabsContent value="bookings" className="mt-6">
-            <div className="bg-white rounded-md border">
+            <div className="bg-white rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

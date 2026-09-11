@@ -114,8 +114,8 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user and include password for comparison
-    const user = await User.findOne({ email }).select('+password');
+    // Find user and include password and lockout fields for comparison
+    const user = await User.findOne({ email }).select('+password +failedLoginAttempts +lockUntil');
     
     if (!user) {
       return res.status(401).json({

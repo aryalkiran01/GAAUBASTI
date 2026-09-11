@@ -147,8 +147,14 @@ export default function ListingWizardModal({
     safetyInfo: {
       smokeAlarm: true,
       firstAidKit: true,
+      emergencyContactName: "Host / Village Coordinator",
+      emergencyContactPhone: "+977-9800000000",
       emergencyContact: "+977-9800000000",
+      nearbyHospital: "Village Community Health Post (15 mins walk)",
       medicalFacility: "Village Community Health Post (15 mins walk)",
+      policeStationContact: "Local Police Post / 100",
+      safetyNotes: "Flashlight recommended for evening walks. Filtered spring water provided.",
+      importantLocationNotes: "Trail marker 4 off the main suspension bridge.",
     },
   });
 
@@ -164,6 +170,7 @@ export default function ListingWizardModal({
             typeof img === "string" ? { url: img, caption: "" } : img
           )
         : [];
+      const s = listingToEdit.safetyAndEmergency || {};
 
       setFormData({
         title: listingToEdit.title || "",
@@ -194,8 +201,14 @@ export default function ListingWizardModal({
         safetyInfo: {
           smokeAlarm: true,
           firstAidKit: true,
-          emergencyContact: "+977-9800000000",
-          medicalFacility: "Village Community Health Post",
+          emergencyContactName: s.emergencyContactName || "Host Coordinator",
+          emergencyContactPhone: s.emergencyContactPhone || "+977-9800000000",
+          emergencyContact: s.emergencyContactPhone || "+977-9800000000",
+          nearbyHospital: s.nearbyHospital || "Village Health Post",
+          medicalFacility: s.nearbyHospital || "Village Health Post",
+          policeStationContact: s.policeStationContact || "100",
+          safetyNotes: s.safetyNotes || "",
+          importantLocationNotes: s.importantLocationNotes || "",
         },
       });
       setCurrentStep(1);
@@ -280,6 +293,14 @@ export default function ListingWizardModal({
         price: Number(formData.price),
         amenities: formData.amenities,
         images: formData.images,
+        safetyAndEmergency: {
+          emergencyContactName: formData.safetyInfo.emergencyContactName,
+          emergencyContactPhone: formData.safetyInfo.emergencyContactPhone || formData.safetyInfo.emergencyContact,
+          nearbyHospital: formData.safetyInfo.nearbyHospital || formData.safetyInfo.medicalFacility,
+          policeStationContact: formData.safetyInfo.policeStationContact,
+          safetyNotes: formData.safetyInfo.safetyNotes,
+          importantLocationNotes: formData.safetyInfo.importantLocationNotes,
+        },
         location: {
           address: formData.location.address || formData.location.city,
           city: formData.location.city,
@@ -797,8 +818,120 @@ export default function ListingWizardModal({
           {/* Step 8: Safety */}
           {currentStep === 8 && (
             <div className="space-y-4 animate-in fade-in-50 duration-200">
-              <h3 className="text-base font-semibold">Guest Safety & Healthcare Info</h3>
-              <div className="space-y-3">
+              <h3 className="text-base font-semibold">Guest Safety, Health & Local Contacts</h3>
+              <p className="text-xs text-muted-foreground">
+                Help travelers feel secure in rural areas by providing verified emergency contacts and local health guidance.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div>
+                  <Label htmlFor="emergencyContactName">Emergency Contact Person</Label>
+                  <Input
+                    id="emergencyContactName"
+                    placeholder="e.g. Village Lead / Host Coordinator"
+                    value={formData.safetyInfo.emergencyContactName}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        safetyInfo: { ...formData.safetyInfo, emergencyContactName: e.target.value },
+                      })
+                    }
+                    className="mt-1 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="emergencyContactPhone">Emergency Phone Number</Label>
+                  <Input
+                    id="emergencyContactPhone"
+                    placeholder="e.g. +977-9800000000"
+                    value={formData.safetyInfo.emergencyContactPhone}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        safetyInfo: {
+                          ...formData.safetyInfo,
+                          emergencyContactPhone: e.target.value,
+                          emergencyContact: e.target.value,
+                        },
+                      })
+                    }
+                    className="mt-1 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="medicalFacility">Nearest Health Post / Hospital</Label>
+                  <Input
+                    id="medicalFacility"
+                    placeholder="e.g. Ghandruk Health Post (15m walk), Pokhara Hospital (3h drive)"
+                    value={formData.safetyInfo.nearbyHospital}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        safetyInfo: {
+                          ...formData.safetyInfo,
+                          nearbyHospital: e.target.value,
+                          medicalFacility: e.target.value,
+                        },
+                      })
+                    }
+                    className="mt-1 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="policeStationContact">Police Post Contact / Ward Lead</Label>
+                  <Input
+                    id="policeStationContact"
+                    placeholder="e.g. Area Police Post / 100 / 061-XXXXXX"
+                    value={formData.safetyInfo.policeStationContact}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        safetyInfo: { ...formData.safetyInfo, policeStationContact: e.target.value },
+                      })
+                    }
+                    className="mt-1 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="safetyNotes">Safety Precautions & Practical Tips</Label>
+                <Textarea
+                  id="safetyNotes"
+                  rows={2}
+                  placeholder="e.g. Carry a flashlight for evening stone stairways. Filtered mountain spring water provided."
+                  value={formData.safetyInfo.safetyNotes}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      safetyInfo: { ...formData.safetyInfo, safetyNotes: e.target.value },
+                    })
+                  }
+                  className="mt-1 text-xs"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="importantLocationNotes">Location & Trail Advisories</Label>
+                <Textarea
+                  id="importantLocationNotes"
+                  rows={2}
+                  placeholder="e.g. Homestay is accessible via a 15-minute stone staircase hike from the lower jeep stop."
+                  value={formData.safetyInfo.importantLocationNotes}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      safetyInfo: { ...formData.safetyInfo, importantLocationNotes: e.target.value },
+                    })
+                  }
+                  className="mt-1 text-xs"
+                />
+              </div>
+
+              <div className="space-y-3 pt-2">
                 <label className="flex items-center space-x-2">
                   <Checkbox
                     checked={formData.safetyInfo.firstAidKit}
@@ -823,36 +956,6 @@ export default function ListingWizardModal({
                   />
                   <span className="text-xs">Fire safety / smoke precautions</span>
                 </label>
-              </div>
-
-              <div>
-                <Label htmlFor="emergencyContact">Emergency Phone Number</Label>
-                <Input
-                  id="emergencyContact"
-                  value={formData.safetyInfo.emergencyContact}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      safetyInfo: { ...formData.safetyInfo, emergencyContact: e.target.value },
-                    })
-                  }
-                  className="mt-1 text-xs"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="medicalFacility">Nearest Health Center / Hospital</Label>
-                <Input
-                  id="medicalFacility"
-                  value={formData.safetyInfo.medicalFacility}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      safetyInfo: { ...formData.safetyInfo, medicalFacility: e.target.value },
-                    })
-                  }
-                  className="mt-1 text-xs"
-                />
               </div>
             </div>
           )}

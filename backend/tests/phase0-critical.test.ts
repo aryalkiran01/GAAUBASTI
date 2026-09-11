@@ -454,14 +454,24 @@ test('availability: checkListingAvailability passes session to queries', async (
   }
 });
 
-// --- 13. Integration test with in-memory MongoDB (if available) ---
+// --- 13. Integration test with in-memory MongoDB fallback ---
 test('integration: concurrent overlapping bookings — only one succeeds', async (t) => {
-  // This test requires a running MongoDB instance
-  // Skip if no MongoDB URI is available
-  const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+  let mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+  let replSet: any = null;
 
   if (!mongoUri) {
-    t.skip('No MongoDB URI available — skipping integration test');
+    try {
+      const { MongoMemoryReplSet } = require('mongodb-memory-server');
+      replSet = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
+      mongoUri = replSet.getUri();
+    } catch {
+      t.skip('MongoDB in-memory instance could not be initialized');
+      return;
+    }
+  }
+
+  if (!mongoUri) {
+    t.skip('MongoDB in-memory instance could not be initialized');
     return;
   }
 
@@ -472,8 +482,8 @@ test('integration: concurrent overlapping bookings — only one succeeds', async
   // Connect to test database
   const testDbName = 'gaunbasti_test_concurrency';
   const testUri = mongoUri.includes('?')
-    ? mongoUri.replace(/\/[^\/?]+(\?)/, `/${testDbName}$1`)
-    : mongoUri.replace(/\/[^\/]+$/, `/${testDbName}`);
+    ? mongoUri.replace(/\/[^/?]+(\?)/, `/${testDbName}$1`)
+    : mongoUri.replace(/\/[^/]+$/, `/${testDbName}`);
 
   await mongoose.connect(testUri);
   await BookingNight.deleteMany({});
@@ -506,7 +516,7 @@ test('integration: concurrent overlapping bookings — only one succeeds', async
   endDate.setDate(endDate.getDate() + 2);
 
   // Attempt two concurrent bookings for overlapping dates
-  const createBookingTransaction = async (guestId) => {
+  const createBookingTransaction = async (guestId: any) => {
     const session = await mongoose.startSession();
     try {
       let createdBooking = null;
@@ -543,7 +553,7 @@ test('integration: concurrent overlapping bookings — only one succeeds', async
             endDate,
             session
           });
-        } catch (lockError) {
+        } catch (lockError: any) {
           if (lockError.code === 11000) {
             throw new Error('Dates already locked');
           }
@@ -554,7 +564,7 @@ test('integration: concurrent overlapping bookings — only one succeeds', async
       });
       session.endSession();
       return { success: true, booking: createdBooking };
-    } catch (err) {
+    } catch (err: any) {
       session.endSession();
       return { success: false, error: err.message };
     }
@@ -567,7 +577,7 @@ test('integration: concurrent overlapping bookings — only one succeeds', async
   ]);
 
   // Exactly one should succeed
-  const successes = [result1, result2].filter((r) => r.success);
+  const successes = [result1, result2].filter((r: any) => r.success);
   assert.equal(successes.length, 1, `Expected exactly 1 success, got ${successes.length}`);
 
   // Verify only one set of BookingNight records exists
@@ -576,4 +586,7 @@ test('integration: concurrent overlapping bookings — only one succeeds', async
 
   // Cleanup
   await mongoose.disconnect();
+  if (replSet) {
+    await replSet.stop();
+  }
 });

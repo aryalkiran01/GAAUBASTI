@@ -238,56 +238,56 @@ export default function Navbar() {
       
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t bg-background py-4">
-          <div className="container space-y-4">
+        <div className="md:hidden border-t bg-background/98 backdrop-blur shadow-lg py-4 px-4">
+          <div className="space-y-1">
             <Link 
               to="/" 
-              className="block text-sm font-medium hover:text-gaun-green"
+              className="flex items-center min-h-[44px] px-3 py-2 rounded-lg text-sm font-medium hover:bg-secondary/60 hover:text-gaun-green transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Home
             </Link>
             <Link 
               to="/listings" 
-              className="block text-sm font-medium hover:text-gaun-green"
+              className="flex items-center min-h-[44px] px-3 py-2 rounded-lg text-sm font-medium hover:bg-secondary/60 hover:text-gaun-green transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Stay
             </Link>
             <Link 
               to="/villages" 
-              className="block text-sm font-medium hover:text-gaun-green"
+              className="flex items-center min-h-[44px] px-3 py-2 rounded-lg text-sm font-medium hover:bg-secondary/60 hover:text-gaun-green transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Villages
             </Link>
             <Link 
               to="/articles" 
-              className="block text-sm font-medium hover:text-gaun-green"
+              className="flex items-center min-h-[44px] px-3 py-2 rounded-lg text-sm font-medium hover:bg-secondary/60 hover:text-gaun-green transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Stories
             </Link>
             <Link 
               to="/about" 
-              className="block text-sm font-medium hover:text-gaun-green"
+              className="flex items-center min-h-[44px] px-3 py-2 rounded-lg text-sm font-medium hover:bg-secondary/60 hover:text-gaun-green transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               About
             </Link>
             <Link 
               to="/contact" 
-              className="block text-sm font-medium hover:text-gaun-green"
+              className="flex items-center min-h-[44px] px-3 py-2 rounded-lg text-sm font-medium hover:bg-secondary/60 hover:text-gaun-green transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Contact
             </Link>
             
             {user ? (
-              <div className="space-y-2 pt-2 border-t">
+              <div className="space-y-1 pt-3 mt-2 border-t border-border">
                 <Link 
                   to="/account" 
-                  className="flex items-center text-sm font-medium hover:text-gaun-green"
+                  className="flex items-center min-h-[44px] px-3 py-2 rounded-lg text-sm font-medium hover:bg-secondary/60 hover:text-gaun-green transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <User className="mr-2 h-4 w-4" />
@@ -295,7 +295,7 @@ export default function Navbar() {
                 </Link>
                 <Link
                   to="/messages"
-                  className="flex items-center text-sm font-medium hover:text-gaun-green"
+                  className="flex items-center min-h-[44px] px-3 py-2 rounded-lg text-sm font-medium hover:bg-secondary/60 hover:text-gaun-green transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <Bell className="mr-2 h-4 w-4" />
@@ -303,7 +303,7 @@ export default function Navbar() {
                 </Link>
                 <Link
                   to="/wishlist"
-                  className="flex items-center text-sm font-medium hover:text-gaun-green"
+                  className="flex items-center min-h-[44px] px-3 py-2 rounded-lg text-sm font-medium hover:bg-secondary/60 hover:text-gaun-green transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <Heart className="mr-2 h-4 w-4" />
@@ -312,7 +312,7 @@ export default function Navbar() {
                 {user.role === "admin" && (
                   <Link 
                     to="/admin" 
-                    className="flex items-center text-sm font-medium hover:text-gaun-green"
+                    className="flex items-center min-h-[44px] px-3 py-2 rounded-lg text-sm font-medium hover:bg-secondary/60 hover:text-gaun-green transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Admin Dashboard
@@ -321,7 +321,7 @@ export default function Navbar() {
                 {user.role === "host" && (
                   <Link 
                     to="/host" 
-                    className="flex items-center text-sm font-medium hover:text-gaun-green"
+                    className="flex items-center min-h-[44px] px-3 py-2 rounded-lg text-sm font-medium hover:bg-secondary/60 hover:text-gaun-green transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Host Dashboard
@@ -329,7 +329,7 @@ export default function Navbar() {
                 )}
                 <Button 
                   variant="ghost" 
-                  className="flex items-center text-sm font-medium hover:text-gaun-green w-full justify-start p-0"
+                  className="flex items-center min-h-[44px] px-3 py-2 text-sm font-medium hover:bg-secondary/60 hover:text-destructive w-full justify-start"
                   onClick={() => {
                     logout();
                     setIsMobileMenuOpen(false);
@@ -340,12 +340,12 @@ export default function Navbar() {
                 </Button>
               </div>
             ) : (
-              <div className="flex flex-col gap-2 pt-2 border-t">
+              <div className="flex flex-col gap-2 pt-3 mt-2 border-t border-border">
                 <Link 
                   to="/login" 
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  <Button variant="ghost" className="w-full">
+                  <Button variant="outline" className="w-full min-h-[44px]">
                     Log in
                   </Button>
                 </Link>
@@ -353,7 +353,7 @@ export default function Navbar() {
                   to="/signup" 
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  <Button className="w-full bg-gaun-green hover:bg-gaun-light-green">
+                  <Button className="w-full min-h-[44px] bg-gaun-green hover:bg-gaun-light-green text-white">
                     Sign up
                   </Button>
                 </Link>

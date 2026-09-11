@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { isBlacklisted } = require('../controllers/authController');
 
-const toUserId = (value) => {
+const toUserId = (value: any) => {
   if (!value) return null;
   if (typeof value === 'object' && value._id) return value._id.toString();
   return value.toString();
@@ -32,17 +32,17 @@ const parseCookies = (cookieHeader: string | undefined): Record<string, string> 
 };
 
 // Verify JWT token from cookie or Authorization header
-const authenticate = async (req, res, next) => {
+const authenticate = async (req: any, res: any, next: any) => {
   try {
-    let token = req.header('Authorization')?.replace('Bearer ', '');
+    let token = req.cookies?.token;
 
-    if (!token && req.cookies && req.cookies.token) {
-      token = req.cookies.token;
-    }
-
-    if (!token && req.headers.cookie) {
+    if (!token && req.headers?.cookie) {
       const parsed = parseCookies(req.headers.cookie);
       token = parsed.token;
+    }
+
+    if (!token) {
+      token = req.header('Authorization')?.replace('Bearer ', '');
     }
 
     if (!token) {
@@ -60,7 +60,7 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, getJwtSecret());
+    const decoded: any = jwt.verify(token, getJwtSecret());
     const user = await User.findById(decoded.userId).select('-password');
 
     if (!user) {
@@ -103,8 +103,9 @@ const authenticate = async (req, res, next) => {
 };
 
 // Check if user has required role
-const authorize = (...roles) => {
-  return (req, res, next) => {
+const authorize = (...rolesOrArray: any[]) => {
+  const roles = (Array.isArray(rolesOrArray[0]) ? rolesOrArray[0] : rolesOrArray) as string[];
+  return (req: any, res: any, next: any) => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -123,11 +124,58 @@ const authorize = (...roles) => {
   };
 };
 
+const requireRole = authorize;
 const requireAdmin = authorize('admin');
 const requireHost = authorize('host', 'admin');
+const requireGuest = authorize('guest');
+const requireTraveler = authorize('guest', 'host', 'admin');
 
-const requireOwnershipOrAdmin = (resourceField = 'user') => {
-  return (req, res, next) => {
+const requireOwnership = (Model: any, resourceField: string = 'host') => {
+  return async (req: any, res: any, next: any) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    if (req.user.role === 'admin') {
+      return next();
+    }
+
+    try {
+      if (!req.params?.id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Resource identifier is required.'
+        });
+      }
+
+      const resource = await Model.findById(req.params.id);
+      if (!resource) {
+        return res.status(404).json({ success: false, message: 'Resource not found' });
+      }
+
+      const ownerId = toUserId(resource[resourceField]);
+      const currentUserId = toUserId(req.user._id);
+
+      if (!ownerId || ownerId !== currentUserId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only access your own resources.'
+        });
+      }
+
+      req.resource = resource;
+      next();
+    } catch {
+      return res.status(500).json({ success: false, message: 'Authorization check failed' });
+    }
+  };
+};
+
+const requireOwnershipOrAdmin = (resourceField: string = 'user') => {
+  return (req: any, res: any, next: any) => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -159,8 +207,12 @@ const requireOwnershipOrAdmin = (resourceField = 'user') => {
 const authModule = {
   authenticate,
   authorize,
+  requireRole,
   requireAdmin,
   requireHost,
+  requireGuest,
+  requireTraveler,
+  requireOwnership,
   requireOwnershipOrAdmin
 };
 
@@ -170,7 +222,11 @@ module.exports.default = authModule;
 export {
   authenticate,
   authorize,
+  requireRole,
   requireAdmin,
   requireHost,
+  requireGuest,
+  requireTraveler,
+  requireOwnership,
   requireOwnershipOrAdmin
 };

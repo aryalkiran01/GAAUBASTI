@@ -62,6 +62,16 @@ export interface Listing {
   isActive?: boolean;
   isVerified?: boolean;
   averageRating?: number;
+  safetyAndEmergency?: SafetyAndEmergency;
+}
+
+export interface SafetyAndEmergency {
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  nearbyHospital?: string;
+  policeStationContact?: string;
+  safetyNotes?: string[];
+  importantLocationNotes?: string;
 }
 
 export interface Village {
