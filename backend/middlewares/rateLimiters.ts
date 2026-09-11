@@ -54,9 +54,30 @@ const aiLimiter = rateLimit({
   message: 'Too many AI requests. Please try again later.'
 });
 
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // max 10 registrations per hour per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many registration requests from this IP. Please try again later.'
+});
+
+const limiters = {
+  globalLimiter,
+  loginLimiter,
+  registerLimiter,
+  passwordLimiter,
+  bookingCreateLimiter,
+  aiLimiter
+};
+
+module.exports = limiters;
+module.exports.default = limiters;
+
 export {
   globalLimiter,
   loginLimiter,
+  registerLimiter,
   passwordLimiter,
   bookingCreateLimiter,
   aiLimiter

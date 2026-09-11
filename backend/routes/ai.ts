@@ -36,4 +36,6 @@ router.post('/listing-description', aiLimiter, requireHost, generateListingDescr
 router.post('/pricing-recommendation', aiLimiter, requireHost, pricingRecommendation);
 router.post('/moderate', aiLimiter, requireHost, moderateContent);
 
+module.exports = router;
+module.exports.default = router;
 export default router;

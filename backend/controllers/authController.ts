@@ -16,6 +16,18 @@ const getJwtSecret = () => {
   throw new Error('JWT_SECRET environment variable is required');
 };
 
+const RevokedToken = require('../models/RevokedToken');
+
+const getCookieOptions = () => {
+  const isProd = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? ('none' as const) : ('lax' as const),
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days matching JWT expiry
+  };
+};
+
 // Generate JWT token
 const generateToken = (userId) => {
   return jwt.sign({ userId }, getJwtSecret(), {
@@ -79,6 +91,9 @@ const register = async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
+    // Set httpOnly cookie for secure auth
+    res.cookie('token', token, getCookieOptions());
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully. Please verify your email to complete setup.',
@@ -116,14 +131,37 @@ const login = async (req, res) => {
       });
     }
 
+    // Account lockout check (protection against credential stuffing / targeted brute force)
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      const remainingMinutes = Math.max(1, Math.ceil((user.lockUntil.getTime() - Date.now()) / (60 * 1000)));
+      return res.status(423).json({
+        success: false,
+        message: `Account is temporarily locked due to too many failed login attempts. Please try again in ${remainingMinutes} minute(s).`
+      });
+    }
+
     // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
+      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+      if (user.failedLoginAttempts >= 5) {
+        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minute lockout
+        await user.save();
+        return res.status(423).json({
+          success: false,
+          message: 'Account locked due to 5 consecutive failed login attempts. Please try again in 15 minutes.'
+        });
+      }
+      await user.save();
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
       });
     }
+
+    // Reset failed attempts on successful login
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
 
     // Generate token
     const token = generateToken(user._id);
@@ -134,6 +172,9 @@ const login = async (req, res) => {
 
     // Remove password from response
     user.password = undefined;
+
+    // Set httpOnly cookie for secure auth
+    res.cookie('token', token, getCookieOptions());
 
     res.json({
       success: true,
@@ -407,23 +448,61 @@ const refreshToken = async (req, res) => {
   }
 };
 
-// Logout - blacklist the current token
-const blacklistedTokens = new Set<string>();
+// Logout - blacklist the current token with persistent DB storage + memory cache
+const memoryBlacklist = new Set<string>();
 
-const addToBlacklist = (token: string) => {
-  blacklistedTokens.add(token);
-  // Auto-remove after 7 days (matches JWT expiry)
-  setTimeout(() => blacklistedTokens.delete(token), 7 * 24 * 60 * 60 * 1000);
+const hashToken = (token: string): string => {
+  return crypto.createHash('sha256').update(token).digest('hex');
 };
 
-const isBlacklisted = (token: string) => blacklistedTokens.has(token);
+const addToBlacklist = async (token: string) => {
+  if (!token) return;
+  memoryBlacklist.add(token);
+  try {
+    const mongooseInstance = require('mongoose');
+    if (mongooseInstance.connection?.readyState === 1) {
+      const tokenHash = hashToken(token);
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await RevokedToken.findOneAndUpdate(
+        { tokenHash },
+        { tokenHash, expiresAt, revokedAt: new Date() },
+        { upsert: true, new: true }
+      );
+    }
+  } catch (err: any) {
+    console.error('Failed to save revoked token to database:', err.message);
+  }
+};
+
+const isBlacklisted = async (token: string): Promise<boolean> => {
+  if (!token) return false;
+  if (memoryBlacklist.has(token)) return true;
+  try {
+    const mongooseInstance = require('mongoose');
+    if (mongooseInstance.connection?.readyState === 1) {
+      const tokenHash = hashToken(token);
+      const found = await RevokedToken.findOne({ tokenHash });
+      if (found) {
+        memoryBlacklist.add(token);
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+};
 
 const logout = async (req, res) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const token = req.cookies?.token || req.header('Authorization')?.replace('Bearer ', '');
     if (token) {
-      addToBlacklist(token);
+      await addToBlacklist(token);
     }
+
+    // Clear authentication cookie
+    res.clearCookie('token', getCookieOptions());
+
     res.json({
       success: true,
       message: 'Logged out successfully'
@@ -585,5 +664,6 @@ module.exports = {
   resendVerification,
   deleteAccount,
   applyForHost,
-  isBlacklisted
+  isBlacklisted,
+  addToBlacklist
 };

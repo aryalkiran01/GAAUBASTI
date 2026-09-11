@@ -20,10 +20,10 @@ const {
   validateUserRegistration,
   validateUserLogin
 } = require('../middlewares/validation');
-const { loginLimiter, passwordLimiter } = require('../middlewares/rateLimiters');
+const { loginLimiter, registerLimiter, passwordLimiter } = require('../middlewares/rateLimiters');
 
 // Public routes
-router.post('/register', validateUserRegistration, register);
+router.post('/register', registerLimiter, validateUserRegistration, register);
 router.get('/verify-email/:token', verifyEmail);
 router.post('/login', loginLimiter, validateUserLogin, login);
 router.post('/forgot-password', passwordLimiter, forgotPassword);
@@ -40,5 +40,7 @@ router.post('/resend-verification', resendVerification);
 router.delete('/account', deleteAccount);
 router.post('/apply-host', applyForHost);
 
+module.exports = router;
+module.exports.default = router;
 export default router;
 

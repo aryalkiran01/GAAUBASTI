@@ -21,10 +21,36 @@ const listingSchema = new mongoose.Schema({
       type: String,
       required: [true, 'City is required']
     },
+    village: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    district: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    province: {
+      type: String,
+      trim: true,
+      default: ''
+    },
     state: String,
     country: {
       type: String,
       default: 'Nepal'
+    },
+    geoJSON: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        default: undefined
+      }
     },
     coordinates: {
       latitude: Number,
@@ -141,11 +167,45 @@ const listingSchema = new mongoose.Schema({
 
 // Indexes for efficient queries
 listingSchema.index({ 'location.city': 1 });
+listingSchema.index({ 'location.village': 1 });
+listingSchema.index({ 'location.district': 1 });
+listingSchema.index({ 'location.province': 1 });
 listingSchema.index({ price: 1 });
 listingSchema.index({ averageRating: -1 });
 listingSchema.index({ host: 1 });
 listingSchema.index({ isActive: 1, isVerified: 1 });
-listingSchema.index({ 'location.coordinates': '2dsphere' }); // For geospatial queries
+listingSchema.index({ 'location.geoJSON': '2dsphere' }); // For geospatial queries
+
+// Synchronize coordinates and geoJSON on save
+listingSchema.pre('save', function(this: any, next: (err?: Error) => void) {
+  if (this.location) {
+    // If coordinates.latitude and longitude exist, sync to geoJSON
+    if (
+      this.location.coordinates &&
+      typeof this.location.coordinates.latitude === 'number' &&
+      typeof this.location.coordinates.longitude === 'number' &&
+      !isNaN(this.location.coordinates.latitude) &&
+      !isNaN(this.location.coordinates.longitude)
+    ) {
+      this.location.geoJSON = {
+        type: 'Point',
+        coordinates: [this.location.coordinates.longitude, this.location.coordinates.latitude]
+      };
+    } else if (
+      this.location.geoJSON &&
+      Array.isArray(this.location.geoJSON.coordinates) &&
+      this.location.geoJSON.coordinates.length === 2 &&
+      typeof this.location.geoJSON.coordinates[0] === 'number' &&
+      typeof this.location.geoJSON.coordinates[1] === 'number'
+    ) {
+      this.location.coordinates = {
+        latitude: this.location.geoJSON.coordinates[1],
+        longitude: this.location.geoJSON.coordinates[0]
+      };
+    }
+  }
+  next();
+});
 
 // Virtual for reviews
 listingSchema.virtual('reviews', {

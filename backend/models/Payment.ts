@@ -42,8 +42,12 @@ const paymentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'processing', 'paid', 'failed', 'refunded'],
+    enum: ['pending', 'processing', 'paid', 'failed', 'refunded', 'partially_refunded', 'refund_failed'],
     default: 'pending'
+  },
+  notes: {
+    type: String,
+    default: null
   },
   metadata: {
     type: Map,

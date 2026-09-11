@@ -24,6 +24,36 @@ const articleSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  summary: {
+    type: String,
+    trim: true
+  },
+  coverImage: {
+    type: String,
+    trim: true
+  },
+  author: {
+    name: { type: String, default: 'Gaun Basti Editorial' },
+    avatar: { type: String },
+    role: { type: String, default: 'Cultural Specialist' }
+  },
+  tags: [{
+    type: String,
+    trim: true
+  }],
+  villageSlug: {
+    type: String,
+    trim: true,
+    lowercase: true
+  },
+  isFeatured: {
+    type: Boolean,
+    default: false
+  },
+  readingTime: {
+    type: String,
+    default: '5 min read'
+  },
   published: {
     type: Boolean,
     default: true
@@ -35,5 +65,10 @@ const articleSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+articleSchema.index({ slug: 1 });
+articleSchema.index({ category: 1 });
+articleSchema.index({ isFeatured: 1 });
+articleSchema.index({ villageSlug: 1 });
 
 export = mongoose.model('Article', articleSchema);

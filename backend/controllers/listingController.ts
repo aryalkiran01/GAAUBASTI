@@ -45,9 +45,13 @@ const sanitizeListingPayloadForCreate = (payload = {}) => {
 
     if (location.address) cleanedLocation.address = location.address;
     if (location.city) cleanedLocation.city = location.city;
+    if (location.village) cleanedLocation.village = location.village;
+    if (location.district) cleanedLocation.district = location.district;
+    if (location.province) cleanedLocation.province = location.province;
     if (location.state) cleanedLocation.state = location.state;
     if (location.country) cleanedLocation.country = location.country;
     if (location.coordinates) cleanedLocation.coordinates = location.coordinates;
+    if (location.geoJSON) cleanedLocation.geoJSON = location.geoJSON;
 
     safePayload.location = cleanedLocation;
   }
@@ -64,9 +68,13 @@ const sanitizeListingPayloadForUpdate = (payload = {}) => {
 
     if (location.address) cleanedLocation.address = location.address;
     if (location.city) cleanedLocation.city = location.city;
+    if (location.village) cleanedLocation.village = location.village;
+    if (location.district) cleanedLocation.district = location.district;
+    if (location.province) cleanedLocation.province = location.province;
     if (location.state) cleanedLocation.state = location.state;
     if (location.country) cleanedLocation.country = location.country;
     if (location.coordinates) cleanedLocation.coordinates = location.coordinates;
+    if (location.geoJSON) cleanedLocation.geoJSON = location.geoJSON;
 
     safePayload.location = cleanedLocation;
   }
@@ -84,13 +92,17 @@ const processUploadedFiles = (files) => {
   }));
 };
 
-// Get all listings with filtering and pagination
+// Get all listings with filtering, geospatial radius, and pagination
 const getListings = async (req, res) => {
   try {
     const {
       page = 1,
       limit = 12,
       location,
+      village,
+      city,
+      district,
+      province,
       minPrice,
       maxPrice,
       guests,
@@ -100,20 +112,59 @@ const getListings = async (req, res) => {
       sortBy = 'createdAt',
       sortOrder = 'desc',
       checkIn,
-      checkOut
+      checkOut,
+      lat,
+      lng,
+      latitude,
+      longitude,
+      radius
     } = req.query;
 
     // Build filter object
     const filter = { isActive: true, isVerified: true } as any;
 
+    // Geospatial radius search
+    const geoLat = parseFloat(lat || latitude);
+    const geoLng = parseFloat(lng || longitude);
+    const geoRadiusKm = parseFloat(radius) || 50;
+
+    if (!isNaN(geoLat) && !isNaN(geoLng)) {
+      // 6378.1 km is the radius of Earth for spherical geometry
+      filter['location.geoJSON'] = {
+        $geoWithin: {
+          $centerSphere: [[geoLng, geoLat], geoRadiusKm / 6378.1]
+        }
+      };
+    }
+
     if (location) {
       const escapedLocation = escapeRegex(location);
       if (escapedLocation) {
         filter.$or = [
+          { title: { $regex: escapedLocation, $options: 'i' } },
+          { 'location.village': { $regex: escapedLocation, $options: 'i' } },
           { 'location.city': { $regex: escapedLocation, $options: 'i' } },
+          { 'location.district': { $regex: escapedLocation, $options: 'i' } },
+          { 'location.province': { $regex: escapedLocation, $options: 'i' } },
           { 'location.address': { $regex: escapedLocation, $options: 'i' } }
         ];
       }
+    }
+
+    if (village) {
+      filter['location.village'] = { $regex: new RegExp(`^${escapeRegex(village)}$`, 'i') };
+    }
+
+    if (city) {
+      filter['location.city'] = { $regex: new RegExp(`^${escapeRegex(city)}$`, 'i') };
+    }
+
+    if (district) {
+      filter['location.district'] = { $regex: new RegExp(`^${escapeRegex(district)}$`, 'i') };
+    }
+
+    if (province) {
+      filter['location.province'] = { $regex: new RegExp(`^${escapeRegex(province)}$`, 'i') };
     }
 
     if (minPrice || maxPrice) {
@@ -140,8 +191,26 @@ const getListings = async (req, res) => {
     }
 
     // Build sort object
-    const sort = {} as any;
-    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    let sort = {} as any;
+    const sortKey = String(sortBy).toLowerCase();
+
+    if (sortKey === 'recommended') {
+      sort = { averageRating: -1, reviewCount: -1, createdAt: -1 };
+    } else if (sortKey === 'price-asc' || sortKey === 'price_asc' || (sortKey === 'price' && sortOrder === 'asc')) {
+      sort = { price: 1 };
+    } else if (sortKey === 'price-desc' || sortKey === 'price_desc' || (sortKey === 'price' && sortOrder === 'desc')) {
+      sort = { price: -1 };
+    } else if (sortKey === 'rating' || sortKey === 'averagerating-desc') {
+      sort = { averageRating: -1, reviewCount: -1 };
+    } else if (sortKey === 'most_reviewed' || sortKey === 'most-reviewed' || sortKey === 'reviewcount-desc') {
+      sort = { reviewCount: -1, averageRating: -1 };
+    } else if (sortKey === 'newest' || sortKey === 'createdat-desc') {
+      sort = { createdAt: -1 };
+    } else if (sortKey === 'oldest' || sortKey === 'createdat-asc') {
+      sort = { createdAt: 1 };
+    } else {
+      sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    }
 
     // Execute query with pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);

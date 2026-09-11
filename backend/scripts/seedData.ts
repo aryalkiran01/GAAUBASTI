@@ -8,10 +8,15 @@ const Listing = require('../models/Listing');
 const Booking = require('../models/Booking');
 const Review = require('../models/Review');
 
+if (process.env.NODE_ENV === 'production') {
+  console.error('FATAL: seedData script cannot be executed in production environment!');
+  process.exit(1);
+}
+
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/gaunbasti')
   .then(() => console.log(' Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+  .catch((err: any) => console.error('MongoDB connection error:', err));
 
 const seedData = async () => {
   try {

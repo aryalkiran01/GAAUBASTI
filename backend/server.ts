@@ -25,6 +25,7 @@ import wishlistRoutes from './routes/wishlist';
 import payoutRoutes from './routes/payouts';
 import aiRoutes from './routes/ai';
 import savedSearchRoutes from './routes/savedSearches';
+import villageRoutes from './routes/villages';
 import errorHandler from './middlewares/errorHandler';
 import Conversation from './models/Conversation';
 
@@ -129,6 +130,7 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/payouts', payoutRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/saved-searches', savedSearchRoutes);
+app.use('/api/villages', villageRoutes);
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {
@@ -251,8 +253,11 @@ const startServer = async () => {
 
     process.on('SIGINT', () => clearInterval(bookingCompletionTimer));
     process.on('SIGTERM', () => clearInterval(bookingCompletionTimer));
-  } catch {
-    console.error('Failed to start server');
+  } catch (err: any) {
+    console.error('Failed to start server:', err?.message || err);
+    if (err?.stack) {
+      console.error(err.stack);
+    }
     process.exitCode = 1;
   }
 };

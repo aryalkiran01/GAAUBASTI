@@ -20,10 +20,30 @@ const getJwtSecret = () => {
   throw new Error('JWT_SECRET environment variable is required');
 };
 
-// Verify JWT token
+const parseCookies = (cookieHeader: string | undefined): Record<string, string> => {
+  if (!cookieHeader) return {};
+  return cookieHeader.split(';').reduce((acc, cookie) => {
+    const [name, ...rest] = cookie.trim().split('=');
+    if (name) {
+      acc[name.trim()] = decodeURIComponent(rest.join('='));
+    }
+    return acc;
+  }, {} as Record<string, string>);
+};
+
+// Verify JWT token from cookie or Authorization header
 const authenticate = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    let token = req.header('Authorization')?.replace('Bearer ', '');
+
+    if (!token && req.cookies && req.cookies.token) {
+      token = req.cookies.token;
+    }
+
+    if (!token && req.headers.cookie) {
+      const parsed = parseCookies(req.headers.cookie);
+      token = parsed.token;
+    }
 
     if (!token) {
       return res.status(401).json({
@@ -32,7 +52,8 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    if (isBlacklisted(token)) {
+    const blacklisted = await isBlacklisted(token);
+    if (blacklisted) {
       return res.status(401).json({
         success: false,
         message: 'Token has been invalidated. Please log in again.'
@@ -134,6 +155,17 @@ const requireOwnershipOrAdmin = (resourceField = 'user') => {
     next();
   };
 };
+
+const authModule = {
+  authenticate,
+  authorize,
+  requireAdmin,
+  requireHost,
+  requireOwnershipOrAdmin
+};
+
+module.exports = authModule;
+module.exports.default = authModule;
 
 export {
   authenticate,

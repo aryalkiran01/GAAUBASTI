@@ -17,30 +17,14 @@ const {
   notifyPaymentConfirmed,
 } = require("../utils/notifications");
 const { checkSuspiciousBookingPattern, checkCancellationAbuse } = require("../services/fraudService");
-const { logBookingFailure } = require("../services/monitoringService");
+const { logBookingFailure, logPaymentFailure } = require("../services/monitoringService");
 const { createRefundTransaction } = require("../services/earningsService");
+const { calculateBookingPrice: computeBookingPrice } = require("../config/pricingConfig");
 const Payment = require("../models/Payment");
 
 const calculateBookingPrice = (listing, startDate, endDate) => {
-  const bookingStart = new Date(startDate);
-  const bookingEnd = new Date(endDate);
-  const nights = Math.ceil(
-    (Number(bookingEnd) - Number(bookingStart)) / (1000 * 60 * 60 * 24),
-  );
-  const basePrice = listing.price * nights;
-  const cleaningFee = 25;
-  const serviceFee = Math.round(basePrice * 0.1);
-  const taxes = Math.round(basePrice * 0.05);
-  const totalPrice = basePrice + cleaningFee + serviceFee + taxes;
-
-  return {
-    nights,
-    basePrice,
-    cleaningFee,
-    serviceFee,
-    taxes,
-    totalPrice,
-  };
+  const price = typeof listing === 'object' && listing.price !== undefined ? listing.price : Number(listing);
+  return computeBookingPrice(price, startDate, endDate);
 };
 
 // Create new booking
@@ -586,31 +570,60 @@ const cancelBooking = async (req, res) => {
       session.endSession();
     }
 
+    let refundStatus = 'none';
+    let refundError: string | null = null;
+
     if (refundAmount > 0 && booking.paymentStatus === "paid") {
       try {
         const payment = await Payment.findOne({ booking: booking._id, status: "paid" });
         if (payment) {
           const stripeKey = process.env.STRIPE_SECRET_KEY;
-          if (stripeKey) {
-            const stripe = require("stripe")(stripeKey);
-            await stripe.refunds.create({
-              payment_intent: payment.providerPaymentId,
-              amount: Math.round(refundAmount * 100),
-              metadata: {
-                paymentId: payment._id.toString(),
-                bookingId: booking._id.toString(),
-                reason: "guest_cancellation",
-              },
-            }, {
-              idempotencyKey: `refund:${payment._id}:${refundAmount}`,
-            });
-            payment.status = "refunded";
+          if (!stripeKey) {
+            throw new Error('STRIPE_SECRET_KEY is not configured. Cannot process refund automatically.');
+          }
+          const stripe = require("stripe")(stripeKey);
+          const refund = await stripe.refunds.create({
+            payment_intent: payment.providerPaymentId,
+            amount: Math.round(refundAmount * 100),
+            metadata: {
+              paymentId: payment._id.toString(),
+              bookingId: booking._id.toString(),
+              reason: "guest_cancellation",
+            },
+          }, {
+            idempotencyKey: `refund:${payment._id}:${refundAmount}`,
+          });
+
+          payment.status = refundAmount >= payment.amount ? "refunded" : "partially_refunded";
+          await payment.save();
+
+          booking.paymentStatus = payment.status;
+          await booking.save();
+
+          await createRefundTransaction(booking, refundAmount, refund.id || `refund:${payment._id}:${refundAmount}`);
+          refundStatus = 'succeeded';
+        }
+      } catch (err: any) {
+        console.error("[cancelBooking] Stripe refund failed:", err.message);
+        refundStatus = 'failed';
+        refundError = err.message || 'Refund processing failed';
+
+        // Update payment record to reflect failed refund state for admin reconciliation
+        try {
+          const payment = await Payment.findOne({ booking: booking._id });
+          if (payment) {
+            payment.status = 'refund_failed';
+            payment.notes = `Refund attempt failed: ${err.message}`;
             await payment.save();
           }
-          await createRefundTransaction(booking, refundAmount, `refund:${payment._id}:${refundAmount}`);
+
+          logPaymentFailure('stripe_refund_failure', err.message || 'Stripe refund failed', {
+            bookingId: booking._id.toString(),
+            refundAmount
+          }).catch(() => {});
+        } catch {
+          // ignore nested logging errors
         }
-      } catch (err) {
-        console.error("[cancelBooking] Refund failed:", err.message);
       }
     }
 
@@ -629,10 +642,14 @@ const cancelBooking = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Booking cancelled successfully",
+      message: refundStatus === 'failed'
+        ? "Booking cancelled, but automatic refund processing failed. Our team has been notified to reconcile and process your refund manually."
+        : "Booking cancelled successfully",
       data: {
         booking,
         refundAmount,
+        refundStatus,
+        refundError: refundError || undefined,
       },
     });
   } catch (error) {
