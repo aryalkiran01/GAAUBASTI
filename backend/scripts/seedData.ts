@@ -1,26 +1,32 @@
 export {};
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-require('dotenv').config();
+const path = require('path');
+const dotenv = require('dotenv');
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const User = require('../models/User');
 const Listing = require('../models/Listing');
 const Booking = require('../models/Booking');
 const Review = require('../models/Review');
+const Village = require('../models/Village');
+const Article = require('../models/Article');
+
+const { seedVillages } = require('./seedVillages');
+const { seedArticles } = require('./seedArticles');
 
 if (process.env.NODE_ENV === 'production') {
   console.error('FATAL: seedData script cannot be executed in production environment!');
   process.exit(1);
 }
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/gaunbasti')
-  .then(() => console.log(' Connected to MongoDB'))
-  .catch((err: any) => console.error('MongoDB connection error:', err));
-
 const seedData = async () => {
   try {
-    // Clear existing data
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/gaunbasti');
+    console.log(' Connected to MongoDB for Full Nepali Data Seeding');
+
+    // Clear existing collection data
     await Promise.all([
       User.deleteMany({}),
       Listing.deleteMany({}),
@@ -28,150 +34,198 @@ const seedData = async () => {
       Review.deleteMany({})
     ]);
 
-    console.log(' Cleared existing data');
+    console.log(' Cleared existing user, listing, booking, and review collections');
 
-    // Create users
+    // 1. First seed authentic Nepali villages & articles
+    await seedVillages();
+    await seedArticles();
+
+    // 2. Create Users with authentic Nepali profiles
     const hashedPassword = await bcrypt.hash('password', 12);
     
-const users = await User.create([
-  {
-    name: 'Guest User',
-    username: 'guestuser',       // must be unique
-    email: 'guest@example.com',
-    password: hashedPassword,
-    role: 'guest',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?...',
-    isVerified: true
-  },
-  {
-    name: 'Host User',
-    username: 'hostuser',        // must be unique
-    email: 'host@example.com',
-    password: hashedPassword,
-    role: 'host',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?...',
-    isVerified: true,
-    hostProfile: {
-      bio: 'Passionate about sharing Nepali culture with travelers',
-      languages: ['English', 'Nepali', 'Hindi'],
-      responseRate: 95,
-      responseTime: 'within an hour'
-    }
-  },
-  {
-    name: 'Admin User',
-    username: 'adminuser',       // must be unique
-    email: 'admin@example.com',
-    password: hashedPassword,
-    role: 'admin',
-    avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?...',
-    isVerified: true
-  }
-]);
-User.schema.indexes();
+    const users = await User.create([
+      {
+        name: 'Aarav Sharma (आरव शर्मा)',
+        username: 'guestuser',
+        email: 'guest@example.com',
+        password: hashedPassword,
+        role: 'guest',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
+        isVerified: true
+      },
+      {
+        name: 'Dhan Maya Gurung (धनमाया गुरुङ)',
+        username: 'hostuser',
+        email: 'host@example.com',
+        password: hashedPassword,
+        role: 'host',
+        avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80',
+        isVerified: true,
+        hostProfile: {
+          bio: 'Registered Community Homestay Host under Nepal Tourism Board & Gaun Basti Stays Hub. Warmly welcoming travelers to experience living Gurung culture, authentic organic meals, and mountain serenity in Ghandruk.',
+          languages: ['Nepali', 'Gurung', 'English', 'Hindi'],
+          responseRate: 98,
+          responseTime: 'within an hour'
+        }
+      },
+      {
+        name: 'Gaun Basti Admin (गाउँ बस्ती व्यवस्थापक)',
+        username: 'adminuser',
+        email: 'admin@example.com',
+        password: hashedPassword,
+        role: 'admin',
+        avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=200&auto=format&fit=crop&q=80',
+        isVerified: true
+      }
+    ]);
 
+    console.log(' Created authentic Nepali user profiles (Guest, Host, Admin)');
 
-    console.log('ðŸ‘¥ Created users');
+    const hostUser = users.find((u: any) => u.role === 'host');
 
-    // Create listings
-    const hostUser = users.find(u => u.role === 'host');
-    
+    // 3. Create authentic Nepali homestay listings
     const listings = await Listing.create([
       {
-        title: 'Riverside Cottage',
-        description: 'A beautiful cottage by the river, perfect for a peaceful getaway. Experience traditional Nepali hospitality while enjoying modern comforts.',
+        title: 'Annapurna View Gurung Heritage Homestay',
+        description: 'Wake up to the golden sunrise over Machhapuchhre and Annapurna South. An authentic slate-roofed traditional stone homestay in the heart of Ghandruk village. Enjoy organic home-cooked meals, farm-fresh milk, and traditional Gurung hospitality.',
         location: {
-          address: 'Lakeside Road, Pokhara',
-          city: 'Pokhara',
+          address: 'Upper Ghandruk, Near Gurung Museum',
+          village: 'Ghandruk',
+          city: 'Ghandruk',
+          district: 'Kaski',
+          province: 'Gandaki',
           state: 'Gandaki',
           country: 'Nepal',
           coordinates: {
-            latitude: 28.2096,
-            longitude: 83.9856
+            latitude: 28.3758,
+            longitude: 83.8083
+          },
+          geoJSON: {
+            type: 'Point',
+            coordinates: [83.8083, 28.3758]
           }
         },
-        price: 85,
+        price: 2500, // NPR per night
         images: [
           {
-            url: 'https://images.unsplash.com/photo-1587061949409-02df41d5e562?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
-            caption: 'Riverside view'
+            url: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&auto=format&fit=crop&q=80',
+            caption: 'Panoramic balcony view of Machhapuchhre'
           },
           {
-            url: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
-            caption: 'Interior view'
+            url: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&auto=format&fit=crop&q=80',
+            caption: 'Traditional timber-and-slate bedroom'
+          },
+          {
+            url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop&q=80',
+            caption: 'Courtyard overlooking the Annapurna valley'
           }
         ],
-        amenities: ['Wi-Fi', 'Kitchen', 'Mountain view', 'Private entrance', 'Breakfast'],
-        maxGuests: 2,
-        bedrooms: 1,
+        amenities: ['Wi-Fi', 'Hot Water', 'Breakfast Included', 'Organic Local Meals', 'Mountain View', 'Cultural Dance Experience', 'Trekking Guide Assistance'],
+        houseRules: ['No smoking inside wooden rooms', 'Shoes off before entering hearth area', 'Quiet hours after 10 PM'],
+        safetyHealth: {
+          firstAidAvailable: true,
+          nearestHospitalDistance: 'Annapurna Health Post (5 mins)',
+          emergencyTransport: 'Local 4WD Jeep Stand (10 mins)',
+          fireExtinguisher: true
+        },
+        maxGuests: 4,
+        bedrooms: 2,
         bathrooms: 1,
         host: hostUser._id,
-        category: 'cottage',
+        category: 'homestay',
         isVerified: true,
         verifiedAt: new Date(),
-        averageRating: 4.9,
-        reviewCount: 128
+        averageRating: 4.95,
+        reviewCount: 42
       },
       {
-        title: 'Mountain View Villa',
-        description: 'Luxurious villa with panoramic mountain views and modern amenities. Perfect for families and groups seeking comfort and stunning scenery.',
+        title: 'Bandipur Chhen Traditional Newari Homestay',
+        description: 'Immerse yourself in 18th-century Newari heritage in Bandipur’s vehicle-free stone bazaar. Featuring hand-carved woodcraft, serene rooftop views of the Manaslu range, and authentic Newari Samay Baji dinners.',
         location: {
-          address: 'Nagarkot Hill Station',
-          city: 'Nagarkot',
-          state: 'Bagmati',
-          country: 'Nepal',
-          coordinates: {
-            latitude: 27.7172,
-            longitude: 85.5240
-          }
-        },
-        price: 150,
-        images: [
-          {
-            url: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
-            caption: 'Villa exterior'
-          },
-          {
-            url: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
-            caption: 'Living area'
-          }
-        ],
-        amenities: ['Wi-Fi', 'Kitchen', 'Mountain view', 'Hot tub', 'Breakfast', 'Fireplace'],
-        maxGuests: 6,
-        bedrooms: 3,
-        bathrooms: 2,
-        host: hostUser._id,
-        category: 'villa',
-        isVerified: true,
-        verifiedAt: new Date(),
-        averageRating: 4.8,
-        reviewCount: 95
-      },
-      {
-        title: 'Traditional Mud House',
-        description: 'Experience authentic Nepali living in this traditional mud house. Immerse yourself in local culture and traditional architecture.',
-        location: {
-          address: 'Old Bandipur',
+          address: 'Heritage Bazaar Street, Bandipur',
+          village: 'Bandipur',
           city: 'Bandipur',
+          district: 'Tanahun',
+          province: 'Gandaki',
           state: 'Gandaki',
           country: 'Nepal',
           coordinates: {
             latitude: 27.9317,
-            longitude: 84.4204
+            longitude: 84.4172
+          },
+          geoJSON: {
+            type: 'Point',
+            coordinates: [84.4172, 27.9317]
           }
         },
-        price: 45,
+        price: 3200,
         images: [
           {
-            url: 'https://images.unsplash.com/photo-1590725140246-20acddc1ec6b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
-            caption: 'Traditional architecture'
+            url: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&auto=format&fit=crop&q=80',
+            caption: 'Carved Newari timber facade'
           },
           {
-            url: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
-            caption: 'Interior design'
+            url: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&auto=format&fit=crop&q=80',
+            caption: 'Cozy heritage lounge'
           }
         ],
-        amenities: ['Local cuisine', 'Cultural experience', 'Garden', 'Valley view'],
+        amenities: ['Wi-Fi', 'Rooftop Mountain View', 'Authentic Samay Baji', 'Hot Shower', 'Balcony', 'Reading Lounge'],
+        houseRules: ['Vehicles must be parked at main town gate', 'Respect local religious shrines'],
+        safetyHealth: {
+          firstAidAvailable: true,
+          nearestHospitalDistance: 'Bandipur Hospital (1 km)',
+          emergencyTransport: '24/7 Town Taxi Service',
+          fireExtinguisher: true
+        },
+        maxGuests: 5,
+        bedrooms: 3,
+        bathrooms: 2,
+        host: hostUser._id,
+        category: 'traditional',
+        isVerified: true,
+        verifiedAt: new Date(),
+        averageRating: 4.88,
+        reviewCount: 36
+      },
+      {
+        title: 'Sirubari Model Eco-Village Homestay',
+        description: 'Experience Nepal’s pioneer PATA Gold Award winning community homestay in Sirubari. Enjoy warm Gurung hospitality, farm-to-table organic meals, and serene slate pathways amidst terraced hill slopes.',
+        location: {
+          address: 'Sirubari Model Village',
+          village: 'Sirubari',
+          city: 'Sirubari',
+          district: 'Syangja',
+          province: 'Gandaki',
+          state: 'Gandaki',
+          country: 'Nepal',
+          coordinates: {
+            latitude: 28.0833,
+            longitude: 83.8447
+          },
+          geoJSON: {
+            type: 'Point',
+            coordinates: [83.8447, 28.0833]
+          }
+        },
+        price: 1800,
+        images: [
+          {
+            url: 'https://images.unsplash.com/photo-1590725140246-20acddc1ec6b?w=800&auto=format&fit=crop&q=80',
+            caption: 'Traditional Gurung courtyard'
+          },
+          {
+            url: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&auto=format&fit=crop&q=80',
+            caption: 'Handcrafted guest room'
+          }
+        ],
+        amenities: ['Organic Farming Experience', 'Full Board Traditional Meals', 'Cultural Reception', 'Hot Water', 'Garden'],
+        houseRules: ['Participate in village cleanliness norms', 'Smoking prohibited in village grounds'],
+        safetyHealth: {
+          firstAidAvailable: true,
+          nearestHospitalDistance: 'Sirubari Sub-Health Post (300m)',
+          emergencyTransport: 'Community Jeep on standby',
+          fireExtinguisher: true
+        },
         maxGuests: 4,
         bedrooms: 2,
         bathrooms: 1,
@@ -179,64 +233,61 @@ User.schema.indexes();
         category: 'traditional',
         isVerified: true,
         verifiedAt: new Date(),
-        averageRating: 4.7,
-        reviewCount: 73
+        averageRating: 4.92,
+        reviewCount: 29
       }
     ]);
 
-    console.log('Created listings');
+    console.log(' Created authentic Nepali homestay listings with GeoJSON coordinates');
 
-    // Create bookings
-    const guestUser = users.find(u => u.role === 'guest');
-  const today = new Date();
+    // 4. Create Bookings & Reviews
+    const guestUser = users.find((u: any) => u.role === 'guest');
+    const today = new Date();
 
-const bookings = await Booking.create([
-  {
-    listing: listings[0]._id,
-    guest: guestUser._id,
-    host: hostUser._id,
-    startDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7),
-    endDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 12),
-    guests: { adults: 2, children: 0 },
-    totalPrice: 425,
-    priceBreakdown: {
-      basePrice: 425,
-      cleaningFee: 25,
-      serviceFee: 42,
-      taxes: 21
-    },
-    status: 'confirmed',
-    paymentStatus: 'paid'
-  },
-  {
-    listing: listings[2]._id,
-    guest: guestUser._id,
-    host: hostUser._id,
-    startDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 14),
-    endDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 19),
-    guests: { adults: 2, children: 1 },
-    totalPrice: 225,
-    priceBreakdown: {
-      basePrice: 225,
-      cleaningFee: 25,
-      serviceFee: 22,
-      taxes: 11
-    },
-    status: 'pending',
-    paymentStatus: 'pending'
-  }
-]);
+    const bookings = await Booking.create([
+      {
+        listing: listings[0]._id,
+        guest: guestUser._id,
+        host: hostUser._id,
+        startDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 5),
+        endDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 8),
+        guests: { adults: 2, children: 0 },
+        totalPrice: 8300,
+        priceBreakdown: {
+          basePrice: 7500,
+          cleaningFee: 300,
+          serviceFee: 500,
+          taxes: 0
+        },
+        status: 'confirmed',
+        paymentStatus: 'paid'
+      },
+      {
+        listing: listings[1]._id,
+        guest: guestUser._id,
+        host: hostUser._id,
+        startDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 12),
+        endDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 15),
+        guests: { adults: 2, children: 1 },
+        totalPrice: 10400,
+        priceBreakdown: {
+          basePrice: 9600,
+          cleaningFee: 300,
+          serviceFee: 500,
+          taxes: 0
+        },
+        status: 'pending',
+        paymentStatus: 'pending'
+      }
+    ]);
 
-    console.log('Created bookings');
-
-    // Create reviews
     await Review.create([
       {
         listing: listings[0]._id,
         guest: guestUser._id,
         booking: bookings[0]._id,
         rating: 5,
-        comment: 'Amazing stay! The hosts were incredibly welcoming and the location was perfect. The traditional breakfast was a highlight of our trip.',
+        comment: 'Dhan Maya didi and her family made us feel right at home in Ghandruk. The Dhindo dinner by the fireplace was delicious, and the sunrise over Annapurna from our balcony was unforgettable. Dhanyabaad Gaun Basti for connecting us!',
         ratings: {
           cleanliness: 5,
           communication: 5,
@@ -249,17 +300,19 @@ const bookings = await Booking.create([
       }
     ]);
 
-    console.log(' Created reviews');
-
-    console.log(' Seed data created successfully!');
-    console.log('\n Demo accounts:');
+    console.log(' Created authentic Nepali booking records and guest reviews');
+    console.log('\n=========================================');
+    console.log(' GAUN BASTI NEPALI DATA SEEDING COMPLETE');
+    console.log('=========================================');
+    console.log('Demo Credentials:');
     console.log('Guest: guest@example.com / password');
-    console.log('Host: host@example.com / password');
+    console.log('Host:  host@example.com / password');
     console.log('Admin: admin@example.com / password');
-    
+    console.log('=========================================\n');
+
     process.exit(0);
   } catch (error: any) {
-    console.error('Error seeding data:', error);
+    console.error('Error seeding Nepali database:', error);
     process.exit(1);
   }
 };
