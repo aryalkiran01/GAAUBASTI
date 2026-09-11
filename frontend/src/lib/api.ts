@@ -60,6 +60,7 @@ const apiRequest = async (
 
   try {
     const response = await fetch(url, {
+      credentials: "include",
       ...options,
       headers: {
         ...headers,
@@ -163,6 +164,10 @@ export const authAPI = {
     const result = await apiRequest("/auth/logout", { method: "POST" });
     removeAuthToken();
     return result;
+  },
+
+  verifyEmail: async (token: string) => {
+    return await apiRequest(`/auth/verify-email/${encodeURIComponent(token)}`, { method: "GET" }, false);
   },
 
   resendVerification: async () => {
@@ -702,6 +707,54 @@ export const paymentsAPI = {
     return await apiRequest(
       `/payments/history${queryString ? `?${queryString}` : ""}`,
     );
+  },
+};
+
+// Villages & Destinations API calls
+export const villageAPI = {
+  getVillages: async (params: any = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return await apiRequest(`/villages${queryString ? `?${queryString}` : ""}`, {}, false);
+  },
+
+  getFeaturedVillages: async () => {
+    return await apiRequest("/villages/featured", {}, false);
+  },
+
+  getVillageBySlug: async (slug: string) => {
+    return await apiRequest(`/villages/${encodeURIComponent(slug)}`, {}, false);
+  },
+};
+
+// Articles & Content API calls
+export const articlesAPI = {
+  getArticles: async (params: any = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return await apiRequest(`/articles${queryString ? `?${queryString}` : ""}`, {}, false);
+  },
+
+  getArticleBySlug: async (slug: string) => {
+    return await apiRequest(`/articles/${encodeURIComponent(slug)}`, {}, false);
+  },
+
+  createArticle: async (data: any) => {
+    return await apiRequest("/articles", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateArticle: async (id: string, data: any) => {
+    return await apiRequest(`/articles/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteArticle: async (id: string) => {
+    return await apiRequest(`/articles/${id}`, {
+      method: "DELETE",
+    });
   },
 };
 

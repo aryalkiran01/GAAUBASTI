@@ -9,9 +9,10 @@ import { useAuth } from "@/context/AuthContext";
 interface PricingRecommendationProps {
   listingId: string;
   currentPrice: number;
+  onApply?: (recPrice: number) => void;
 }
 
-const PricingRecommendation = ({ listingId, currentPrice }: PricingRecommendationProps) => {
+const PricingRecommendation = ({ listingId, currentPrice, onApply }: PricingRecommendationProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -79,6 +80,16 @@ const PricingRecommendation = ({ listingId, currentPrice }: PricingRecommendatio
               )}
             </div>
             <p className="text-sm text-muted-foreground">{result.reasoning}</p>
+            {onApply && result.recommendedPrice && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => onApply(result.recommendedPrice)}
+                className="w-full bg-gaun-green hover:bg-gaun-light-green text-white text-xs mt-2"
+              >
+                Apply Suggested Price (${result.recommendedPrice})
+              </Button>
+            )}
             <p className="text-xs text-muted-foreground italic">
               This is a suggestion based on marketplace data. You decide the final price.
             </p>

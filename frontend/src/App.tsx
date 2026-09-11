@@ -28,9 +28,14 @@ const Payment = lazy(() => import("./pages/Payment"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const ForgotPasswordPage = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const Messages = lazy(() => import("./pages/Messages"));
 const Wishlist = lazy(() => import("./pages/Wishlist"));
 const BookingConfirmation = lazy(() => import("./pages/BookingConfirmation"));
+const Villages = lazy(() => import("./pages/Villages"));
+const VillageDetail = lazy(() => import("./pages/VillageDetail"));
+const Articles = lazy(() => import("./pages/Articles"));
+const ArticleDetail = lazy(() => import("./pages/ArticleDetail"));
 
 const queryClient = new QueryClient();
 
@@ -67,7 +72,47 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+                <Route
+                  path="/verify-email/:token"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <VerifyEmail />
+                    </Suspense>
+                  }
+                />
                 <Route path="/listings" element={<Listings />} />
+                <Route
+                  path="/villages"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <Villages />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/villages/:slug"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <VillageDetail />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/articles"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <Articles />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/articles/:slug"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ArticleDetail />
+                    </Suspense>
+                  }
+                />
                 <Route
                   path="/listing/:id"
                   element={

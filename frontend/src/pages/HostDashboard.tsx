@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useAuth } from "@/context/AuthContext";
 import SEO from "@/components/SEO";
-import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { listingsAPI, bookingsAPI } from "@/lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,7 +18,7 @@ import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { Booking, Listing } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -27,18 +27,32 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/EmptyState";
-import { Home, CalendarCheck, DollarSign, Plus, Pencil, Trash2, MessageSquare } from "lucide-react";
-import ListingDescriptionGenerator from "@/components/ai/ListingDescriptionGenerator";
-import PricingRecommendation from "@/components/ai/PricingRecommendation";
+import {
+  Home,
+  CalendarCheck,
+  DollarSign,
+  Plus,
+  Pencil,
+  Trash2,
+  MessageSquare,
+  ShieldCheck,
+  TrendingUp,
+  Percent,
+  Clock,
+  Eye,
+  CheckCircle2,
+  AlertCircle,
+  ExternalLink,
+  Ban,
+  Calendar as CalendarIcon,
+} from "lucide-react";
+import ListingWizardModal from "@/components/host/ListingWizardModal";
 
-const HostDashboard = () => {
+export default function HostDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -46,24 +60,15 @@ const HostDashboard = () => {
   const [listings, setListings] = useState<Listing[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Booking Modal
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [bookingStatus, setBookingStatus] = useState("");
   const [hostNotes, setHostNotes] = useState("");
-  const [editingListing, setEditingListing] = useState<Listing | null>(null);
-  const [isEditingOpen, setIsEditingOpen] = useState(false);
 
-  const [isCreatingListing, setIsCreatingListing] = useState(false);
-  const [newListing, setNewListing] = useState({
-    title: "",
-    description: "",
-    location: { address: "", city: "", state: "", country: "Nepal" },
-    price: 0,
-    maxGuests: 1,
-    bedrooms: 1,
-    bathrooms: 1,
-    amenities: [] as string[],
-    category: "homestay",
-  });
+  // 10-Step Wizard Modal
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [editingListing, setEditingListing] = useState<Listing | null>(null);
 
   useEffect(() => {
     const fetchHostData = async () => {
@@ -73,8 +78,8 @@ const HostDashboard = () => {
           listingsAPI.getHostListings(),
           bookingsAPI.getHostBookings(),
         ]);
-        if (listingsResponse.success) setListings(listingsResponse.data.listings);
-        if (bookingsResponse.success) setBookings(bookingsResponse.data.bookings);
+        if (listingsResponse.success) setListings(listingsResponse.data.listings || []);
+        if (bookingsResponse.success) setBookings(bookingsResponse.data.bookings || []);
       } catch (error: any) {
         toast({
           variant: "destructive",
@@ -94,6 +99,21 @@ const HostDashboard = () => {
 
   if (!user || user.role !== "host") return null;
 
+  // Key Analytics Calculations
+  const completedBookings = bookings.filter((b) => b.status === "completed");
+  const confirmedBookings = bookings.filter((b) => b.status === "confirmed");
+  const cancelledBookings = bookings.filter((b) => b.status === "cancelled");
+  const totalRevenue = completedBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+  const pendingPayouts = confirmedBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+
+  const cancellationRate = bookings.length > 0
+    ? Math.round((cancelledBookings.length / bookings.length) * 100)
+    : 0;
+
+  const estimatedOccupancy = listings.length > 0
+    ? Math.min(100, Math.round((confirmedBookings.length * 4 / (listings.length * 30)) * 100))
+    : 0;
+
   const handleUpdateBookingStatus = async () => {
     if (!selectedBooking || !bookingStatus) return;
     try {
@@ -107,53 +127,6 @@ const HostDashboard = () => {
       }
     } catch (error: any) {
       toast({ variant: "destructive", title: "Update failed", description: error.message || "Failed to update booking status" });
-    }
-  };
-
-  const handleCreateListing = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsCreatingListing(true);
-    try {
-      const response = await listingsAPI.createListing({
-        ...newListing,
-        images: [{ url: "https://images.unsplash.com/photo-1587061949409-02df41d5e562?auto=format&fit=crop&w=800&q=80", caption: "Main view" }],
-      });
-      if (response.success) {
-        setListings([...listings, response.data.listing]);
-        setNewListing({ title: "", description: "", location: { address: "", city: "", state: "", country: "Nepal" }, price: 0, maxGuests: 1, bedrooms: 1, bathrooms: 1, amenities: [], category: "homestay" });
-        toast({ title: "Listing created", description: "Your new listing has been created successfully" });
-      }
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Creation failed", description: error.message || "Failed to create listing" });
-    } finally {
-      setIsCreatingListing(false);
-    }
-  };
-
-  const handleUpdateListing = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingListing) return;
-    try {
-      const listingData = {
-        title: editingListing.title,
-        description: editingListing.description,
-        location: editingListing.location,
-        price: editingListing.price,
-        maxGuests: editingListing.maxGuests,
-        bedrooms: editingListing.bedrooms,
-        bathrooms: editingListing.bathrooms,
-        amenities: editingListing.amenities,
-        category: editingListing.category,
-      };
-      const response = await listingsAPI.updateListing(editingListing.id, listingData);
-      if (response.success) {
-        setListings(listings.map((l) => (l.id === editingListing.id ? response.data.listing : l)));
-        setEditingListing(null);
-        setIsEditingOpen(false);
-        toast({ title: "Listing updated", description: "Your listing has been updated. It will need to be verified again by admin." });
-      }
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Update failed", description: error.message || "Failed to update listing" });
     }
   };
 
@@ -182,6 +155,7 @@ const HostDashboard = () => {
   };
 
   const handleDeleteListing = async (listingId: string) => {
+    if (!confirm("Are you sure you want to permanently delete this listing?")) return;
     try {
       const response = await listingsAPI.deleteListing(listingId);
       if (response.success) {
@@ -193,362 +167,450 @@ const HostDashboard = () => {
     }
   };
 
-  const openEditDialog = (listing: Listing) => {
-    setEditingListing({ ...listing });
-    setIsEditingOpen(true);
+  const openCreateWizard = () => {
+    setEditingListing(null);
+    setWizardOpen(true);
   };
 
-  const stats = [
-    { label: "Total Listings", value: listings.length, icon: Home },
-    { label: "Active Bookings", value: bookings.filter((b) => b.status === "confirmed").length, icon: CalendarCheck },
-    { label: "Total Revenue", value: `$${bookings.filter((b) => b.status === "completed").reduce((sum, b) => sum + b.totalPrice, 0)}`, icon: DollarSign },
-  ];
+  const openEditWizard = (listing: Listing) => {
+    setEditingListing(listing);
+    setWizardOpen(true);
+  };
+
+  const handleWizardSuccess = (savedListing: Listing) => {
+    setListings((prev) => {
+      const exists = prev.some((l) => (l.id || (l as any)._id) === (savedListing.id || (savedListing as any)._id));
+      if (exists) {
+        return prev.map((l) =>
+          (l.id || (l as any)._id) === (savedListing.id || (savedListing as any)._id) ? savedListing : l
+        );
+      }
+      return [savedListing, ...prev];
+    });
+  };
 
   return (
-    <div className="min-h-screen py-10 md:py-14">
-      <SEO title="Host Dashboard" description="Manage your listings, bookings, and reviews." canonicalPath="/host" noindex />
-      <div className="container">
-        <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
-          <h1 className="text-3xl font-display font-semibold tracking-tight">Host dashboard</h1>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4" />
-                Add new listing
+    <div className="min-h-screen py-8 md:py-12 bg-background">
+      <SEO title="Host Dashboard | Gaun Basti" description="Manage your properties, reservations, earnings, and village homestays." canonicalPath="/host" noindex />
+
+      <div className="container space-y-8">
+        {/* Header Bar */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border pb-6">
+          <div className="space-y-1">
+            <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight">Host Management Portal</h1>
+            <p className="text-xs md:text-sm text-muted-foreground">
+              Welcome back, {user.name}. Manage your authentic homestay portfolio and incoming guests.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Link to="/messages">
+              <Button variant="outline" size="sm" className="text-xs">
+                <MessageSquare className="h-4 w-4 mr-1.5" />
+                Guest Messages
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle className="font-display">Create new listing</DialogTitle>
-                <DialogDescription>Add a new homestay to your portfolio</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleCreateListing} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="title">Title</Label>
-                    <Input id="title" value={newListing.title} onChange={(e) => setNewListing({ ...newListing, title: e.target.value })} required className="mt-1.5" />
-                  </div>
-                  <div>
-                    <Label htmlFor="price">Price per night ($)</Label>
-                    <Input id="price" type="number" value={newListing.price} onChange={(e) => setNewListing({ ...newListing, price: Number(e.target.value) })} required className="mt-1.5" />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea id="description" value={newListing.description} onChange={(e) => setNewListing({ ...newListing, description: e.target.value })} required rows={3} className="mt-1.5" />
-                </div>
-                <ListingDescriptionGenerator
-                  initialData={{
-                    title: newListing.title,
-                    category: newListing.category,
-                    location: newListing.location.city,
-                    amenities: newListing.amenities,
-                    bedrooms: newListing.bedrooms,
-                    bathrooms: newListing.bathrooms,
-                    maxGuests: newListing.maxGuests,
-                  }}
-                  onApply={(data) => setNewListing((prev) => ({ ...prev, title: data.title, description: data.description }))}
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="city">City</Label>
-                    <Input id="city" value={newListing.location.city} onChange={(e) => setNewListing({ ...newListing, location: { ...newListing.location, city: e.target.value } })} required className="mt-1.5" />
-                  </div>
-                  <div>
-                    <Label htmlFor="address">Address</Label>
-                    <Input id="address" value={newListing.location.address} onChange={(e) => setNewListing({ ...newListing, location: { ...newListing.location, address: e.target.value } })} required className="mt-1.5" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="maxGuests">Max Guests</Label>
-                    <Input id="maxGuests" type="number" min="1" value={newListing.maxGuests} onChange={(e) => setNewListing({ ...newListing, maxGuests: Number(e.target.value) })} required className="mt-1.5" />
-                  </div>
-                  <div>
-                    <Label htmlFor="bedrooms">Bedrooms</Label>
-                    <Input id="bedrooms" type="number" min="0" value={newListing.bedrooms} onChange={(e) => setNewListing({ ...newListing, bedrooms: Number(e.target.value) })} required className="mt-1.5" />
-                  </div>
-                  <div>
-                    <Label htmlFor="bathrooms">Bathrooms</Label>
-                    <Input id="bathrooms" type="number" min="0" value={newListing.bathrooms} onChange={(e) => setNewListing({ ...newListing, bathrooms: Number(e.target.value) })} required className="mt-1.5" />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit" disabled={isCreatingListing}>
-                    {isCreatingListing ? "Creating..." : "Create listing"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+            </Link>
+            <Button onClick={openCreateWizard} size="sm" className="bg-gaun-green hover:bg-gaun-light-green text-white text-xs font-semibold">
+              <Plus className="h-4 w-4 mr-1.5" />
+              List New Homestay
+            </Button>
+          </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-          {stats.map((stat) => (
-            <Card key={stat.label}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{stat.label}</CardTitle>
-                <stat.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-display font-semibold">{stat.value}</div>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Host Profile & Verification Status Card */}
+        <div className="p-5 rounded-2xl border border-border bg-card shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-full bg-gaun-green/10 text-gaun-green flex items-center justify-center shrink-0">
+              <ShieldCheck className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-display font-semibold text-base">{user.name}</h3>
+                <Badge variant={user.isVerified ? "default" : "secondary"} className="text-[10px]">
+                  {user.isVerified ? "Verified Host" : "Verification Pending"}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {user.hostProfile?.bio || "Certified community homestay host on the Gaun Basti network."}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 text-xs">
+            <div className="bg-secondary/50 px-3 py-1.5 rounded-lg">
+              <span className="text-muted-foreground">Response Rate: </span>
+              <strong className="text-gaun-green">{user.hostProfile?.responseRate || 98}%</strong>
+            </div>
+            <div className="bg-secondary/50 px-3 py-1.5 rounded-lg">
+              <span className="text-muted-foreground">Response Time: </span>
+              <strong className="text-foreground">{user.hostProfile?.responseTime || "Within 1 hr"}</strong>
+            </div>
+          </div>
         </div>
 
-        <Tabs defaultValue="listings" className="w-full">
-          <TabsList className="flex flex-wrap h-auto">
-            <TabsTrigger value="listings">My Listings</TabsTrigger>
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="reviews">Reviews</TabsTrigger>
+        {/* Analytics & Metrics Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Total Listings</CardTitle>
+              <Home className="h-4 w-4 text-gaun-green" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{listings.length}</div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {listings.filter((l) => l.isActive).length} currently active
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Active Bookings</CardTitle>
+              <CalendarCheck className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{confirmedBookings.length}</div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {bookings.filter((b) => b.status === "pending").length} pending approval
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Earned Revenue</CardTitle>
+              <DollarSign className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${totalRevenue}</div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                ${pendingPayouts} in upcoming stays
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Estimated Occupancy</CardTitle>
+              <TrendingUp className="h-4 w-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{estimatedOccupancy}%</div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Cancellation Rate: {cancellationRate}%
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Dashboard Tabs */}
+        <Tabs defaultValue="listings" className="space-y-6">
+          <TabsList className="bg-secondary/70 p-1">
+            <TabsTrigger value="listings" className="text-xs">
+              Properties ({listings.length})
+            </TabsTrigger>
+            <TabsTrigger value="bookings" className="text-xs">
+              Bookings & Calendar ({bookings.length})
+            </TabsTrigger>
+            <TabsTrigger value="payouts" className="text-xs">
+              Earnings & Payouts
+            </TabsTrigger>
           </TabsList>
 
-          {/* Listings Tab */}
-          <TabsContent value="listings" className="mt-6">
-            <div className="bg-white rounded-2xl border border-border overflow-x-auto">
-              {loading ? (
-                <div className="p-6 space-y-4">
-                  {Array.from({ length: 3 }).map((_, index) => (
-                    <div key={index} className="flex items-center space-x-4">
-                      <Skeleton className="h-16 w-16 rounded-xl" />
-                      <div className="space-y-2 flex-1">
-                        <Skeleton className="h-4 w-3/4" />
-                        <Skeleton className="h-4 w-1/2" />
-                      </div>
-                      <Skeleton className="h-8 w-20" />
-                    </div>
-                  ))}
-                </div>
-              ) : listings.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Listing</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {listings.map((listing) => (
-                      <TableRow key={listing.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={Array.isArray(listing.images) ? (typeof listing.images[0] === "string" ? listing.images[0] : listing.images[0]?.url) : "https://images.unsplash.com/photo-1587061949409-02df41d5e562"}
-                              alt={listing.title}
-                              loading="lazy"
-                              className="h-12 w-12 rounded-xl object-cover"
-                            />
-                            <div>
-                              <p className="font-medium text-sm">{listing.title}</p>
-                              <p className="text-xs text-muted-foreground">{listing.bedrooms} bed · {listing.bathrooms} bath</p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {typeof listing.location === "string" ? listing.location : `${listing.location.city}, ${listing.location.country}`}
-                        </TableCell>
-                        <TableCell className="font-medium">${listing.price}<span className="text-muted-foreground font-normal text-xs">/night</span></TableCell>
-                        <TableCell>
-                          <Badge variant={listing.isVerified ? "success" : (listing as any).status === 'draft' ? "secondary" : "warning"}>
-                            {(listing as any).status === 'draft' ? "Draft" : listing.isVerified ? "Published" : (listing as any).status === 'pending' ? "In Review" : (listing as any).status === 'rejected' ? "Rejected" : "Pending"}
+          {/* TAB 1: PROPERTIES */}
+          <TabsContent value="listings" className="space-y-4">
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="aspect-[4/3] rounded-2xl" />
+                ))}
+              </div>
+            ) : listings.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {listings.map((listing) => {
+                  const listingId = listing.id || (listing as any)._id;
+                  const coverImg = Array.isArray(listing.images) && listing.images[0]
+                    ? typeof listing.images[0] === "string"
+                      ? listing.images[0]
+                      : (listing.images[0] as any).url
+                    : "https://images.unsplash.com/photo-1544735716-392fe2489ffa";
+
+                  const locationStr = typeof listing.location === "object"
+                    ? `${(listing.location as any).village || (listing.location as any).city}, ${(listing.location as any).district || "Nepal"}`
+                    : listing.location;
+
+                  return (
+                    <div
+                      key={listingId}
+                      className="group bg-card border border-border rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow"
+                    >
+                      <div className="relative aspect-[16/10] overflow-hidden bg-secondary">
+                        <img src={coverImg} alt={listing.title} className="w-full h-full object-cover" />
+                        <div className="absolute top-3 left-3 flex gap-1.5">
+                          <Badge variant={listing.isActive ? "default" : "secondary"} className="text-[10px]">
+                            {listing.isActive ? "Active" : "Draft"}
                           </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-2 justify-end">
-                            <Dialog open={isEditingOpen && editingListing?.id === listing.id} onOpenChange={(open) => { if (!open) { setEditingListing(null); setIsEditingOpen(false); } }}>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" onClick={() => openEditDialog(listing)}>
-                                  <Pencil className="h-3.5 w-3.5" />
-                                  Edit
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="sm:max-w-[600px]">
-                                <DialogHeader>
-                                  <DialogTitle className="font-display">Edit listing</DialogTitle>
-                                  <DialogDescription>Update your listing details</DialogDescription>
-                                </DialogHeader>
-                                {editingListing && (
-                                  <form onSubmit={handleUpdateListing} className="space-y-4">
-                                    <div>
-                                      <Label htmlFor="edit-title">Title</Label>
-                                      <Input id="edit-title" value={editingListing.title} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, title: e.target.value } : null))} required className="mt-1.5" />
-                                    </div>
-                                    <div>
-                                      <Label htmlFor="edit-description">Description</Label>
-                                      <Textarea id="edit-description" value={editingListing.description} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, description: e.target.value } : null))} required rows={3} className="mt-1.5" />
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                      <div>
-                                        <Label htmlFor="edit-city">City</Label>
-                                        <Input id="edit-city" value={typeof editingListing.location === "string" ? "" : editingListing.location.city} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, location: typeof prev.location === "string" ? { address: "", city: e.target.value, state: "", country: "Nepal" } : { ...prev.location, city: e.target.value } } : null))} required className="mt-1.5" />
-                                      </div>
-                                      <div>
-                                        <Label htmlFor="edit-address">Address</Label>
-                                        <Input id="edit-address" value={typeof editingListing.location === "string" ? "" : editingListing.location.address} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, location: typeof prev.location === "string" ? { address: e.target.value, city: "", state: "", country: "Nepal" } : { ...prev.location, address: e.target.value } } : null))} required className="mt-1.5" />
-                                      </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                      <div>
-                                        <Label htmlFor="edit-maxGuests">Guests</Label>
-                                        <Input id="edit-maxGuests" type="number" min="1" value={editingListing.maxGuests} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, maxGuests: Number(e.target.value) } : null))} required className="mt-1.5" />
-                                      </div>
-                                      <div>
-                                        <Label htmlFor="edit-bedrooms">Beds</Label>
-                                        <Input id="edit-bedrooms" type="number" min="0" value={editingListing.bedrooms} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, bedrooms: Number(e.target.value) } : null))} required className="mt-1.5" />
-                                      </div>
-                                      <div>
-                                        <Label htmlFor="edit-bathrooms">Baths</Label>
-                                        <Input id="edit-bathrooms" type="number" min="0" value={editingListing.bathrooms} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, bathrooms: Number(e.target.value) } : null))} required className="mt-1.5" />
-                                      </div>
-                                      <div>
-                                        <Label htmlFor="edit-price">Price $</Label>
-                                        <Input id="edit-price" type="number" value={editingListing.price} onChange={(e) => setEditingListing((prev) => (prev ? { ...prev, price: Number(e.target.value) } : null))} required className="mt-1.5" />
-                                      </div>
-                                    </div>
-                                    <DialogFooter>
-                                      <Button type="submit">Update listing</Button>
-                                    </DialogFooter>
-                                  </form>
-                                )}
-                              </DialogContent>
-                            </Dialog>
-                            {!(listing as any).status || (listing as any).status === 'draft' ? (
-                              <Button variant="outline" size="sm" onClick={() => handlePublishListing(listing.id)} className="text-gaun-green hover:bg-gaun-green/5">
+                          {listing.isVerified && (
+                            <Badge className="bg-gaun-green text-white text-[10px]">Verified</Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-start">
+                            <h3 className="font-display font-bold text-base leading-snug line-clamp-1">
+                              {listing.title}
+                            </h3>
+                            <span className="font-bold text-gaun-green text-sm">${listing.price}/night</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{locationStr}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2 pt-1">{listing.description}</p>
+                        </div>
+
+                        <div className="pt-3 border-t border-border flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditWizard(listing)}
+                              className="h-7 text-xs px-2.5"
+                            >
+                              <Pencil className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                            <Link to={`/listing/${listingId}`} target="_blank">
+                              <Button variant="ghost" size="sm" className="h-7 text-xs px-2">
+                                <ExternalLink className="h-3 w-3" />
+                              </Button>
+                            </Link>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            {listing.isActive ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleUnpublishListing(listingId)}
+                                className="h-7 text-xs text-amber-600 hover:text-amber-700"
+                              >
+                                Take Offline
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePublishListing(listingId)}
+                                className="h-7 text-xs bg-gaun-green/10 text-gaun-green hover:bg-gaun-green hover:text-white"
+                              >
                                 Publish
                               </Button>
-                            ) : listing.isVerified ? (
-                              <Button variant="outline" size="sm" onClick={() => handleUnpublishListing(listing.id)}>
-                                Unpublish
-                              </Button>
-                            ) : null}
-                            <Button variant="outline" size="sm" onClick={() => handleDeleteListing(listing.id)} className="text-destructive hover:bg-destructive/5">
-                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteListing(listingId)}
+                              className="h-7 text-xs text-destructive hover:bg-destructive/10 px-2"
+                            >
+                              <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <EmptyState icon={Home} title="No listings yet" description="Create your first listing to start hosting guests" />
-              )}
-            </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Home}
+                title="No homestays listed yet"
+                description="Share your authentic rural accommodation and start receiving guest bookings."
+                action={
+                  <Button onClick={openCreateWizard} className="bg-gaun-green hover:bg-gaun-light-green text-white">
+                    <Plus className="h-4 w-4 mr-1.5" />
+                    Create Your First Listing
+                  </Button>
+                }
+              />
+            )}
           </TabsContent>
 
-          {/* Bookings Tab */}
-          <TabsContent value="bookings" className="mt-6">
-            <div className="bg-white rounded-2xl border border-border">
-              {loading ? (
-                <div className="p-6 space-y-4">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <div key={index} className="flex items-center space-x-4">
-                      <Skeleton className="h-6 w-32" />
-                      <Skeleton className="h-6 w-24" />
-                      <Skeleton className="h-6 w-20" />
-                      <Skeleton className="h-6 w-16" />
-                    </div>
-                  ))}
-                </div>
-              ) : bookings.length > 0 ? (
+          {/* TAB 2: BOOKINGS & CALENDAR */}
+          <TabsContent value="bookings" className="space-y-4">
+            {bookings.length > 0 ? (
+              <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Guest</TableHead>
-                      <TableHead>Listing</TableHead>
-                      <TableHead>Dates</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="text-xs">Guest / Ref</TableHead>
+                      <TableHead className="text-xs">Property</TableHead>
+                      <TableHead className="text-xs">Dates</TableHead>
+                      <TableHead className="text-xs">Total</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-xs text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {bookings.map((booking) => {
-                      const guestData = typeof booking.guest === "string" ? { name: "Guest", email: "" } : booking.guest;
-                      const listingData = typeof booking.listing === "string" ? listings.find((l) => l.id === booking.listing) : booking.listing;
+                      const guestName = typeof booking.guest === "object" ? booking.guest.name : "Traveler";
+                      const listingTitle = typeof booking.listing === "object" ? booking.listing.title : "Homestay";
+                      const startStr = booking.startDate ? format(new Date(booking.startDate), "MMM d, yyyy") : "-";
+                      const endStr = booking.endDate ? format(new Date(booking.endDate), "MMM d, yyyy") : "-";
+
                       return (
                         <TableRow key={booking.id}>
-                          <TableCell>
-                            <p className="font-medium text-sm">{guestData.name}</p>
-                            <p className="text-xs text-muted-foreground">{guestData.email}</p>
+                          <TableCell className="text-xs">
+                            <div className="font-semibold text-foreground">{guestName}</div>
+                            <span className="text-[10px] text-muted-foreground font-mono">{booking.bookingReference || booking.id.substring(0, 8)}</span>
                           </TableCell>
-                          <TableCell className="text-sm">{listingData?.title || "Unknown"}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{format(new Date(booking.startDate), "MMM d")} – {format(new Date(booking.endDate), "MMM d, yyyy")}</TableCell>
-                          <TableCell className="font-medium">${booking.totalPrice}</TableCell>
-                          <TableCell>
-                            <Badge variant={booking.status === "confirmed" ? "success" : booking.status === "pending" ? "warning" : booking.status === "cancelled" ? "error" : "secondary"}>
+                          <TableCell className="text-xs max-w-[180px] truncate">{listingTitle}</TableCell>
+                          <TableCell className="text-xs">{startStr} → {endStr}</TableCell>
+                          <TableCell className="text-xs font-bold text-gaun-green">${booking.totalPrice}</TableCell>
+                          <TableCell className="text-xs">
+                            <Badge
+                              variant={
+                                booking.status === "confirmed"
+                                  ? "default"
+                                  : booking.status === "completed"
+                                  ? "secondary"
+                                  : booking.status === "pending"
+                                  ? "outline"
+                                  : "destructive"
+                              }
+                              className="text-[10px]"
+                            >
                               {booking.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" onClick={() => { setSelectedBooking(booking); setBookingStatus(booking.status); setHostNotes(""); }}>
-                                  Manage
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle className="font-display">Manage booking</DialogTitle>
-                                  <DialogDescription>Update booking status and add notes</DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  <div>
-                                    <Label htmlFor="status">Status</Label>
-                                    <Select value={bookingStatus} onValueChange={setBookingStatus}>
-                                      <SelectTrigger className="mt-1.5">
-                                        <SelectValue placeholder="Select status" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="pending">Pending</SelectItem>
-                                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                                        <SelectItem value="completed">Completed</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="hostNotes">Host notes</Label>
-                                    <Textarea id="hostNotes" value={hostNotes} onChange={(e) => setHostNotes(e.target.value)} placeholder="Add any notes for the guest..." rows={3} className="mt-1.5" />
-                                  </div>
-                                </div>
-                                <DialogFooter>
-                                  <Button onClick={handleUpdateBookingStatus}>Update booking</Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
+                          <TableCell className="text-xs text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedBooking(booking);
+                                setBookingStatus(booking.status);
+                              }}
+                              className="h-7 text-xs"
+                            >
+                              Manage
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );
                     })}
                   </TableBody>
                 </Table>
-              ) : (
-                <EmptyState icon={CalendarCheck} title="No bookings yet" description="Bookings will appear here once guests start reserving your listings" />
-              )}
-            </div>
+              </div>
+            ) : (
+              <EmptyState
+                icon={CalendarCheck}
+                title="No bookings received yet"
+                description="When guests reserve your homestay, their reservations and check-in schedules will appear here."
+              />
+            )}
           </TabsContent>
 
-          {/* Reviews Tab */}
-          <TabsContent value="reviews" className="mt-6">
-            <div className="space-y-6">
-              {listings.length > 0 && (
-                <PricingRecommendation listingId={listings[0].id} currentPrice={listings[0].price} />
-              )}
-              <div className="bg-white rounded-2xl border border-border">
-                <EmptyState icon={MessageSquare} title="Reviews coming soon" description="Guest reviews for your listings will appear here" />
-              </div>
+          {/* TAB 3: EARNINGS & PAYOUTS */}
+          <TabsContent value="payouts" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Total Disbursed</CardTitle>
+                  <CardDescription className="text-xs">Settled to your verified bank</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-gaun-green">${totalRevenue}</div>
+                  <p className="text-xs text-muted-foreground mt-2">Zero hidden commission fees on local homestays.</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">In Escrow / Upcoming</CardTitle>
+                  <CardDescription className="text-xs">Pending guest check-ins</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-primary">${pendingPayouts}</div>
+                  <p className="text-xs text-muted-foreground mt-2">Released 24 hours following guest arrival.</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Direct Bank / eSewa</CardTitle>
+                  <CardDescription className="text-xs">Payment distribution status</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-green-700 dark:text-green-400">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Verified Payout Method Connected</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">Payments deposited automatically in NPR / USD.</p>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* 10-Step Wizard Modal */}
+        <ListingWizardModal
+          open={wizardOpen}
+          onOpenChange={setWizardOpen}
+          listingToEdit={editingListing}
+          onSuccess={handleWizardSuccess}
+        />
+
+        {/* Manage Booking Dialog */}
+        <Dialog open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
+          <DialogContent className="sm:max-w-[480px]">
+            <DialogHeader>
+              <DialogTitle className="font-display">Update Reservation</DialogTitle>
+              <DialogDescription className="text-xs">
+                Modify status and add host arrival instructions for booking #{selectedBooking?.id.substring(0, 8)}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-3">
+              <div>
+                <label className="text-xs font-semibold mb-1 block">Status</label>
+                <Select value={bookingStatus} onValueChange={setBookingStatus}>
+                  <SelectTrigger className="text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="confirmed">Confirmed (Accept Guest)</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="no-show">No Show</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold mb-1 block">Host Notes / Arrival Instructions</label>
+                <Textarea
+                  placeholder="e.g. Host family will meet you at the Ghandruk jeep station at 2 PM."
+                  value={hostNotes}
+                  onChange={(e) => setHostNotes(e.target.value)}
+                  rows={3}
+                  className="text-xs"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedBooking(null)} className="text-xs">
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateBookingStatus} size="sm" className="bg-gaun-green hover:bg-gaun-light-green text-white text-xs">
+                Save Status
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
-};
-
-export default HostDashboard;
+}

@@ -102,6 +102,12 @@ export default function Navbar() {
           <Link to="/listings" className="text-sm font-medium hover:text-gaun-green">
             Stay
           </Link>
+          <Link to="/villages" className="text-sm font-medium hover:text-gaun-green">
+            Villages
+          </Link>
+          <Link to="/articles" className="text-sm font-medium hover:text-gaun-green">
+            Stories
+          </Link>
           <Link to="/about" className="text-sm font-medium hover:text-gaun-green">
             About
           </Link>
@@ -247,6 +253,20 @@ export default function Navbar() {
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Stay
+            </Link>
+            <Link 
+              to="/villages" 
+              className="block text-sm font-medium hover:text-gaun-green"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Villages
+            </Link>
+            <Link 
+              to="/articles" 
+              className="block text-sm font-medium hover:text-gaun-green"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Stories
             </Link>
             <Link 
               to="/about" 

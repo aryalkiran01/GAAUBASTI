@@ -24,6 +24,7 @@ export interface User {
 
 export interface Listing {
   id: string;
+  _id?: string;
   title: string;
   description: string;
   location: string | {
@@ -31,6 +32,17 @@ export interface Listing {
     city: string;
     state?: string;
     country: string;
+    village?: string;
+    district?: string;
+    province?: string;
+    coordinates?: {
+      latitude: number;
+      longitude: number;
+    };
+    geoJSON?: {
+      type: 'Point';
+      coordinates: [number, number]; // [longitude, latitude]
+    };
   };
   price: number;
   rating: number;
@@ -50,6 +62,76 @@ export interface Listing {
   isActive?: boolean;
   isVerified?: boolean;
   averageRating?: number;
+}
+
+export interface Village {
+  id?: string;
+  _id?: string;
+  name: string;
+  slug: string;
+  tagline?: string;
+  province: string;
+  district: string;
+  municipality?: string;
+  ward?: number;
+  altitude?: number;
+  description: string;
+  heroImage: string;
+  gallery: string[];
+  culture?: {
+    overview?: string;
+    ethnicGroups?: string[];
+    traditions?: string[];
+    languages?: string[];
+  };
+  localFood?: Array<{
+    name: string;
+    description: string;
+    image?: string;
+  }>;
+  festivals?: Array<{
+    name: string;
+    month?: string;
+    description: string;
+  }>;
+  attractions?: Array<{
+    title: string;
+    description: string;
+    distance?: string;
+    image?: string;
+  }>;
+  activities?: Array<{
+    title: string;
+    description: string;
+    difficulty?: 'Easy' | 'Moderate' | 'Challenging';
+  }>;
+  transport?: {
+    howToReach?: string;
+    nearestBusStop?: string;
+    nearestAirport?: string;
+    roadCondition?: string;
+    estimatedTravelTime?: string;
+  };
+  bestTimeToVisit?: string[];
+  safetyInfo?: {
+    medicalFacilities?: string;
+    networkConnectivity?: string;
+    emergencyContacts?: string[];
+    generalTips?: string[];
+  };
+  coordinates?: {
+    type: 'Point';
+    coordinates: [number, number]; // [lng, lat]
+  };
+  isFeatured?: boolean;
+  featuredRank?: number;
+  homestayCount?: number;
+  seo?: {
+    metaTitle?: string;
+    metaDescription?: string;
+    keywords?: string[];
+  };
+  listings?: Listing[];
 }
 
 export interface Booking {
@@ -170,4 +252,28 @@ export interface PaymentRecord {
   provider: string;
   status: string;
   createdAt: string;
+}
+
+export interface Article {
+  id?: string;
+  _id?: string;
+  title: string;
+  slug: string;
+  category: string;
+  summary?: string;
+  content: string;
+  coverImage?: string;
+  author?: {
+    name: string;
+    avatar?: string;
+    role?: string;
+  };
+  tags?: string[];
+  villageSlug?: string;
+  isFeatured?: boolean;
+  readingTime?: string;
+  published?: boolean;
+  lastUpdated?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
