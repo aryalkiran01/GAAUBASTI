@@ -121,12 +121,19 @@ export const useListing = (id: string) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!id || id === "undefined" || id === "null" || !id.trim()) {
+      setListing(null);
+      setError("Invalid listing ID provided");
+      setLoading(false);
+      return;
+    }
+
     const fetchListing = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const response = await listingsAPI.getListing(id);
+        const response = await listingsAPI.getListing(id.trim());
 
         if (response.success) {
           setListing(response.data.listing);
@@ -143,9 +150,7 @@ export const useListing = (id: string) => {
       }
     };
 
-    if (id) {
-      fetchListing();
-    }
+    fetchListing();
   }, [id]);
 
   return { listing, loading, error };

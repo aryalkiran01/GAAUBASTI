@@ -19,13 +19,21 @@ npm run dev   # Starts frontend on http://localhost:8080
 ## Testing Guide
 
 ### Authentication Testing
-1. **Demo Login**: Use these accounts:
-   - Guest: `guest@example.com` / `password`
-   - Guest: `aryalkira1@gmail.com` / `1111111`
-   - Host: `host@example.com` / `password` 
-   - Admin: `admin@example.com` / `password`
+1. **Database Seeding**:
+   ```bash
+   cd backend
+   npm run seed:users   # Seeds/resets only user test accounts
+   npm run seed         # Seeds full database (users, homestays, villages, articles)
+   ```
 
-2. **Registration**: Create new account with any email/password
+2. **Demo Login**: Use these pre-seeded accounts:
+   - **Admin**: `admin@example.com` / `password`
+   - **Host**: `host@example.com` / `password`
+   - **Guest**: `guest@example.com` / `password`
+   - **Guest**: `aryalkira1@gmail.com` / `password`
+   - **Guest**: `aryalkiran21@gmail.com` / `password`
+
+3. **Registration**: Create a new account with any valid email and password (minimum 6 characters)
 
 ### Features to Test
 

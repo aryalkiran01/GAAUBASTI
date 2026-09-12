@@ -211,7 +211,7 @@ const notifyBookingCreated = async ({
       startDate: booking.startDate,
       endDate: booking.endDate,
       totalPrice: booking.totalPrice,
-      currency: booking.currency || "USD",
+      currency: booking.currency || "NPR",
     });
   }
 };
@@ -248,7 +248,7 @@ const notifyPaymentConfirmed = async ({
       guestName: guest.name,
       listingTitle: booking.listing?.title,
       amount: payment?.amount || booking.totalPrice,
-      currency: payment?.currency || booking.currency || "USD",
+      currency: payment?.currency || booking.currency || "NPR",
       startDate: booking.startDate,
       endDate: booking.endDate,
     });
@@ -289,13 +289,13 @@ const notifyBookingCancelled = async ({
       startDate: booking.startDate,
       endDate: booking.endDate,
       refundAmount: refundAmount || 0,
-      currency: booking.currency || "USD",
+      currency: booking.currency || "NPR",
     });
   }
 
   if (guest?.phone && refundAmount > 0) {
     await sendTransactionalSMS(guest.phone, {
-      body: `Gaun Basti: Your booking for ${booking.listing?.title || "your stay"} has been cancelled. Refund of $${Number(refundAmount).toFixed(2)} will be processed.`,
+      body: `Gaun Basti: Your booking for ${booking.listing?.title || "your stay"} has been cancelled. Refund of Rs. ${Number(refundAmount).toLocaleString()} will be processed.`,
     });
   }
 };
@@ -308,7 +308,7 @@ const notifyRefundProcessed = async ({
   const content = {
     bookingId: String(booking._id),
     amount,
-    preview: `Refund of $${Number(amount).toFixed(2)} processed`,
+    preview: `Refund of Rs. ${Number(amount).toLocaleString()} processed`,
     dedupKey: `refund_processed:${booking._id}:${amount}`,
   };
 
@@ -323,7 +323,7 @@ const notifyRefundProcessed = async ({
       guestName: guest.name,
       listingTitle: booking.listing?.title,
       amount,
-      currency: booking.currency || "USD",
+      currency: booking.currency || "NPR",
     });
   }
 };
@@ -361,7 +361,7 @@ const notifyPayoutCreated = async ({ payout, host }: any): Promise<void> => {
     payoutId: String(payout._id),
     amount: payout.amount,
     period: payout.period,
-    preview: `Payout of $${Number(payout.amount).toFixed(2)} for ${payout.period}`,
+    preview: `Payout of Rs. ${Number(payout.amount).toLocaleString()} for ${payout.period}`,
     dedupKey: `payout_created:${payout._id}`,
   };
 
@@ -375,7 +375,7 @@ const notifyPayoutCreated = async ({ payout, host }: any): Promise<void> => {
     await sendTransactionalEmail("payout_created", host.email, {
       hostName: host.name,
       amount: payout.amount,
-      currency: "USD",
+      currency: "NPR",
       period: payout.period,
     });
   }
@@ -471,7 +471,7 @@ const notifyPayoutPaid = async ({ payout, host }: any): Promise<void> => {
     payoutId: String(payout._id),
     amount: payout.amount,
     period: payout.period,
-    preview: `Payout of ${Number(payout.amount).toFixed(2)} has been paid`,
+    preview: `Payout of Rs. ${Number(payout.amount).toLocaleString()} has been paid`,
     dedupKey: `payout_paid:${payout._id}`,
   };
   await createNotification({

@@ -23,6 +23,7 @@ const getDashboardStats = async (req, res) => {
       totalBookings,
       totalRevenue,
       pendingListings,
+      pendingHosts,
       flaggedReviews,
       recentUsers,
       recentBookings,
@@ -45,7 +46,10 @@ const getDashboardStats = async (req, res) => {
 
       Listing.countDocuments({
         isVerified: false,
-        isActive: true,
+      }),
+
+      User.countDocuments({
+        hostStatus: "pending",
       }),
 
       Review.countDocuments({
@@ -75,6 +79,7 @@ const getDashboardStats = async (req, res) => {
           totalBookings,
           totalRevenue: revenue,
           pendingListings,
+          pendingHosts,
           flaggedReviews,
         },
         recentActivity: {
@@ -193,24 +198,32 @@ const updateUser = async (req, res) => {
 // Get all listings for admin
 const getAllListings = async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, search } = req.query;
+    const { page = 1, limit = 50, status, search } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const filter: any = {};
-    if (status === "pending") filter.isVerified = false;
-    if (status === "verified") filter.isVerified = true;
-    if (status === "inactive") filter.isActive = false;
+    if (status === "pending") {
+      filter.$or = [{ isVerified: false }, { status: "pending" }];
+    } else if (status === "verified" || status === "approved") {
+      filter.isVerified = true;
+    } else if (status === "inactive") {
+      filter.isActive = false;
+    } else if (status === "rejected") {
+      filter.status = "rejected";
+    }
+
     if (search) {
       const escaped = escapeRegex(String(search));
       filter.$or = [
         { title: { $regex: escaped, $options: "i" } },
         { "location.city": { $regex: escaped, $options: "i" } },
+        { "location.village": { $regex: escaped, $options: "i" } },
       ];
     }
 
     const [listings, total] = await Promise.all([
       Listing.find(filter)
-        .populate("host", "name email")
+        .populate("host", "name email phone avatar")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),

@@ -67,8 +67,8 @@ const Payment = () => {
     );
   }
 
-  const usdAmount = Number(paymentDetails.amount) || 0;
-  const nprAmount = Math.round(usdAmount * USD_TO_NPR_RATE);
+  const nprAmount = Number(paymentDetails.amount) || 0;
+  const usdAmount = Math.max(1, Math.round(nprAmount / USD_TO_NPR_RATE));
 
   const handleInitializePayment = async () => {
     setIsInitializing(true);
@@ -187,15 +187,15 @@ const Payment = () => {
                   <div className="space-y-1 mt-2 text-xs text-muted-foreground pt-2 border-t border-border">
                     <div className="flex justify-between">
                       <span>Base price</span>
-                      <span>${breakdown.basePrice}</span>
+                      <span>Rs. {breakdown.basePrice?.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Cleaning fee</span>
-                      <span>${breakdown.cleaningFee}</span>
+                      <span>Rs. {breakdown.cleaningFee?.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Community fee</span>
-                      <span>${breakdown.serviceFee}</span>
+                      <span>Rs. {breakdown.serviceFee?.toLocaleString()}</span>
                     </div>
                   </div>
                 )}
@@ -203,11 +203,8 @@ const Payment = () => {
                   <span className="text-sm font-semibold">Total to Pay</span>
                   <div className="text-right">
                     <div className="font-bold text-base text-gaun-green">
-                      {displayCurrency === "NPR" ? `Rs. ${displayAmount.toLocaleString()}` : `$${displayAmount}`}
+                      Rs. {nprAmount.toLocaleString()}
                     </div>
-                    {displayCurrency === "NPR" && (
-                      <div className="text-[10px] text-muted-foreground">Approx ${usdAmount} USD</div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -228,8 +225,8 @@ const Payment = () => {
                       }`}
                     >
                       <CreditCard className="h-5 w-5" />
-                      <span className="text-xs">Card (Stripe)</span>
-                      <span className="text-[9px] text-muted-foreground font-mono">USD</span>
+                      <span className="text-xs">Debit/Card</span>
+                      <span className="text-[9px] text-muted-foreground font-mono">NPR/Card</span>
                     </button>
 
                     {/* eSewa */}
@@ -323,7 +320,7 @@ const Payment = () => {
                     ) : (
                       <>
                         <span>
-                          Pay {selectedProvider === "stripe" ? `$${usdAmount} USD` : `Rs. ${nprAmount.toLocaleString()} NPR`}
+                          Pay Rs. {nprAmount.toLocaleString()}
                         </span>
                         <ArrowRight className="h-4 w-4" />
                       </>

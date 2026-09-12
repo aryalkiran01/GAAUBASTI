@@ -112,8 +112,8 @@ const createPayment = async (req: any, res: any) => {
 
     const { booking } = validation;
 
-    const authoritativeUsdAmount = Number(booking.totalPrice);
-    if (!Number.isFinite(authoritativeUsdAmount) || authoritativeUsdAmount < 0) {
+    const authoritativeNprAmount = Number(booking.totalPrice);
+    if (!Number.isFinite(authoritativeNprAmount) || authoritativeNprAmount < 0) {
       return res.status(500).json({
         success: false,
         message: 'Booking total price is not available. Cannot initialize payment.'
@@ -132,11 +132,11 @@ const createPayment = async (req: any, res: any) => {
 
     const targetCurrency = providerName === 'esewa' || providerName === 'khalti'
       ? 'NPR'
-      : (currency ? String(currency).toUpperCase() : 'USD');
+      : (currency ? String(currency).toUpperCase() : 'NPR');
 
-    const authoritativeAmount = targetCurrency === 'NPR'
-      ? convertToNpr(authoritativeUsdAmount)
-      : authoritativeUsdAmount;
+    const authoritativeAmount = targetCurrency === 'USD'
+      ? Math.max(1, Math.round(authoritativeNprAmount / 135))
+      : authoritativeNprAmount;
 
     // Check existing active payment for same booking and payer
     const activePayment = await Payment.findOne({
@@ -197,7 +197,7 @@ const createPayment = async (req: any, res: any) => {
           bookingId: booking._id.toString(),
           listingId: booking.listing._id.toString(),
           userId: req.user._id.toString(),
-          authoritativeUsdAmount: String(authoritativeUsdAmount)
+          authoritativeNprAmount: String(authoritativeNprAmount)
         }
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }

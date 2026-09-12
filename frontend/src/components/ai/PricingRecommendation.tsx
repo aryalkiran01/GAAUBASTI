@@ -49,7 +49,7 @@ const PricingRecommendation = ({ listingId, currentPrice, onApply }: PricingReco
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Current price: <span className="font-medium">${currentPrice}/night</span>
+          Current price: <span className="font-medium">Rs. {currentPrice?.toLocaleString()}/night</span>
         </p>
         <Button onClick={handleGet} disabled={loading} className="bg-gaun-green hover:bg-gaun-light-green">
           {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
@@ -63,7 +63,7 @@ const PricingRecommendation = ({ listingId, currentPrice, onApply }: PricingReco
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Recommended Price</span>
               <span className="text-2xl font-bold text-gaun-green">
-                ${result.recommendedPrice}<span className="text-sm font-normal text-muted-foreground">/night</span>
+                Rs. {result.recommendedPrice?.toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/night</span>
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -87,7 +87,7 @@ const PricingRecommendation = ({ listingId, currentPrice, onApply }: PricingReco
                 onClick={() => onApply(result.recommendedPrice)}
                 className="w-full bg-gaun-green hover:bg-gaun-light-green text-white text-xs mt-2"
               >
-                Apply Suggested Price (${result.recommendedPrice})
+                Apply Suggested Price (Rs. {result.recommendedPrice?.toLocaleString()})
               </Button>
             )}
             <p className="text-xs text-muted-foreground italic">

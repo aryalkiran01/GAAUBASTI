@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { articlesAPI, villageAPI } from "@/lib/api";
@@ -7,6 +6,7 @@ import SEO, { getArticleSchema } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
+import ArticleContentRenderer from "@/components/ArticleContentRenderer";
 import {
   ChevronLeft,
   Calendar,
@@ -17,9 +17,13 @@ import {
   MapPin,
   ArrowRight,
   BookOpen,
-  MessageCircle,
+  Sparkles,
+  Tag,
 } from "lucide-react";
 import { format } from "date-fns";
+
+const DEFAULT_ARTICLE_COVER = "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=1600&auto=format&fit=crop&q=80";
+const DEFAULT_AUTHOR_AVATAR = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80";
 
 export default function ArticleDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -90,10 +94,14 @@ export default function ArticleDetail() {
     return (
       <div className="min-h-screen bg-background py-12">
         <div className="container max-w-4xl space-y-6">
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-12 w-3/4" />
+          <Skeleton className="h-8 w-32 rounded-lg" />
+          <Skeleton className="h-12 w-3/4 rounded-xl" />
           <Skeleton className="aspect-[21/9] w-full rounded-3xl" />
-          <Skeleton className="h-48 w-full" />
+          <div className="space-y-4 pt-4">
+            <Skeleton className="h-6 w-full" />
+            <Skeleton className="h-6 w-5/6" />
+            <Skeleton className="h-6 w-4/6" />
+          </div>
         </div>
       </div>
     );
@@ -102,7 +110,9 @@ export default function ArticleDetail() {
   if (error || !article) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center container text-center space-y-4">
-        <BookOpen className="h-16 w-16 text-muted-foreground" />
+        <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
+          <BookOpen className="h-8 w-8" />
+        </div>
         <h1 className="text-2xl font-display font-bold">Story Not Found</h1>
         <p className="text-sm text-muted-foreground max-w-md">
           {error || "We could not find the article you are looking for."}
@@ -118,7 +128,7 @@ export default function ArticleDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <article className="min-h-screen bg-background pb-20">
       <SEO
         title={`${article.title} | Gaun Basti Journal`}
         description={
@@ -127,14 +137,14 @@ export default function ArticleDetail() {
           "Read authentic stories and guides on Nepal village homestays and culture."
         }
         canonicalPath={`/articles/${article.slug}`}
-        image={article.coverImage}
+        image={article.coverImage || DEFAULT_ARTICLE_COVER}
         type="article"
         schema={getArticleSchema({
           id: article.id || (article as any)._id,
           slug: article.slug,
           title: article.title,
           excerpt: article.summary,
-          coverImage: article.coverImage,
+          coverImage: article.coverImage || DEFAULT_ARTICLE_COVER,
           author: article.author,
           createdAt: article.createdAt,
           updatedAt: (article as any).updatedAt
@@ -146,72 +156,98 @@ export default function ArticleDetail() {
         ]}
       />
 
-      {/* Back Button */}
-      <div className="container max-w-4xl pt-6 pb-4">
+      {/* Breadcrumb Navigation Bar */}
+      <div className="container max-w-4xl pt-8 pb-4">
         <Link
           to="/articles"
-          className="inline-flex items-center text-xs font-medium text-muted-foreground hover:text-gaun-green transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-gaun-green transition-colors group"
         >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Back to Stories
+          <ChevronLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Back to all stories & journal</span>
         </Link>
       </div>
 
-      {/* Article Header */}
-      <header className="container max-w-4xl space-y-4 pb-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gaun-green/10 text-gaun-green capitalize">
+      {/* Article Header Container */}
+      <header className="container max-w-4xl space-y-6 pb-8">
+        {/* Category & Metadata Pills */}
+        <div className="flex flex-wrap items-center gap-2.5 text-xs">
+          <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full font-semibold bg-gaun-green/10 text-gaun-green border border-gaun-green/20 capitalize shadow-xs">
+            <Sparkles className="h-3 w-3" />
             {article.category.replace("-", " ")}
           </span>
+
           {article.readingTime && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary/80 text-muted-foreground font-medium">
+              <Clock className="h-3.5 w-3.5 text-gaun-green" />
               {article.readingTime}
             </span>
           )}
+
           {article.createdAt && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary/80 text-muted-foreground font-medium">
+              <Calendar className="h-3.5 w-3.5 text-gaun-green" />
               {format(new Date(article.createdAt), "MMMM d, yyyy")}
             </span>
           )}
+
+          {associatedVillage && (
+            <Link
+              to={`/villages/${associatedVillage.slug}`}
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-secondary/80 text-foreground hover:text-gaun-green font-medium transition-colors"
+            >
+              <MapPin className="h-3 w-3 text-gaun-green" />
+              <span>{associatedVillage.name}</span>
+            </Link>
+          )}
         </div>
 
-        <h1 className="text-3xl md:text-5xl font-display font-bold tracking-tight leading-tight">
+        {/* Article Main Headline */}
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-bold tracking-tight text-foreground leading-[1.18] text-balance">
           {article.title}
         </h1>
 
+        {/* Lead Summary Excerpt */}
         {article.summary && (
-          <p className="text-base md:text-lg text-muted-foreground leading-relaxed font-sans">
-            {article.summary}
-          </p>
+          <div className="border-l-3 border-gaun-green pl-4 sm:pl-5 py-1">
+            <p className="text-lg sm:text-xl text-muted-foreground/90 font-serif italic leading-relaxed">
+              {article.summary}
+            </p>
+          </div>
         )}
 
-        {/* Author & Social Bar */}
-        <div className="pt-4 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        {/* Author Bio & Social Sharing Bar */}
+        <div className="pt-6 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          <div className="flex items-center gap-3.5">
             <img
-              src={article.author?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"}
+              src={article.author?.avatar || DEFAULT_AUTHOR_AVATAR}
               alt={article.author?.name || "Author"}
-              className="w-10 h-10 rounded-full object-cover border"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = DEFAULT_AUTHOR_AVATAR;
+              }}
+              className="w-12 h-12 rounded-full object-cover border-2 border-border shadow-xs shrink-0"
             />
-            <div>
-              <p className="text-sm font-semibold text-foreground">{article.author?.name || "Gaun Basti Editorial"}</p>
-              <p className="text-xs text-muted-foreground">{article.author?.role || "Cultural Contributor"}</p>
+            <div className="space-y-0.5">
+              <p className="text-sm font-semibold text-foreground leading-tight">
+                {article.author?.name || "Gaun Basti Editorial"}
+              </p>
+              <p className="text-xs text-muted-foreground line-clamp-1">
+                {article.author?.role || "Cultural Contributor & Researcher"}
+              </p>
             </div>
           </div>
 
-          {/* Social Share Buttons */}
+          {/* Social Share Group */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground mr-1 flex items-center gap-1">
-              <Share2 className="h-3.5 w-3.5" />
+            <span className="text-xs text-muted-foreground mr-1 hidden sm:flex items-center gap-1">
+              <Share2 className="h-3.5 w-3.5 text-gaun-green" />
               Share:
             </span>
             <Button
               variant="outline"
               size="sm"
               onClick={handleShareWhatsApp}
-              className="h-8 px-2.5 text-xs hover:text-green-600"
+              className="h-8 px-3 text-xs hover:text-green-600 hover:border-green-300 font-medium"
               title="Share on WhatsApp"
             >
               WhatsApp
@@ -220,7 +256,7 @@ export default function ArticleDetail() {
               variant="outline"
               size="sm"
               onClick={handleShareTwitter}
-              className="h-8 px-2.5 text-xs hover:text-blue-400"
+              className="h-8 px-3 text-xs hover:text-blue-400 hover:border-blue-300 font-medium"
               title="Share on X"
             >
               X
@@ -229,7 +265,7 @@ export default function ArticleDetail() {
               variant="outline"
               size="sm"
               onClick={handleShareFacebook}
-              className="h-8 px-2.5 text-xs hover:text-blue-600"
+              className="h-8 px-3 text-xs hover:text-blue-600 hover:border-blue-300 font-medium"
               title="Share on Facebook"
             >
               Facebook
@@ -238,113 +274,156 @@ export default function ArticleDetail() {
               variant="outline"
               size="sm"
               onClick={handleCopyLink}
-              className="h-8 px-2 text-xs"
+              className="h-8 px-2.5 text-xs hover:border-gaun-green"
               title="Copy Article Link"
             >
-              {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? <Check className="h-3.5 w-3.5 text-gaun-green" /> : <Copy className="h-3.5 w-3.5" />}
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Cover Image */}
+      {/* Hero Cover Image */}
       {article.coverImage && (
-        <section className="container max-w-4xl mb-10">
-          <div className="aspect-[21/10] rounded-3xl overflow-hidden shadow-md bg-secondary">
+        <section className="container max-w-4xl mb-12">
+          <div className="aspect-[21/10] sm:aspect-[21/9] rounded-3xl overflow-hidden shadow-lg border border-border/80 bg-secondary relative group">
             <img
               src={article.coverImage}
               alt={article.title}
-              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = DEFAULT_ARTICLE_COVER;
+              }}
+              className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700"
             />
           </div>
         </section>
       )}
 
       {/* Main Body Prose */}
-      <main className="container max-w-3xl space-y-8">
-        <div className="prose prose-neutral dark:prose-invert max-w-none text-base leading-relaxed whitespace-pre-line space-y-4">
-          {article.content}
-        </div>
+      <main className="container max-w-3xl space-y-10">
+        <ArticleContentRenderer
+          content={article.content}
+          className="text-[17px] sm:text-[18px] leading-[1.85]"
+        />
 
-        {/* Tags */}
+        {/* Hashtags / Topics */}
         {article.tags && article.tags.length > 0 && (
-          <div className="pt-6 border-t border-border flex flex-wrap gap-2 items-center">
-            <span className="text-xs font-semibold text-muted-foreground">Topics:</span>
-            {article.tags.map((tag) => (
-              <span
-                key={tag}
-                className="text-xs bg-secondary px-3 py-1 rounded-full text-foreground font-medium"
-              >
-                #{tag}
-              </span>
-            ))}
+          <div className="pt-8 border-t border-border space-y-3">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <Tag className="h-3.5 w-3.5 text-gaun-green" />
+              <span>Explore Topics</span>
+            </div>
+            <div className="flex flex-wrap gap-2 items-center">
+              {article.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-medium bg-secondary/80 hover:bg-gaun-green/10 hover:text-gaun-green border border-border hover:border-gaun-green/30 transition-all cursor-default shadow-2xs"
+                >
+                  <span className="text-gaun-green font-bold mr-0.5">#</span>
+                  {tag.replace(/^#/, "")}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Associated Village Card */}
+        {/* Associated Destination / Village Card */}
         {associatedVillage && (
-          <div className="my-8 p-6 rounded-2xl border border-border bg-card shadow-sm flex flex-col sm:flex-row items-center gap-6">
-            <img
-              src={associatedVillage.heroImage}
-              alt={associatedVillage.name}
-              className="w-full sm:w-36 h-28 object-cover rounded-xl shrink-0"
-            />
+          <div className="my-10 p-6 sm:p-7 rounded-3xl border border-border bg-gradient-to-br from-card via-card to-secondary/30 shadow-md flex flex-col sm:flex-row items-center gap-6">
+            <div className="w-full sm:w-44 h-36 rounded-2xl overflow-hidden bg-secondary shrink-0 shadow-xs">
+              <img
+                src={associatedVillage.heroImage || DEFAULT_ARTICLE_COVER}
+                alt={associatedVillage.name}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = DEFAULT_ARTICLE_COVER;
+                }}
+                className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+              />
+            </div>
             <div className="space-y-2 flex-1 text-center sm:text-left">
-              <div className="flex items-center justify-center sm:justify-start gap-1 text-xs font-semibold text-gaun-green">
-                <MapPin className="h-3.5 w-3.5" />
-                <span>Featured Destination: {associatedVillage.name}</span>
+              <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-gaun-green bg-gaun-green/10 px-2.5 py-0.5 rounded-full">
+                <MapPin className="h-3 w-3" />
+                <span>Featured Heritage Village</span>
               </div>
-              <h3 className="text-lg font-display font-bold">
+              <h3 className="text-lg sm:text-xl font-display font-bold text-foreground">
                 Experience {associatedVillage.name} Homestays
               </h3>
-              <p className="text-xs text-muted-foreground line-clamp-2">
+              <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                 {associatedVillage.description}
               </p>
-              <Link to={`/villages/${associatedVillage.slug}`}>
-                <Button size="sm" className="mt-2 bg-gaun-green hover:bg-gaun-light-green text-white text-xs">
-                  Explore {associatedVillage.name}
-                  <ArrowRight className="h-3 w-3 ml-1" />
-                </Button>
-              </Link>
+              <div className="pt-1">
+                <Link to={`/villages/${associatedVillage.slug}`}>
+                  <Button size="sm" className="bg-gaun-green hover:bg-gaun-light-green text-white text-xs font-semibold shadow-xs">
+                    Explore {associatedVillage.name} Stays
+                    <ArrowRight className="h-3 w-3 ml-1.5" />
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         )}
       </main>
 
-      {/* Related Articles */}
+      {/* Related Articles Section */}
       {relatedArticles.length > 0 && (
         <section className="container max-w-4xl mt-16 pt-12 border-t border-border space-y-6">
-          <h2 className="text-2xl font-display font-bold">Related Stories & Guides</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-display font-bold tracking-tight">Related Stories & Guides</h2>
+            <Link
+              to="/articles"
+              className="text-xs font-semibold text-gaun-green hover:underline flex items-center gap-1"
+            >
+              View all stories
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {relatedArticles.map((rel) => (
               <Link
                 key={rel._id || rel.id || rel.slug}
                 to={`/articles/${rel.slug}`}
-                className="group flex flex-col bg-card border border-border rounded-xl overflow-hidden hover:shadow-md transition-shadow"
+                className="group flex flex-col bg-card border border-border rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300"
               >
-                <div className="aspect-[16/10] overflow-hidden bg-secondary">
+                <div className="aspect-[16/10] overflow-hidden bg-secondary relative">
                   <img
-                    src={rel.coverImage || "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=600&auto=format&fit=crop&q=80"}
+                    src={rel.coverImage || DEFAULT_ARTICLE_COVER}
                     alt={rel.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = DEFAULT_ARTICLE_COVER;
+                    }}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
+                  <div className="absolute top-2.5 left-2.5">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-black/70 backdrop-blur-md text-white uppercase tracking-wider">
+                      {rel.category}
+                    </span>
+                  </div>
                 </div>
-                <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
-                  <span className="text-[10px] font-semibold text-gaun-green uppercase tracking-wider">
-                    {rel.category}
-                  </span>
-                  <h3 className="font-display font-semibold text-sm leading-snug group-hover:text-gaun-green transition-colors line-clamp-2">
-                    {rel.title}
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground line-clamp-2">
-                    {rel.summary || rel.content.substring(0, 80)}...
-                  </p>
+                <div className="p-4 sm:p-5 space-y-2 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="font-display font-bold text-sm sm:text-base leading-snug group-hover:text-gaun-green transition-colors line-clamp-2">
+                      {rel.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mt-1.5 leading-relaxed">
+                      {rel.summary || rel.content.substring(0, 90)}...
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>{rel.readingTime || "5 min read"}</span>
+                    <span className="text-gaun-green font-medium flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                      Read story <ArrowRight className="h-2.5 w-2.5" />
+                    </span>
+                  </div>
                 </div>
               </Link>
             ))}
           </div>
         </section>
       )}
-    </div>
+    </article>
   );
 }
+

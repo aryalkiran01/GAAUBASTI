@@ -219,13 +219,34 @@ export default function ListingWizardModal({
   }, [listingToEdit, open]);
 
   const handleNext = () => {
-    if (currentStep === 1 && (!formData.title || !formData.description)) {
-      toast({ title: "Title and description required", variant: "destructive" });
-      return;
+    if (currentStep === 1) {
+      if (!formData.title || formData.title.trim().length < 5) {
+        toast({ title: "Invalid title", description: "Title must be at least 5 characters long", variant: "destructive" });
+        return;
+      }
+      if (!formData.description || formData.description.trim().length < 20) {
+        toast({ title: "Invalid description", description: "Description must be at least 20 characters long", variant: "destructive" });
+        return;
+      }
     }
-    if (currentStep === 2 && !formData.location.city) {
-      toast({ title: "City/Village name required", variant: "destructive" });
-      return;
+    if (currentStep === 2) {
+      const city = formData.location.city.trim() || formData.location.village.trim();
+      if (!city) {
+        toast({ title: "Location required", description: "Please provide a village or city name", variant: "destructive" });
+        return;
+      }
+    }
+    if (currentStep === 3) {
+      if (!formData.images || formData.images.length === 0) {
+        toast({ title: "Photo required", description: "Please add at least one photo of your stay", variant: "destructive" });
+        return;
+      }
+    }
+    if (currentStep === 6) {
+      if (!formData.price || Number(formData.price) <= 0) {
+        toast({ title: "Price required", description: "Please enter a valid nightly price", variant: "destructive" });
+        return;
+      }
     }
     if (currentStep < 10) {
       setCurrentStep((prev) => prev + 1);
@@ -239,10 +260,19 @@ export default function ListingWizardModal({
   };
 
   const handleAddImage = () => {
-    if (!newImageUrl.trim()) return;
+    const trimmedUrl = newImageUrl.trim();
+    if (!trimmedUrl) return;
+    if (!/^https?:\/\//i.test(trimmedUrl)) {
+      toast({
+        title: "Invalid Image URL",
+        description: "Image URL must start with http:// or https://",
+        variant: "destructive",
+      });
+      return;
+    }
     setFormData((prev) => ({
       ...prev,
-      images: [...prev.images, { url: newImageUrl.trim(), caption: newImageCaption.trim() }],
+      images: [...prev.images, { url: trimmedUrl, caption: newImageCaption.trim() || "Homestay photo" }],
     }));
     setNewImageUrl("");
     setNewImageCaption("");
@@ -281,40 +311,121 @@ export default function ListingWizardModal({
   };
 
   const handleSubmit = async (publishImmediate = true) => {
+    // Pre-flight client-side validation
+    if (!formData.title || formData.title.trim().length < 5) {
+      setCurrentStep(1);
+      toast({
+        title: "Listing title required",
+        description: "Title must be at least 5 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.description || formData.description.trim().length < 20) {
+      setCurrentStep(1);
+      toast({
+        title: "Description too short",
+        description: "Description must be at least 20 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const city = (formData.location.city || formData.location.village || formData.location.address || "").trim();
+    const address = (formData.location.address || formData.location.village || formData.location.city || "").trim();
+
+    if (!city || !address) {
+      setCurrentStep(2);
+      toast({
+        title: "Location details required",
+        description: "Please specify both the village/city name and local address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const validImages = (formData.images || []).filter(
+      (img) => img && typeof img.url === "string" && img.url.trim().length > 0 && /^https?:\/\//i.test(img.url.trim())
+    );
+
+    if (validImages.length === 0) {
+      setCurrentStep(3);
+      toast({
+        title: "Photo required",
+        description: "Please provide at least one valid image with http(s) URL",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const price = Number(formData.price);
+    if (!Number.isFinite(price) || price <= 0) {
+      setCurrentStep(6);
+      toast({
+        title: "Invalid nightly rate",
+        description: "Price must be a positive number",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
+      const lat = Number(formData.location.coordinates?.latitude) || 28.3758;
+      const lng = Number(formData.location.coordinates?.longitude) || 83.8083;
+
       const payload: any = {
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        maxGuests: Number(formData.maxGuests),
-        bedrooms: Number(formData.bedrooms),
-        bathrooms: Number(formData.bathrooms),
-        price: Number(formData.price),
-        amenities: formData.amenities,
-        images: formData.images,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        category: formData.category || "homestay",
+        maxGuests: Math.max(1, Number(formData.maxGuests) || 1),
+        bedrooms: Math.max(0, Number(formData.bedrooms) || 1),
+        bathrooms: Math.max(0, Number(formData.bathrooms) || 1),
+        price,
+        amenities: formData.amenities || [],
+        houseRules: formData.houseRules || [],
+        images: validImages.map((img) => ({
+          url: img.url.trim(),
+          caption: img.caption?.trim() || "Uploaded photo",
+        })),
+        checkInTime: "15:00",
+        checkOutTime: "11:00",
+        cancellationPolicy: "moderate",
         safetyAndEmergency: {
-          emergencyContactName: formData.safetyInfo.emergencyContactName,
-          emergencyContactPhone: formData.safetyInfo.emergencyContactPhone || formData.safetyInfo.emergencyContact,
-          nearbyHospital: formData.safetyInfo.nearbyHospital || formData.safetyInfo.medicalFacility,
-          policeStationContact: formData.safetyInfo.policeStationContact,
-          safetyNotes: formData.safetyInfo.safetyNotes,
-          importantLocationNotes: formData.safetyInfo.importantLocationNotes,
+          emergencyContactName: (formData.safetyInfo?.emergencyContactName || "").trim(),
+          emergencyContactPhone: (
+            formData.safetyInfo?.emergencyContactPhone ||
+            formData.safetyInfo?.emergencyContact ||
+            ""
+          ).trim(),
+          nearbyHospital: (
+            formData.safetyInfo?.nearbyHospital ||
+            formData.safetyInfo?.medicalFacility ||
+            ""
+          ).trim(),
+          policeStationContact: (formData.safetyInfo?.policeStationContact || "").trim(),
+          safetyNotes: formData.safetyInfo?.safetyNotes
+            ? typeof formData.safetyInfo.safetyNotes === "string"
+              ? [formData.safetyInfo.safetyNotes.trim()]
+              : formData.safetyInfo.safetyNotes
+            : [],
+          importantLocationNotes: (formData.safetyInfo?.importantLocationNotes || "").trim(),
         },
         location: {
-          address: formData.location.address || formData.location.city,
-          city: formData.location.city,
-          village: formData.location.village || formData.location.city,
-          district: formData.location.district || "Kaski",
-          province: formData.location.province || "Gandaki",
-          country: formData.location.country || "Nepal",
-          coordinates: formData.location.coordinates,
+          address,
+          city,
+          village: (formData.location.village || city).trim(),
+          district: formData.location.district?.trim() || "Kaski",
+          province: formData.location.province?.trim() || "Gandaki",
+          country: formData.location.country?.trim() || "Nepal",
+          coordinates: {
+            latitude: lat,
+            longitude: lng,
+          },
           geoJSON: {
             type: "Point",
-            coordinates: [
-              formData.location.coordinates.longitude,
-              formData.location.coordinates.latitude,
-            ],
+            coordinates: [lng, lat],
           },
         },
       };
@@ -338,9 +449,15 @@ export default function ListingWizardModal({
         onSuccess(savedListing);
         onOpenChange(false);
       } else {
+        const errorMsg =
+          res.message ||
+          (res.errors && Array.isArray(res.errors)
+            ? res.errors.map((e: any) => `${e.path || e.param}: ${e.msg}`).join("; ")
+            : "Failed to save listing");
+
         toast({
           title: "Submission failed",
-          description: res.message || "Failed to save listing",
+          description: errorMsg,
           variant: "destructive",
         });
       }
@@ -660,7 +777,15 @@ export default function ListingWizardModal({
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
                 {formData.images.map((img, idx) => (
                   <div key={idx} className="relative aspect-[4/3] rounded-xl overflow-hidden border border-border group bg-secondary">
-                    <img src={img.url} alt={img.caption || "Homestay"} className="w-full h-full object-cover" />
+                    <img
+                      src={img.url}
+                      alt={img.caption || "Homestay"}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&auto=format&fit=crop&q=80";
+                      }}
+                      className="w-full h-full object-cover"
+                    />
                     {idx === 0 && (
                       <span className="absolute top-2 left-2 bg-gaun-green text-white text-[10px] font-bold px-2 py-0.5 rounded shadow">
                         Cover Photo
@@ -744,7 +869,7 @@ export default function ListingWizardModal({
               <h3 className="text-base font-semibold">Set your nightly rate</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="price">Base Price per Night ($ USD)</Label>
+                  <Label htmlFor="price">Base Price per Night (Rs. NPR)</Label>
                   <Input
                     id="price"
                     type="number"
@@ -753,10 +878,10 @@ export default function ListingWizardModal({
                     onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                     className="mt-1 font-semibold text-base"
                   />
-                  <p className="text-[11px] text-muted-foreground mt-1">Average homestay in this region: $25 - $45/night</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Average homestay in this region: Rs. 1,500 - Rs. 3,500/night</p>
                 </div>
                 <div>
-                  <Label htmlFor="cleaningFee">Cleaning / Service Fee ($)</Label>
+                  <Label htmlFor="cleaningFee">Cleaning / Service Fee (Rs. NPR)</Label>
                   <Input
                     id="cleaningFee"
                     type="number"
@@ -967,8 +1092,12 @@ export default function ListingWizardModal({
               <div className="max-w-sm mx-auto border border-border rounded-2xl overflow-hidden shadow-md bg-card">
                 <div className="aspect-[4/3] bg-secondary relative">
                   <img
-                    src={formData.images[0]?.url || "https://images.unsplash.com/photo-1544735716-392fe2489ffa"}
+                    src={formData.images[0]?.url || "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&auto=format&fit=crop&q=80"}
                     alt={formData.title}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&auto=format&fit=crop&q=80";
+                    }}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full backdrop-blur-md">
@@ -980,7 +1109,7 @@ export default function ListingWizardModal({
                   <p className="text-xs text-muted-foreground line-clamp-2">{formData.description}</p>
                   <div className="pt-2 border-t flex justify-between items-center text-xs">
                     <span className="text-muted-foreground">{formData.maxGuests} Guests • {formData.bedrooms} Beds</span>
-                    <span className="font-bold text-gaun-green">${formData.price} / night</span>
+                    <span className="font-bold text-gaun-green">Rs. {formData.price?.toLocaleString()} / night</span>
                   </div>
                 </div>
               </div>

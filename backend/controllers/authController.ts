@@ -501,7 +501,8 @@ const logout = async (req, res) => {
     }
 
     // Clear authentication cookie
-    res.clearCookie('token', getCookieOptions());
+    const { maxAge: _maxAge, ...clearOptions } = getCookieOptions();
+    res.clearCookie('token', clearOptions);
 
     res.json({
       success: true,

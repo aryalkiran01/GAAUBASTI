@@ -81,7 +81,7 @@ const Index = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {featuredListings.slice(0, 4).map((listing) => (
-                <div key={listing.id} className="h-full">
+                <div key={(listing as any)._id || listing.id} className="h-full">
                   <ListingCard listing={listing} />
                 </div>
               ))}

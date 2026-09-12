@@ -56,34 +56,14 @@ const apiRequest = async (
       const message =
         data?.message || data?.error || "The request could not be completed.";
 
-      if (status === 401 || status === 403) {
-        return {
-          success: false,
-          message,
-          status,
-        };
-      }
-
-      if (status === 404) {
-        return {
-          success: false,
-          message: message || "Resource not found.",
-          status,
-        };
-      }
-
-      if (status === 409 || status === 422) {
-        return {
-          success: false,
-          message,
-          status,
-        };
-      }
-
       return {
         success: false,
-        message: message || "API request failed.",
+        message,
+        errors: data?.errors,
+        details: data?.details,
+        field: data?.field,
         status,
+        ...data,
       };
     }
 
@@ -195,10 +175,28 @@ export const authAPI = {
   },
 };
 
+/// Helper to build safe query strings without undefined, null, or empty string params
+const buildCleanQueryString = (params: Record<string, any> = {}): string => {
+  const cleanParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "" || value === "undefined" || value === "null") {
+      return;
+    }
+    if (Array.isArray(value)) {
+      if (value.length > 0) {
+        cleanParams.set(key, value.join(","));
+      }
+    } else {
+      cleanParams.set(key, String(value).trim());
+    }
+  });
+  return cleanParams.toString();
+};
+
 // Listings API calls
 export const listingsAPI = {
   getListings: async (params: any = {}) => {
-    const queryString = new URLSearchParams(params).toString();
+    const queryString = buildCleanQueryString(params);
     return await apiRequest(
       `/listings${queryString ? `?${queryString}` : ""}`,
       {},
@@ -211,12 +209,26 @@ export const listingsAPI = {
   },
 
   getListing: async (id: string) => {
-    return await apiRequest(`/listings/${id}`, {}, false);
+    if (!id || id === "undefined" || id === "null" || !id.trim()) {
+      return {
+        success: false,
+        message: "Invalid listing ID provided",
+        status: 400
+      };
+    }
+    return await apiRequest(`/listings/${encodeURIComponent(id.trim())}`, {}, false);
   },
 
   checkAvailability: async (id: string, startDate: string, endDate: string) => {
+    if (!id || id === "undefined" || id === "null" || !id.trim()) {
+      return {
+        success: false,
+        message: "Invalid listing ID provided",
+        status: 400
+      };
+    }
     return await apiRequest(
-      `/listings/${id}/availability?startDate=${startDate}&endDate=${endDate}`,
+      `/listings/${encodeURIComponent(id.trim())}/availability?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`,
       {},
       false,
     );
@@ -230,7 +242,14 @@ export const listingsAPI = {
   },
 
   updateListing: async (id: string, listingData: any) => {
-    return await apiRequest(`/listings/${id}`, {
+    if (!id || id === "undefined" || id === "null" || !id.trim()) {
+      return {
+        success: false,
+        message: "Invalid listing ID provided",
+        status: 400
+      };
+    }
+    return await apiRequest(`/listings/${encodeURIComponent(id.trim())}`, {
       method: "PUT",
       body: JSON.stringify(listingData),
     });
@@ -241,45 +260,86 @@ export const listingsAPI = {
   },
 
   toggleWishlist: async (listingId: string) => {
+    if (!listingId || listingId === "undefined" || listingId === "null" || !listingId.trim()) {
+      return {
+        success: false,
+        message: "Invalid listing ID provided",
+        status: 400
+      };
+    }
     return await apiRequest("/wishlist", {
       method: "POST",
-      body: JSON.stringify({ listingId }),
+      body: JSON.stringify({ listingId: listingId.trim() }),
     });
   },
 
   removeWishlistItem: async (listingId: string) => {
-    return await apiRequest(`/wishlist/${listingId}`, {
+    if (!listingId || listingId === "undefined" || listingId === "null" || !listingId.trim()) {
+      return {
+        success: false,
+        message: "Invalid listing ID provided",
+        status: 400
+      };
+    }
+    return await apiRequest(`/wishlist/${encodeURIComponent(listingId.trim())}`, {
       method: "DELETE",
     });
   },
 
   checkWishlistStatus: async (listingIds: string[]) => {
+    const validIds = (listingIds || []).filter(
+      (id) => Boolean(id) && id !== "undefined" && id !== "null"
+    );
+    if (validIds.length === 0) {
+      return { success: true, data: { wishlistStatus: {} } };
+    }
     return await apiRequest("/wishlist/check", {
       method: "POST",
-      body: JSON.stringify({ listingIds }),
+      body: JSON.stringify({ listingIds: validIds }),
     });
   },
 
   deleteListing: async (id: string) => {
-    return await apiRequest(`/listings/${id}`, {
+    if (!id || id === "undefined" || id === "null" || !id.trim()) {
+      return {
+        success: false,
+        message: "Invalid listing ID provided",
+        status: 400
+      };
+    }
+    return await apiRequest(`/listings/${encodeURIComponent(id.trim())}`, {
       method: "DELETE",
     });
   },
 
   publishListing: async (id: string) => {
-    return await apiRequest(`/listings/${id}/publish`, {
+    if (!id || id === "undefined" || id === "null" || !id.trim()) {
+      return {
+        success: false,
+        message: "Invalid listing ID provided",
+        status: 400
+      };
+    }
+    return await apiRequest(`/listings/${encodeURIComponent(id.trim())}/publish`, {
       method: "POST",
     });
   },
 
   unpublishListing: async (id: string) => {
-    return await apiRequest(`/listings/${id}/unpublish`, {
+    if (!id || id === "undefined" || id === "null" || !id.trim()) {
+      return {
+        success: false,
+        message: "Invalid listing ID provided",
+        status: 400
+      };
+    }
+    return await apiRequest(`/listings/${encodeURIComponent(id.trim())}/unpublish`, {
       method: "POST",
     });
   },
 
   getHostListings: async (params: any = {}) => {
-    const queryString = new URLSearchParams(params).toString();
+    const queryString = buildCleanQueryString(params);
     return await apiRequest(
       `/listings/host/my-listings${queryString ? `?${queryString}` : ""}`,
     );

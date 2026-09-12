@@ -27,7 +27,7 @@ const createPriceIcon = (price: number, isSelected: boolean) => {
         padding: 4px 8px;
         border-radius: 9999px;
         font-weight: 700;
-        font-size: 12px;
+        font-size: 11px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         border: 2px solid ${isSelected ? "#047857" : "#e5e7eb"};
         display: flex;
@@ -38,11 +38,11 @@ const createPriceIcon = (price: number, isSelected: boolean) => {
         cursor: pointer;
         transition: all 0.2s ease;
       ">
-        <span>$${price}</span>
+        <span>Rs. ${price?.toLocaleString()}</span>
       </div>
     `,
-    iconSize: [40, 24],
-    iconAnchor: [20, 12],
+    iconSize: [50, 24],
+    iconAnchor: [25, 12],
   });
 };
 
@@ -239,10 +239,14 @@ export default function MapView({
             >
               <Popup className="listing-map-popup" closeButton={true} offset={[0, -10]}>
                 <div className="w-56 p-1">
-                  <div className="relative aspect-[16/10] overflow-hidden rounded-lg mb-2">
+                  <div className="relative aspect-[16/10] overflow-hidden rounded-lg mb-2 bg-secondary">
                     <img
-                      src={m.image}
+                      src={m.image || "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&auto=format&fit=crop&q=80"}
                       alt={m.title}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&auto=format&fit=crop&q=80";
+                      }}
                       className="h-full w-full object-cover"
                     />
                     <Badge className="absolute top-2 left-2 bg-black/60 backdrop-blur text-white text-[10px] capitalize font-medium border-none">
@@ -263,7 +267,7 @@ export default function MapView({
                       {m.reviews > 0 && <span className="text-muted-foreground">({m.reviews})</span>}
                     </div>
                     <div className="text-right">
-                      <span className="font-bold text-sm text-primary">${m.price}</span>
+                      <span className="font-bold text-sm text-primary">Rs. {m.price?.toLocaleString()}</span>
                       <span className="text-[10px] text-muted-foreground">/night</span>
                     </div>
                   </div>

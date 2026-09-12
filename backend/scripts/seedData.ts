@@ -41,14 +41,12 @@ const seedData = async () => {
     await seedArticles();
 
     // 2. Create Users with authentic Nepali profiles
-    const hashedPassword = await bcrypt.hash('password', 12);
-    
     const users = await User.create([
       {
         name: 'Aarav Sharma (आरव शर्मा)',
         username: 'guestuser',
         email: 'guest@example.com',
-        password: hashedPassword,
+        password: 'password',
         role: 'guest',
         avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
         isVerified: true
@@ -57,7 +55,7 @@ const seedData = async () => {
         name: 'Dhan Maya Gurung (धनमाया गुरुङ)',
         username: 'hostuser',
         email: 'host@example.com',
-        password: hashedPassword,
+        password: 'password',
         role: 'host',
         avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80',
         isVerified: true,
@@ -72,9 +70,18 @@ const seedData = async () => {
         name: 'Gaun Basti Admin (गाउँ बस्ती व्यवस्थापक)',
         username: 'adminuser',
         email: 'admin@example.com',
-        password: hashedPassword,
+        password: 'password',
         role: 'admin',
         avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=200&auto=format&fit=crop&q=80',
+        isVerified: true
+      },
+      {
+        name: 'Kiran Aryal (किरण अर्याल)',
+        username: 'kiranaryal',
+        email: 'aryalkira1@gmail.com',
+        password: 'password',
+        role: 'guest',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
         isVerified: true
       }
     ]);

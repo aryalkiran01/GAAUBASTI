@@ -1,8 +1,8 @@
 export {};
 
-const formatCurrency = (amount, currency = 'USD') => {
-  const symbol = currency === 'USD' ? '$' : '';
-  return `${symbol}${Number(amount).toFixed(2)}`;
+const formatCurrency = (amount, currency = 'NPR') => {
+  const symbol = currency === 'USD' ? '$' : 'Rs. ';
+  return `${symbol}${Number(amount).toLocaleString()}`;
 };
 
 const formatDate = (date) => {

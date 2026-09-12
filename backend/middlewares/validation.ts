@@ -4,10 +4,19 @@ const { body, param, query, validationResult } = require('express-validator');
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    const errorArray = errors.array();
+    const errorMessages = errorArray
+      .map((err) => `${err.path || err.param || 'field'}: ${err.msg}`)
+      .join('; ');
     return res.status(400).json({
       success: false,
-      message: 'Validation failed',
-      errors: errors.array()
+      message: `Validation failed: ${errorMessages}`,
+      errors: errorArray,
+      details: errorArray.map((err) => ({
+        field: err.path || err.param || 'field',
+        message: err.msg,
+        value: err.value
+      }))
     });
   }
   next();
@@ -69,15 +78,19 @@ const validateListing = [
     .isLength({ min: 20, max: 2000 })
     .withMessage('Description must be between 20 and 2000 characters'),
 
-  body('location.address')
-    .trim()
-    .notEmpty()
-    .withMessage('Address is required'),
-
-  body('location.city')
-    .trim()
-    .notEmpty()
-    .withMessage('City is required'),
+  body('location')
+    .custom((val) => {
+      if (!val) throw new Error('Location is required');
+      if (typeof val === 'string' && val.trim().length > 0) return true;
+      if (typeof val === 'object') {
+        const city = val.city || val.village || val.address;
+        const address = val.address || val.city || val.village;
+        if (!city || !String(city).trim()) throw new Error('City or village is required');
+        if (!address || !String(address).trim()) throw new Error('Address is required');
+        return true;
+      }
+      throw new Error('Valid location is required');
+    }),
 
   body('price')
     .isFloat({ min: 0 })
@@ -88,12 +101,19 @@ const validateListing = [
     .withMessage('Maximum guests must be at least 1'),
 
   body('bedrooms')
+    .optional({ values: 'falsy' })
     .isInt({ min: 0 })
     .withMessage('Bedrooms must be a non-negative number'),
 
   body('bathrooms')
+    .optional({ values: 'falsy' })
     .isInt({ min: 0 })
     .withMessage('Bathrooms must be a non-negative number'),
+
+  body('category')
+    .optional({ values: 'falsy' })
+    .isIn(['homestay', 'cottage', 'villa', 'traditional', 'treehouse', 'cabin'])
+    .withMessage('Invalid listing category'),
 
   body('amenities')
     .optional()
@@ -103,12 +123,18 @@ const validateListing = [
   body('images')
     .optional()
     .isArray({ max: 10 })
-    .withMessage('Images must be an array with at most 10 items'),
-
-  body('images.*.url')
-    .optional()
-    .isURL({ protocols: ['http', 'https'] })
-    .withMessage('Each image URL must be a valid http(s) URL'),
+    .withMessage('Images must be an array with at most 10 items')
+    .custom((images) => {
+      if (!Array.isArray(images)) return true;
+      for (const img of images) {
+        if (!img) continue;
+        const url = typeof img === 'string' ? img : img.url;
+        if (url && (typeof url !== 'string' || !/^https?:\/\//i.test(url.trim()))) {
+          throw new Error('Each image URL must be a valid http(s) URL');
+        }
+      }
+      return true;
+    }),
 
   handleValidationErrors
 ];
@@ -200,34 +226,49 @@ const validateObjectId = (paramName) => [
 // Query validation for listings
 const validateListingQuery = [
   query('page')
-    .optional()
+    .optional({ values: 'falsy' })
     .isInt({ min: 1 })
     .withMessage('Page must be a positive integer'),
 
   query('limit')
-    .optional()
+    .optional({ values: 'falsy' })
     .isInt({ min: 1, max: 50 })
     .withMessage('Limit must be between 1 and 50'),
 
   query('minPrice')
-    .optional()
+    .optional({ values: 'falsy' })
     .isFloat({ min: 0 })
     .withMessage('Minimum price must be non-negative'),
 
   query('maxPrice')
-    .optional()
+    .optional({ values: 'falsy' })
     .isFloat({ min: 0 })
     .withMessage('Maximum price must be non-negative'),
 
   query('guests')
-    .optional()
+    .optional({ values: 'falsy' })
     .isInt({ min: 1 })
     .withMessage('Guests must be at least 1'),
 
   query('rating')
-    .optional()
+    .optional({ values: 'falsy' })
     .isFloat({ min: 0, max: 5 })
     .withMessage('Rating must be between 0 and 5'),
+
+  query('lat')
+    .optional({ values: 'falsy' })
+    .isFloat({ min: -90, max: 90 })
+    .withMessage('Latitude must be between -90 and 90'),
+
+  query('lng')
+    .optional({ values: 'falsy' })
+    .isFloat({ min: -180, max: 180 })
+    .withMessage('Longitude must be between -180 and 180'),
+
+  query('radius')
+    .optional({ values: 'falsy' })
+    .isFloat({ min: 0.1 })
+    .withMessage('Radius must be greater than 0'),
 
   handleValidationErrors
 ];

@@ -59,7 +59,7 @@ export default function BookingEditDialog({ booking, isOpen, onClose, onSave }: 
             <p className="text-sm">
               {booking && `${format(booking.startDate, "MMM d")} - ${format(booking.endDate, "MMM d, yyyy")}`}
             </p>
-            <p className="text-sm">Total: ${booking?.totalPrice}</p>
+            <p className="text-sm">Total: Rs. {booking?.totalPrice?.toLocaleString()}</p>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="status" className="text-right">

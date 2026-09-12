@@ -129,9 +129,17 @@ export default function ListingDetail() {
     );
   }
 
+  const DEFAULT_STAY_IMAGES = [
+    "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=1200&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&auto=format&fit=crop&q=80",
+  ];
+
   const basePrice = listing.price * nights;
-  const cleaningFee = 15;
-  const serviceFee = Math.round(basePrice * 0.08);
+  const cleaningFee = 200; // NPR standard cleaning fee
+  const serviceFee = Math.round(basePrice * 0.08); // NPR 8% community fee
   const totalAmount = basePrice + cleaningFee + serviceFee;
 
   const handleAvailabilityCheck = (available: boolean, startDate: Date, checkEndDate: Date) => {
@@ -141,6 +149,8 @@ export default function ListingDetail() {
     const nightsCount = Math.max(1, Math.ceil((checkEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
     setNights(nightsCount);
   };
+
+  const listingId = (listing as any)?._id || listing?.id || id;
 
   const handleMessageHost = async () => {
     if (!user) {
@@ -165,7 +175,7 @@ export default function ListingDetail() {
 
     try {
       const response = await conversationsAPI.createConversation({
-        listingId: listing.id,
+        listingId: listingId,
         participantIds: [hostId],
       });
 
@@ -219,7 +229,7 @@ export default function ListingDetail() {
     setIsBooking(true);
     try {
       const bookingData = {
-        listing: listing.id,
+        listing: listingId,
         startDate: selectedDate.toISOString(),
         endDate: endDate.toISOString(),
         guests: { adults, children },
@@ -238,12 +248,12 @@ export default function ListingDetail() {
 
         const paymentDetails: PaymentDetails = {
           bookingId,
-          listingId: listing.id,
+          listingId: listingId,
           amount: totalAmount,
           nights: nights,
           startDate: selectedDate,
           status: 'pending',
-          currency: 'USD',
+          currency: 'NPR',
         };
 
         navigate("/payment", { state: { paymentDetails } });
@@ -265,7 +275,7 @@ export default function ListingDetail() {
     }
   };
 
-  const saved = isSaved(listing.id);
+  const saved = listingId ? isSaved(listingId) : false;
 
   const handleToggleWishlist = async () => {
     if (!user) {
@@ -273,7 +283,8 @@ export default function ListingDetail() {
       navigate("/login");
       return;
     }
-    const response = await toggle(listing.id);
+    if (!listingId) return;
+    const response = await toggle(listingId);
     if (response.success) {
       toast({ title: response.data?.saved ? "Saved to wishlist" : "Removed from wishlist" });
     }
@@ -295,9 +306,20 @@ export default function ListingDetail() {
     ? `${(locObj as any).address || (locObj as any).city}, ${(locObj as any).district || (locObj as any).province || "Nepal"}`
     : String(listing.location);
 
-  const imagesList = Array.isArray(listing.images)
-    ? listing.images.map((img) => (typeof img === "string" ? img : img.url))
-    : ["https://images.unsplash.com/photo-1544735716-392fe2489ffa"];
+  const rawImages = (Array.isArray(listing.images) ? listing.images : [])
+    .map((img: any) => {
+      if (!img) return null;
+      if (typeof img === "string") return img.trim();
+      if (typeof img === "object" && img.url) return String(img.url).trim();
+      return null;
+    })
+    .filter((url): url is string => Boolean(url && url.length > 0));
+
+  const imagesList = rawImages.length >= 5
+    ? rawImages
+    : rawImages.length > 0
+    ? [...rawImages, ...DEFAULT_STAY_IMAGES.slice(rawImages.length, 5)]
+    : DEFAULT_STAY_IMAGES;
 
   const listingCoordinates = (locObj as any)?.coordinates
     ? { lat: (locObj as any).coordinates.latitude, lng: (locObj as any).coordinates.longitude }
@@ -308,10 +330,10 @@ export default function ListingDetail() {
       <SEO
         title={`${listing.title} — ${locationString} | Gaun Basti`}
         description={`${listing.title} in ${locationString}. ${listing.description?.slice(0, 150) || ""}`}
-        canonicalPath={`/listing/${listing.id}`}
+        canonicalPath={`/listing/${listingId}`}
         image={imagesList[0]}
         schema={getLodgingSchema({
-          id: listing.id,
+          id: listingId,
           title: listing.title,
           description: listing.description,
           price: listing.price,
@@ -324,7 +346,7 @@ export default function ListingDetail() {
         breadcrumbs={[
           { name: "Home", url: "/" },
           { name: "Listings", url: "/listings" },
-          { name: listing.title, url: `/listing/${listing.id}` }
+          { name: listing.title, url: `/listing/${listingId}` }
         ]}
       />
 
@@ -391,6 +413,10 @@ export default function ListingDetail() {
             <img
               src={imagesList[0]}
               alt={listing.title}
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = DEFAULT_STAY_IMAGES[0];
+              }}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 cursor-pointer"
             />
           </div>
@@ -400,6 +426,10 @@ export default function ListingDetail() {
                 <img
                   src={img}
                   alt={`${listing.title} photo ${i + 2}`}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = DEFAULT_STAY_IMAGES[(i + 1) % DEFAULT_STAY_IMAGES.length];
+                  }}
                   className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 cursor-pointer"
                 />
               </div>
@@ -446,6 +476,10 @@ export default function ListingDetail() {
               <img
                 src={(listing.host as any)?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120"}
                 alt={(listing.host as any)?.name || "Host"}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120";
+                }}
                 className="w-12 h-12 rounded-full object-cover border"
               />
               <div>
@@ -564,9 +598,9 @@ export default function ListingDetail() {
 
           {/* AI Review Summary & Reviews Section */}
           <div className="space-y-6 pt-6 border-t border-border">
-            <ReviewSummary listingId={listing.id} />
+            <ReviewSummary listingId={listingId} />
             <ReviewSection
-              listingId={listing.id}
+              listingId={listingId}
               canReview={!!reviewableBookingId}
               bookingId={reviewableBookingId}
             />
@@ -578,7 +612,7 @@ export default function ListingDetail() {
           <div className="sticky top-24 border border-border rounded-3xl p-6 bg-card shadow-lg space-y-6">
             <div className="flex items-baseline justify-between border-b border-border pb-4">
               <div>
-                <span className="text-2xl font-bold font-display text-foreground">${listing.price}</span>
+                <span className="text-2xl font-bold font-display text-foreground">Rs. {listing.price?.toLocaleString()}</span>
                 <span className="text-xs text-muted-foreground"> / night</span>
               </div>
               <div className="flex items-center gap-1 text-xs font-semibold">
@@ -591,7 +625,7 @@ export default function ListingDetail() {
             {/* Availability Date Picker */}
             <div className="space-y-3">
               <AvailabilityChecker
-                listingId={listing.id}
+                listingId={listingId}
                 onAvailabilityCheck={handleAvailabilityCheck}
               />
             </div>
@@ -651,20 +685,20 @@ export default function ListingDetail() {
             {selectedDate && endDate && isAvailable && (
               <div className="space-y-2 pt-2 border-t border-border text-xs">
                 <div className="flex justify-between text-muted-foreground">
-                  <span>${listing.price} × {nights} {nights === 1 ? 'night' : 'nights'}</span>
-                  <span>${basePrice}</span>
+                  <span>Rs. {listing.price?.toLocaleString()} × {nights} {nights === 1 ? 'night' : 'nights'}</span>
+                  <span>Rs. {basePrice.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
                   <span>Cleaning fee</span>
-                  <span>${cleaningFee}</span>
+                  <span>Rs. {cleaningFee.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
                   <span>Community service fee</span>
-                  <span>${serviceFee}</span>
+                  <span>Rs. {serviceFee.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between font-bold text-foreground pt-2 border-t text-sm">
-                  <span>Total (USD)</span>
-                  <span className="text-gaun-green">${totalAmount}</span>
+                  <span>Total (NPR)</span>
+                  <span className="text-gaun-green">Rs. {totalAmount.toLocaleString()}</span>
                 </div>
               </div>
             )}
@@ -689,7 +723,7 @@ export default function ListingDetail() {
       <div className="lg:hidden fixed bottom-0 inset-x-0 bg-background/95 backdrop-blur border-t border-border p-4 z-40 flex items-center justify-between shadow-2xl">
         <div>
           <div className="flex items-baseline gap-1">
-            <span className="text-lg font-bold">${listing.price}</span>
+            <span className="text-lg font-bold">Rs. {listing.price?.toLocaleString()}</span>
             <span className="text-xs text-muted-foreground">/ night</span>
           </div>
           <div className="flex items-center gap-1 text-[11px] text-muted-foreground">

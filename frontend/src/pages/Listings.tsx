@@ -84,11 +84,13 @@ export default function Listings() {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const MAX_DEFAULT_PRICE = 20000;
+
   // Read URL search params
   const locationParam = urlSearchParams.get("location") || "";
   const guestsParam = urlSearchParams.get("guests") || "";
   const minPriceParam = urlSearchParams.get("minPrice") ? Number(urlSearchParams.get("minPrice")) : 0;
-  const maxPriceParam = urlSearchParams.get("maxPrice") ? Number(urlSearchParams.get("maxPrice")) : 500;
+  const maxPriceParam = urlSearchParams.get("maxPrice") ? Number(urlSearchParams.get("maxPrice")) : MAX_DEFAULT_PRICE;
   const categoryParam = urlSearchParams.get("category") || null;
   const amenitiesParam = urlSearchParams.get("amenities") ? urlSearchParams.get("amenities")!.split(",") : [];
   const ratingParam = urlSearchParams.get("rating") ? Number(urlSearchParams.get("rating")) : 0;
@@ -146,7 +148,7 @@ export default function Listings() {
     if (locationParam) params.location = locationParam;
     if (guestsParam) params.guests = parseInt(guestsParam);
     if (minPriceParam > 0) params.minPrice = minPriceParam;
-    if (maxPriceParam < 500) params.maxPrice = maxPriceParam;
+    if (maxPriceParam < MAX_DEFAULT_PRICE) params.maxPrice = maxPriceParam;
     if (categoryParam) params.category = categoryParam;
     if (amenitiesParam.length > 0) params.amenities = amenitiesParam;
     if (ratingParam > 0) params.rating = ratingParam;
@@ -187,13 +189,13 @@ export default function Listings() {
 
   const activeFilterCount =
     (categoryParam ? 1 : 0) +
-    (minPriceParam > 0 || maxPriceParam < 500 ? 1 : 0) +
+    (minPriceParam > 0 || maxPriceParam < MAX_DEFAULT_PRICE ? 1 : 0) +
     (amenitiesParam.length > 0 ? 1 : 0) +
     (ratingParam > 0 ? 1 : 0) +
     (latParam !== null ? 1 : 0);
 
   const clearFilters = () => {
-    setPriceRange([0, 500]);
+    setPriceRange([0, MAX_DEFAULT_PRICE]);
     const newParams = new URLSearchParams();
     if (locationParam) newParams.set("location", locationParam);
     if (viewMode !== "grid") newParams.set("view", viewMode);
@@ -203,7 +205,7 @@ export default function Listings() {
   const applyPriceFilter = () => {
     updateUrlParams({
       minPrice: priceRange[0] > 0 ? priceRange[0] : null,
-      maxPrice: priceRange[1] < 500 ? priceRange[1] : null,
+      maxPrice: priceRange[1] < MAX_DEFAULT_PRICE ? priceRange[1] : null,
       page: 1,
     });
     setShowFilters(false);
@@ -472,14 +474,14 @@ export default function Listings() {
                     <Slider
                       value={priceRange}
                       onValueChange={(v) => setPriceRange(v as [number, number])}
-                      max={500}
+                      max={MAX_DEFAULT_PRICE}
                       min={0}
-                      step={10}
+                      step={200}
                       className="mb-2"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>${priceRange[0]}</span>
-                      <span>${priceRange[1]}{priceRange[1] >= 500 ? "+" : ""}</span>
+                      <span>Rs. {priceRange[0].toLocaleString()}</span>
+                      <span>Rs. {priceRange[1].toLocaleString()}{priceRange[1] >= MAX_DEFAULT_PRICE ? "+" : ""}</span>
                     </div>
                   </div>
                 </div>

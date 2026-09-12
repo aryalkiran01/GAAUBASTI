@@ -59,21 +59,52 @@ const sanitizeListingPayloadForCreate = (payload = {}) => {
     const location = safePayload.location as any;
     const cleanedLocation = {} as any;
 
-    if (location.address) cleanedLocation.address = location.address;
-    if (location.city) cleanedLocation.city = location.city;
-    if (location.village) cleanedLocation.village = location.village;
+    const city = location.city || location.village || location.address || '';
+    const address = location.address || location.city || location.village || '';
+
+    cleanedLocation.address = address;
+    cleanedLocation.city = city;
+    cleanedLocation.village = location.village || city;
     if (location.district) cleanedLocation.district = location.district;
     if (location.province) cleanedLocation.province = location.province;
     if (location.state) cleanedLocation.state = location.state;
-    if (location.country) cleanedLocation.country = location.country;
+    if (location.country) cleanedLocation.country = location.country || 'Nepal';
     if (location.coordinates) cleanedLocation.coordinates = location.coordinates;
     if (location.geoJSON) cleanedLocation.geoJSON = location.geoJSON;
 
     safePayload.location = cleanedLocation;
+  } else if (typeof (payload as any).location === 'string' && (payload as any).location.trim()) {
+    const locStr = (payload as any).location.trim();
+    const parts = locStr.split(',').map((s: string) => s.trim());
+    safePayload.location = {
+      address: locStr,
+      city: parts[0] || locStr,
+      village: parts[0] || locStr,
+      district: parts[1] || 'Kaski',
+      province: 'Gandaki',
+      country: 'Nepal'
+    };
   }
 
-  if (safePayload.safetyAndEmergency) {
-    safePayload.safetyAndEmergency = sanitizeSafetyAndEmergency(safePayload.safetyAndEmergency);
+  if (Array.isArray(safePayload.houseRules)) {
+    safePayload.houseRules = safePayload.houseRules
+      .filter((r: any) => typeof r === 'string' && r.trim().length > 0)
+      .map((r: string) => r.trim());
+  } else if (typeof safePayload.houseRules === 'string' && safePayload.houseRules.trim()) {
+    safePayload.houseRules = [safePayload.houseRules.trim()];
+  }
+
+  if (Array.isArray(safePayload.amenities)) {
+    safePayload.amenities = safePayload.amenities
+      .filter((a: any) => typeof a === 'string' && a.trim().length > 0)
+      .map((a: string) => a.trim());
+  } else if (typeof safePayload.amenities === 'string' && safePayload.amenities.trim()) {
+    safePayload.amenities = safePayload.amenities.split(',').map((a: string) => a.trim()).filter(Boolean);
+  }
+
+  const rawSafety = (payload as any).safetyAndEmergency || (payload as any).safetyInfo || (payload as any).safetyHealth;
+  if (rawSafety) {
+    safePayload.safetyAndEmergency = sanitizeSafetyAndEmergency(rawSafety);
   }
 
   return safePayload;
@@ -86,21 +117,52 @@ const sanitizeListingPayloadForUpdate = (payload = {}) => {
     const location = safePayload.location as any;
     const cleanedLocation = {} as any;
 
-    if (location.address) cleanedLocation.address = location.address;
-    if (location.city) cleanedLocation.city = location.city;
-    if (location.village) cleanedLocation.village = location.village;
+    const city = location.city || location.village || location.address || '';
+    const address = location.address || location.city || location.village || '';
+
+    cleanedLocation.address = address;
+    cleanedLocation.city = city;
+    cleanedLocation.village = location.village || city;
     if (location.district) cleanedLocation.district = location.district;
     if (location.province) cleanedLocation.province = location.province;
     if (location.state) cleanedLocation.state = location.state;
-    if (location.country) cleanedLocation.country = location.country;
+    if (location.country) cleanedLocation.country = location.country || 'Nepal';
     if (location.coordinates) cleanedLocation.coordinates = location.coordinates;
     if (location.geoJSON) cleanedLocation.geoJSON = location.geoJSON;
 
     safePayload.location = cleanedLocation;
+  } else if (typeof (payload as any).location === 'string' && (payload as any).location.trim()) {
+    const locStr = (payload as any).location.trim();
+    const parts = locStr.split(',').map((s: string) => s.trim());
+    safePayload.location = {
+      address: locStr,
+      city: parts[0] || locStr,
+      village: parts[0] || locStr,
+      district: parts[1] || 'Kaski',
+      province: 'Gandaki',
+      country: 'Nepal'
+    };
   }
 
-  if (safePayload.safetyAndEmergency) {
-    safePayload.safetyAndEmergency = sanitizeSafetyAndEmergency(safePayload.safetyAndEmergency);
+  if (Array.isArray(safePayload.houseRules)) {
+    safePayload.houseRules = safePayload.houseRules
+      .filter((r: any) => typeof r === 'string' && r.trim().length > 0)
+      .map((r: string) => r.trim());
+  } else if (typeof safePayload.houseRules === 'string' && safePayload.houseRules.trim()) {
+    safePayload.houseRules = [safePayload.houseRules.trim()];
+  }
+
+  if (Array.isArray(safePayload.amenities)) {
+    safePayload.amenities = safePayload.amenities
+      .filter((a: any) => typeof a === 'string' && a.trim().length > 0)
+      .map((a: string) => a.trim());
+  } else if (typeof safePayload.amenities === 'string' && safePayload.amenities.trim()) {
+    safePayload.amenities = safePayload.amenities.split(',').map((a: string) => a.trim()).filter(Boolean);
+  }
+
+  const rawSafety = (payload as any).safetyAndEmergency || (payload as any).safetyInfo || (payload as any).safetyHealth;
+  if (rawSafety) {
+    safePayload.safetyAndEmergency = sanitizeSafetyAndEmergency(rawSafety);
   }
 
   return safePayload;
@@ -161,8 +223,8 @@ const getListings = async (req, res) => {
       };
     }
 
-    if (location) {
-      const escapedLocation = escapeRegex(location);
+    if (location && typeof location === 'string' && location.trim()) {
+      const escapedLocation = escapeRegex(location.trim());
       if (escapedLocation) {
         filter.$or = [
           { title: { $regex: escapedLocation, $options: 'i' } },
@@ -175,43 +237,54 @@ const getListings = async (req, res) => {
       }
     }
 
-    if (village) {
-      filter['location.village'] = { $regex: new RegExp(`^${escapeRegex(village)}$`, 'i') };
+    if (village && typeof village === 'string' && village.trim()) {
+      filter['location.village'] = { $regex: new RegExp(`^${escapeRegex(village.trim())}$`, 'i') };
     }
 
-    if (city) {
-      filter['location.city'] = { $regex: new RegExp(`^${escapeRegex(city)}$`, 'i') };
+    if (city && typeof city === 'string' && city.trim()) {
+      filter['location.city'] = { $regex: new RegExp(`^${escapeRegex(city.trim())}$`, 'i') };
     }
 
-    if (district) {
-      filter['location.district'] = { $regex: new RegExp(`^${escapeRegex(district)}$`, 'i') };
+    if (district && typeof district === 'string' && district.trim()) {
+      filter['location.district'] = { $regex: new RegExp(`^${escapeRegex(district.trim())}$`, 'i') };
     }
 
-    if (province) {
-      filter['location.province'] = { $regex: new RegExp(`^${escapeRegex(province)}$`, 'i') };
+    if (province && typeof province === 'string' && province.trim()) {
+      filter['location.province'] = { $regex: new RegExp(`^${escapeRegex(province.trim())}$`, 'i') };
     }
 
-    if (minPrice || maxPrice) {
+    const numMinPrice = minPrice !== undefined && minPrice !== '' ? parseFloat(minPrice) : NaN;
+    const numMaxPrice = maxPrice !== undefined && maxPrice !== '' ? parseFloat(maxPrice) : NaN;
+    if (!isNaN(numMinPrice) || !isNaN(numMaxPrice)) {
       filter.price = {};
-      if (minPrice) filter.price.$gte = parseFloat(minPrice);
-      if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
+      if (!isNaN(numMinPrice)) filter.price.$gte = numMinPrice;
+      if (!isNaN(numMaxPrice)) filter.price.$lte = numMaxPrice;
     }
 
-    if (guests) {
-      filter.maxGuests = { $gte: parseInt(guests) };
+    const numGuests = guests !== undefined && guests !== '' ? parseInt(guests, 10) : NaN;
+    if (!isNaN(numGuests) && numGuests > 0) {
+      filter.maxGuests = { $gte: numGuests };
     }
 
-    if (rating) {
-      filter.averageRating = { $gte: parseFloat(rating) };
+    const numRating = rating !== undefined && rating !== '' ? parseFloat(rating) : NaN;
+    if (!isNaN(numRating) && numRating > 0) {
+      filter.averageRating = { $gte: numRating };
     }
 
-    if (category) {
-      filter.category = category;
+    if (category && typeof category === 'string' && category.trim()) {
+      filter.category = category.trim();
     }
 
     if (amenities) {
-      const amenityArray = Array.isArray(amenities) ? amenities : [amenities];
-      filter.amenities = { $in: amenityArray };
+      const rawAmenities = Array.isArray(amenities)
+        ? amenities
+        : (typeof amenities === 'string' ? amenities.split(',') : [amenities]);
+      const amenityArray = rawAmenities
+        .map((a: any) => (typeof a === 'string' ? a.trim() : String(a).trim()))
+        .filter((a: string) => a.length > 0);
+      if (amenityArray.length > 0) {
+        filter.amenities = { $in: amenityArray };
+      }
     }
 
     // Build sort object
@@ -340,21 +413,23 @@ const createListing = async (req, res) => {
     const payload = sanitizeListingPayloadForCreate(req.body || {});
     const normalizedPrice = Number(payload.price);
     const normalizedGuests = Number(payload.maxGuests);
+    const normalizedBedrooms = Number(payload.bedrooms !== undefined && payload.bedrooms !== null ? payload.bedrooms : 1);
+    const normalizedBathrooms = Number(payload.bathrooms !== undefined && payload.bathrooms !== null ? payload.bathrooms : 1);
 
     if (!payload.title || String(payload.title).trim().length < 5) {
-      return res.status(400).json({ success: false, message: 'Title must be at least 5 characters long' });
+      return res.status(400).json({ success: false, message: 'Title must be at least 5 characters long', field: 'title' });
     }
     if (!payload.description || String(payload.description).trim().length < 20) {
-      return res.status(400).json({ success: false, message: 'Description must be at least 20 characters long' });
+      return res.status(400).json({ success: false, message: 'Description must be at least 20 characters long', field: 'description' });
     }
     if (!payload.location || !payload.location.city || !payload.location.address) {
-      return res.status(400).json({ success: false, message: 'Location city and address are required' });
+      return res.status(400).json({ success: false, message: 'Location city and address are required', field: 'location' });
     }
     if (!Number.isFinite(normalizedPrice) || normalizedPrice < 0) {
-      return res.status(400).json({ success: false, message: 'Price must be a non-negative number' });
+      return res.status(400).json({ success: false, message: 'Price must be a non-negative number', field: 'price' });
     }
     if (!Number.isInteger(normalizedGuests) || normalizedGuests < 1) {
-      return res.status(400).json({ success: false, message: 'Maximum guests must be at least 1' });
+      return res.status(400).json({ success: false, message: 'Maximum guests must be at least 1', field: 'maxGuests' });
     }
 
     const images = [] as any[];
@@ -364,21 +439,25 @@ const createListing = async (req, res) => {
       images.push(...processUploadedFiles(req.files));
     }
 
-    // Also accept body-provided image URLs (for flexibility)
+    // Also accept body-provided image URLs (as objects { url } or direct strings)
     const bodyImages = Array.isArray(payload.images) ? payload.images : [];
     for (const image of bodyImages) {
-      if (!image || typeof image.url !== 'string' || !image.url.trim()) {
-        continue;
+      if (typeof image === 'string' && image.trim()) {
+        images.push({
+          url: image.trim(),
+          caption: 'Uploaded image'
+        });
+      } else if (image && typeof image.url === 'string' && image.url.trim()) {
+        images.push({
+          url: image.url.trim(),
+          publicId: typeof image.publicId === 'string' ? image.publicId.trim() : undefined,
+          caption: typeof image.caption === 'string' ? image.caption.trim().slice(0, 200) : undefined
+        });
       }
-      images.push({
-        url: image.url.trim(),
-        publicId: typeof image.publicId === 'string' ? image.publicId.trim() : undefined,
-        caption: typeof image.caption === 'string' ? image.caption.trim().slice(0, 200) : undefined
-      });
     }
 
     if (images.length === 0) {
-      return res.status(400).json({ success: false, message: 'At least one image is required' });
+      return res.status(400).json({ success: false, message: 'At least one image is required', field: 'images' });
     }
 
     const listingData = {
@@ -386,7 +465,10 @@ const createListing = async (req, res) => {
       host: req.user._id,
       images,
       price: normalizedPrice,
-      maxGuests: normalizedGuests
+      maxGuests: normalizedGuests,
+      bedrooms: Number.isInteger(normalizedBedrooms) && normalizedBedrooms >= 0 ? normalizedBedrooms : 1,
+      bathrooms: Number.isInteger(normalizedBathrooms) && normalizedBathrooms >= 0 ? normalizedBathrooms : 1,
+      category: payload.category || 'homestay'
     };
 
     const listing = new Listing(listingData);
@@ -451,7 +533,13 @@ const updateListing = async (req, res) => {
       }
       updates.images = uploadedImages;
     } else if (updates.images && Array.isArray(updates.images)) {
-      // Keep body-provided images
+      // Normalize body-provided images
+      updates.images = updates.images.map((image: any) => {
+        if (typeof image === 'string') {
+          return { url: image.trim(), caption: 'Uploaded image' };
+        }
+        return image;
+      }).filter((img: any) => img && typeof img.url === 'string' && img.url.trim());
     } else {
       delete updates.images;
     }

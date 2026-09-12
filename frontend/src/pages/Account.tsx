@@ -163,7 +163,7 @@ const Account = () => {
         toast({
           title: "Booking cancelled",
           description: response.data?.refundAmount
-            ? `Refund amount: $${response.data.refundAmount}`
+            ? `Refund amount: Rs. ${response.data.refundAmount?.toLocaleString()}`
             : undefined,
         });
         setCancelBookingId(null);
@@ -432,7 +432,7 @@ const Account = () => {
                             <div className="mt-4 flex flex-wrap justify-between items-center gap-2">
                               <div>
                                 <span className="font-medium">
-                                  ${booking.totalPrice}
+                                  Rs. {booking.totalPrice?.toLocaleString()}
                                 </span>{" "}
                                 total
                               </div>
@@ -574,9 +574,9 @@ const Account = () => {
                           </div>
                           <div>
                             <p className="font-medium">
-                              ${payment.amount}{" "}
+                              Rs. {payment.amount?.toLocaleString()}{" "}
                               <span className="text-sm text-muted-foreground">
-                                {payment.currency}
+                                NPR
                               </span>
                             </p>
                             <p className="text-sm text-muted-foreground">

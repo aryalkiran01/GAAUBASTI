@@ -108,8 +108,10 @@ const PaymentSuccess = () => {
   }
 
   const paidAmount = verifiedPayment
-    ? `${verifiedPayment.currency === "NPR" ? "Rs. " : "$"}${verifiedPayment.amount}`
-    : `$${paymentDetails?.amount}`;
+    ? `Rs. ${verifiedPayment.amount?.toLocaleString()}`
+    : paymentDetails?.amount
+    ? `Rs. ${paymentDetails.amount?.toLocaleString()}`
+    : "Confirmed";
 
   return (
     <div className="container py-16 md:py-24">

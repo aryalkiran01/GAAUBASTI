@@ -18,11 +18,15 @@ export default function ListingCard({ listing }: ListingCardProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const DEFAULT_CARD_IMAGE = "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&auto=format&fit=crop&q=80";
+
   const getImageUrl = (images: string[] | Array<{url: string}>) => {
     if (Array.isArray(images) && images.length > 0) {
-      return typeof images[0] === 'string' ? images[0] : images[0].url;
+      const first = images[0];
+      if (typeof first === 'string' && first.trim()) return first.trim();
+      if (typeof first === 'object' && first?.url && String(first.url).trim()) return String(first.url).trim();
     }
-    return "https://images.unsplash.com/photo-1587061949409-02df41d5e562";
+    return DEFAULT_CARD_IMAGE;
   };
 
   const getLocationString = (location: string | {city: string; state?: string; country: string}) => {
@@ -32,7 +36,8 @@ export default function ListingCard({ listing }: ListingCardProps) {
     return `${location.city}${location.state ? `, ${location.state}` : ''}, ${location.country}`;
   };
 
-  const saved = isSaved(listing.id);
+  const listingId = (listing as any)._id || listing.id;
+  const saved = listingId ? isSaved(listingId) : false;
 
   const handleToggleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -48,7 +53,9 @@ export default function ListingCard({ listing }: ListingCardProps) {
       return;
     }
 
-    const response = await toggle(listing.id);
+    if (!listingId) return;
+
+    const response = await toggle(listingId);
     if (response.success) {
       toast({
         title: response.data?.saved ? "Saved to wishlist" : "Removed from wishlist",
@@ -63,18 +70,22 @@ export default function ListingCard({ listing }: ListingCardProps) {
   };
 
   return (
-    <Link to={`/listing/${listing.id}`} className="block h-full group" aria-label={`View ${listing.title}`}>
+    <Link to={`/listing/${listingId}`} className="block h-full group" aria-label={`View ${listing.title}`}>
       <Card className="overflow-hidden border-border hover:shadow-lg transition-shadow duration-200 h-full">
         <div className="aspect-[4/3] overflow-hidden relative bg-secondary">
           <img
             src={getImageUrl(listing.images)}
             alt={listing.title}
             loading="lazy"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = DEFAULT_CARD_IMAGE;
+            }}
             className="listing-image h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
           <div className="absolute top-3 left-3">
             <Badge className="bg-white/95 text-foreground hover:bg-white/95 shadow-sm border-0">
-              <span className="font-semibold">${listing.price}</span>
+              <span className="font-semibold">Rs. {listing.price?.toLocaleString()}</span>
               <span className="text-muted-foreground font-normal"> / night</span>
             </Badge>
           </div>

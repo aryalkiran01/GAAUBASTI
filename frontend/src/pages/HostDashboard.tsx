@@ -282,9 +282,9 @@ export default function HostDashboard() {
               <DollarSign className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${totalRevenue}</div>
+              <div className="text-2xl font-bold">Rs. {totalRevenue.toLocaleString()}</div>
               <p className="text-[11px] text-muted-foreground mt-1">
-                ${pendingPayouts} in upcoming stays
+                Rs. {pendingPayouts.toLocaleString()} in upcoming stays
               </p>
             </CardContent>
           </Card>
@@ -362,7 +362,7 @@ export default function HostDashboard() {
                             <h3 className="font-display font-bold text-base leading-snug line-clamp-1">
                               {listing.title}
                             </h3>
-                            <span className="font-bold text-gaun-green text-sm">${listing.price}/night</span>
+                            <span className="font-bold text-gaun-green text-sm">Rs. {listing.price?.toLocaleString()}/night</span>
                           </div>
                           <p className="text-xs text-muted-foreground">{locationStr}</p>
                           <p className="text-xs text-muted-foreground line-clamp-2 pt-1">{listing.description}</p>
@@ -466,17 +466,17 @@ export default function HostDashboard() {
                           </TableCell>
                           <TableCell className="text-xs max-w-[180px] truncate">{listingTitle}</TableCell>
                           <TableCell className="text-xs">{startStr} → {endStr}</TableCell>
-                          <TableCell className="text-xs font-bold text-gaun-green">${booking.totalPrice}</TableCell>
+                          <TableCell className="text-xs font-bold text-gaun-green">Rs. {booking.totalPrice?.toLocaleString()}</TableCell>
                           <TableCell className="text-xs">
                             <Badge
                               variant={
                                 booking.status === "confirmed"
                                   ? "default"
                                   : booking.status === "completed"
-                                  ? "secondary"
-                                  : booking.status === "pending"
-                                  ? "outline"
-                                  : "destructive"
+                                    ? "secondary"
+                                    : booking.status === "pending"
+                                      ? "outline"
+                                      : "destructive"
                               }
                               className="text-[10px]"
                             >
@@ -546,7 +546,7 @@ export default function HostDashboard() {
                     <CheckCircle2 className="h-4 w-4" />
                     <span>Verified Payout Method Connected</span>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">Payments deposited automatically in NPR / USD.</p>
+                  <p className="text-[11px] text-muted-foreground">Payments deposited automatically in NPR (Nepali Rupees).</p>
                 </CardContent>
               </Card>
             </div>
